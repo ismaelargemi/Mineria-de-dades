@@ -1,0 +1,63 @@
+---
+title: "Pre-preprocessing"
+author: "Iker Meneses Sales"
+date: "2023-09-21"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Selecció de dades i variables
+
+Primer, realitzarem un subset de la base de dades original amb l'objectiu de reduir la seva dimensionalitat i aprofitar les columnes que ens interessen:
+
+```{r}
+library(readxl)
+
+df = read.csv2("application_data.csv", sep = ",")
+
+
+df_no_paga = df[which(df$TARGET==0),]
+df_si_paga = df[which(df$TARGET==1),]
+
+subs_df_no_paga = df_no_paga[sample(1:nrow(df_no_paga), 2865),]
+subs_df_si_paga = df_si_paga[sample(1:nrow(df_si_paga), 2135),]
+
+
+
+df_final = rbind(subs_df_no_paga, subs_df_si_paga)
+
+### sonia.garcia.esteban@upc.edu
+```
+
+Ara, farem les conversions de cada columna segons la seva tipologia (factor i numèrica, concretament):
+
+```{r}
+library(dplyr)
+factor_vars = c("CODE_GENDER", "NAME_INCOME_TYPE", "NAME_EDUCATION_TYPE", 
+                "NAME_FAMILY_STATUS", "OCCUPATION_TYPE", "ORGANIZATION_TYPE", 
+                "REGION_RATING_CLIENT", "TARGET")
+
+num_vars = c("AMT_INCOME_TOTAL", "AMT_CREDIT", "AMT_ANNUITY", "DAYS_BIRTH",
+             "OWN_CAR_AGE", "AMT_GOODS_PRICE", "CNT_FAM_MEMBERS")
+
+x = c(factor_vars, num_vars)
+
+df_factor = df_final %>% select(all_of(factor_vars))
+
+df_num = df_final  %>% select(all_of(num_vars))
+
+df_final = data.frame(df_num, df_factor)
+
+df_final <- df_final %>%
+  mutate(across(all_of(factor_vars), as.factor))
+
+df_final <- df_final %>%
+  mutate(across(all_of(num_vars), as.numeric))
+
+
+write.csv2(df_final, "data.csv")
+```
+
