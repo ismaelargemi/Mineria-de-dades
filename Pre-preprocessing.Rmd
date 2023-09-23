@@ -59,5 +59,8 @@ df_final <- df_final %>%
 
 
 write.csv2(df_final, "data.csv")
+save(df, file = "Dades inicials.RData")
+save(df_final, file = "Dades inicials.RData")
+
 ```
 
