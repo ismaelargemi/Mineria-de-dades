@@ -57,10 +57,11 @@ df_final <- df_final %>%
 df_final <- df_final %>%
   mutate(across(all_of(num_vars), as.numeric))
 
+df_final$OCCUPATION_TYPE[which(df_final$OCCUPATION_TYPE=="")] = NA
 
 write.csv2(df_final, "data.csv")
 save(df, file = "Dades inicials.RData")
-save(df_final, file = "Dades inicials.RData")
+save(df_final, file = "Dades seleccionades.RData")
 
 ```
 
