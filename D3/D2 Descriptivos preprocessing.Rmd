@@ -306,4 +306,23 @@ abline(lm(data$AMT_ANNUITY ~ data$AMT_GOODS_PRICE), col = "red", lwd = 3)
 text(paste("Correlación:", round(cor(data$AMT_ANNUITY, data$AMT_GOODS_PRICE), 2)),
      x = 40, y = 20)
 ```
+
 ### Análisis Bivariante Categórico-Descriptivo
+
+Para finalizar con el análisis descriptivo antes del procesamieto de los datos, falta analizar la relación entre las variables caregóricas y las numéricas para así concluir el análisis de forma clara y concisa. Para ello, será de ayuda la elaboración de diferentes boxplots.
+
+```{r, echo = F, fig.cap = "Boxplot Ingresos y nivel de educación", fig.show='hold',out.width="75%",out.height="75%"}
+boxplot(NAME_INCOME_TYPE~CODE_GENDER,data,col=terrain.colors(5)) 
+```
+
+En este primer gráfico, se analiza el NAMEINCOME TYPE al sexo del cliente. Pese a ser un análisis interesante, vemos como el outlier dificulta mucho su estudio. Pese a ello, vemos como ...
+
+
+
+```{r, echo = F, fig.cap = "Boxplot Ingresos y Estado civil", fig.show='hold',out.width="75%",out.height="75%"}
+boxplot(CODE_GENDER~OCCUPATION_TYPE,data,col=terrain.colors(8))
+```
+
+...
+altres boxplot?
+...
