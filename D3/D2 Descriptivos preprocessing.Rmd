@@ -111,6 +111,10 @@ Invierno 2023
 El total de NAs alcanza las `r sum(is.na(data))` unidades (el $`r 100*(sum(is.na(data))/(ncol(data)*nrow(data)))`\%$ respecto el total), mientras que su disposición y resto de información requerida se encuentra disponible en la Tabla \ref{tab:tab0}.
 
 ```{r tab0, echo=FALSE, warning = FALSE}
+
+x <- as.data.frame(sapply(data, function(x) sum(is.na(x))))
+x <- cbind(x,round(100*(x/(nrow(data))),2))
+names(x) <- c("Número de NAs","% NAs de la Variable")
 kable(x,caption = "Estudio de NAs por variable", align = "c",booktabs=T) %>% 
   kable_styling(position = "center", 
                 latex_options = "HOLD_position",  font_size = 9)
@@ -129,8 +133,6 @@ data |>
   ylab("") + xlab("")  
 ```
 
-
-# ENTREGA D2
 
 # ENTREGA D3
 
