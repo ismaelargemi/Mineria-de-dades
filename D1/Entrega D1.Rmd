@@ -1,0 +1,262 @@
+---
+output: pdf_document
+header-includes:
+  - \usepackage{fullpage} 
+  - \usepackage[spanish]{babel}
+  - \usepackage{fancyhdr}
+  - \setlength{\headsep}{7mm} 
+  - \usepackage[linktoc=page]{hyperref}
+params:
+  file1: "Dades seleccionades.RData"
+  path: "C:/Users/iker1/Downloads"
+---
+
+<!-- estructura del documento -->
+
+```{r, include=FALSE}
+library(limma)
+library(edgeR)
+
+setwd(params$path)
+file1 <- file.path(params$path,params$file1)
+load(file1)
+library(kableExtra)
+View(df_final)
+
+```
+
+\pagenumbering{arabic}
+
+```{=tex}
+\begin{titlepage}
+\centering
+\graphicspath{{directori}}
+\includegraphics[width=19cm, height=2cm]{logo3.png}
+
+\begin{center}
+\vspace*{3cm}
+
+\Huge
+    \textbf{Mineria de Datos}
+
+\Huge
+\textbf{Análisis Exploratorio de Datos y Predicción de Incumplimiento de
+Préstamos}
+
+\vspace{0.75cm}
+
+\large
+    \textbf{Aina Llaneras Casas, Alejandro Arcas Alberti,  Alessandro Natali Vilamú, Berta Moyano Núñez, Blanca Romero Sainz, Iker Meneses Sales, Ismael Argemí Fernández, Iván Martínez Yates, Marta Gomez de la Tia Privat, Mireia Bohils Tenas, Mireia Bolívar Rubia, Oscar Arroyo Luque, Letizia}
+   
+\vspace{0.5cm}
+  \text{GRUPO 1: Aina Llaneras, Blanca Romero, Iván Martínez}
+\vspace{0.02cm}
+  \text{GRUPO 2: Alejandro Arcas Alberti, Alessandro Natali, Iker Meneses, Letizia}
+\vspace{0.02cm}
+  \text{GRUPO 3: Ismael Argemí, Mireia Bohils, Oscar Arroyo}
+\vspace{0.02cm}
+  \text{GRUPO 4: Berta Moyano, Marta Gómez, Mireia Bolívar}
+
+    
+\vspace{0.5cm}
+
+\large
+  \textit{23 de Septiembre del 2023}
+
+\end{center}
+\end{titlepage}
+```
+\newpage
+
+```{=tex}
+\setlength{\headheight}{13.6pt}
+\setlength{\topmargin}{-10mm}
+```
+\pagestyle{fancy}
+
+\fancyhf{}
+
+```{=tex}
+\rhead{Mineria de Datos}
+\lhead{Entrega D1}
+\newpage
+```
+```{=tex}
+\cfoot{\thepage}
+\setcounter{page}{1}
+```
+\pagebreak
+
+# Definición del proyecto y asignación
+
+El objetivo principal de este trabajo es permitir a las instituciones financieras o analistas de riesgos realizar un análisis exploratorio de datos completo para evaluar la probabilidad de que un prestatario incumpla con sus obligaciones financieras. Para un mejor funcionamiento del equipo y una correcta distribución de tareas, se ha separado el conjunto de los integrantes en 4 subgrupos mencionados previamente, cada uno constando de 3 integrantes, para poder efectuar las tareas con mayor asertividad e independencia.
+
+## Fuente de obtención de los datos
+
+Los datos se han extraído del repositorio de bases de datos Kaggle. El enlace de la página web es el siguiente: <https://www.kaggle.com/datasets/gauravduttakiit/loan-defaulter?select=application_data.csv>
+
+## Descripción de los datos
+
+Esta base de datos está diseñada para abordar el desafío de identificar posibles incumplimientos de préstamos en un entorno empresarial real. El conjunto de datos contiene información relacionada con préstamos otorgados a diversos prestatarios, junto con detalles financieros y personales de los solicitantes.
+
+## Estructura e información de la matriz de datos
+
+| **Filas (individuos)** | **Columnas (variables)** |         **Nro. variables numéricas**         |       **Nro. variables categóricas**        | **Nro. variables respuesta u objetivo** |
+|:-------------:|:-------------:|:-------------:|:-------------:|:-------------:|
+|   `r nrow(df_final)`   |    `r ncol(df_final)`    | `r sum(unlist(lapply(df_final,is.numeric)))` | `r sum(unlist(lapply(df_final,is.factor)))` |                    1                    |
+
+**VARIABLES EXPLICATIVAS**
+
+| **Nombre**              | **Descripción**                                                                             | **Tipo**   | **Diccionario y dominio**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+|:----------------|:----------------|:----------------|:----------------------|
+| CODE_GENDER             | Género del cliente                                                                          | Categórica | M---Male, F---Female                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| NAME \_INCOME \_TYPE    | Tipo de ingresos                                                                            | Categórica | 1-Businessman, 2-Commercial associate, 3-Pensioner, 4-State servant, 5-Working                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| NAME \_EDUCATION \_TYPE | Nivel de estudios del cliente                                                               | Categórica | 1-Academic degree, 2-Higher education, 3-Incomplete higher, 4-Lower secondary, 5-Secondary special                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| NAME \_FAMILY \_STATUS  | Estado civil                                                                                | Categórica | 1-Married, 2-Single/not married, 3-Civil marriage, 4-Separated, 5-Widow                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| OCCUPATION \_TYPE       | Actividad laboral                                                                           | Categórica | 1-Laborers, 2-Sales staff, 3-Core staff, 4-Managers, 5-Drivers, 6-Accountants, 7-Cleaning staff, 8- High skill tech staff, 9-HR staff, 10-IT staff, 11-Cooking staff, 12-Low-skill Laborers, 13-Medicine sraff, 14-Private service staff, 15-Realty agents, 16-Security staff, 17-Secretaries, 18-Waiters/barmen staff                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| ORGANIZATION \_TYPE     | Tipo de organización donde trabaja el cliente                                               | Categórica | 1-Advertising, 2-Agriculture, 3-Bank, 4-Business Entity Type 1, 5-Business Entity Type 2, 6-Business Entity Type 3, 7-Cleaning, 8-Construction, 9-Culture, 10-Electricity, 11-Emergency, 12-Government, 13-Hotel, 14-Housing, 15-Industry: type 1, 16-Industry: type 10, 17-Industry: type 11, 18-Industry: type 12, 19-Industry: type 13, 20-Industry: type 2, 21-Industry: type 3, 22-Industry: type 4, 23-Industry: type 5, 24-Industry: type 6, 25-Industry: type 7, 26-Industry: type 9, 27-Insurance, 28-Kindergarten, 29-Legal Services, 30-Medicine, 31-Military, 32-Mobile, 33-Other, 34-Police, 35-Postal, 36-Realtor, 37-Restaurant, 38-School, 39-Security, 40-Security Ministries, 41-Self-employed, 42-Services, 43-Telecom, 44-Trade: type 1, 45-Trade: type 2, 46-Trade: type 3, 47-Trade: type 4, 48-Trade: type 6, 49-Trade: type 7, 50-Transport: type 1, 51-Transport: type 2, 52-Transport: type 3, 53-Transport: type 4, 54-University, 55-XNA |
+| REGION_RATING \_CLIENT  | Nuestra calificación de la región donde vive el cliente                                     | Categórica | 1, 2, 3                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| AMT_INCOME \_TOTAL      | Ingresos totales del cliente                                                                | Numérica   | [29250,2250000]                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| AMT_CREDIT              | Importe de crédito del préstamo                                                             | Numérica   | [45000,3375000]                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| AMT_ANNUITY             | Anualidad del préstamo                                                                      | Numérica   | [2673,177827]                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| DAYS_BIRTH              | Edad del cliente en número de días en el momento de pedir el préstamo                       | Numérica   | [-25159,-7711]                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| OWN_CAR_AGE             | Edad en años del coche del cliente                                                          | Numérica   | [0,65]                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| AMT_GOODS \_PRICE       | Para préstamos al consumo, es el precio de los bienes para los cuales se otorga el préstamo | Numérica   | [45000,3375000]                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| CNT_FAM \_MEMBERS       | Número de familiares del cliente                                                            | Numérica   | [1,8]                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+
+**VARIABLE OUTPUT**
+
+| **Nombre** | **Descripción** | **Tipo**   | **Diccionario y dominio**                                                                                                                                                               |
+|:----------------|:----------------|:----------------|:---------------------|
+| Target     | Target          | Categórica | 1 - Cliente con dificultades de pago: él/ella tuvo pagos atrasados de más de X días en al menos una de las primeras Y cuotas del préstamo en nuestra muestra. 0 - Todos los demás casos |
+
+**VARIABLES MISSINGS**
+
+|          **Nro. de casillas missings**          |                           **Respeto del total de la matriz datos**                           |
+|:------------------------:|:--------------------------------------------:|
+| `` `r sum(is.na(df_final) | df_final == "")` `` | `` `r round(sum(is.na(df_final)| df_final == "")/(nrow(df_final)*ncol(df_final))*100,2)` ``% |
+
+Porcentaje de missings por variable (tabla y histograma):
+
+```{r, echo=FALSE}
+#Percentatge missing per variable:
+taula1 <- data.frame(Nro_de_missings = colSums(is.na(df_final)| df_final == ""),Porcentaje=round(colSums(is.na(df_final)| df_final == "")/nrow(df_final)*100,2))
+
+```
+
+|                 | **Nro. de missings**                             | **Porcentaje de missings**                    |
+|------------------|-------------------|-----------------------------------|
+| OWN_CAR_AGE     | `r taula1["OWN_CAR_AGE", "Nro_de_missings"]`     | `r taula1["OWN_CAR_AGE", "Porcentaje"]`%      |
+| AMT_GOODS_PRICE | `r taula1["AMT_GOODS_PRICE", "Nro_de_missings"]` | `r taula1["AMT_GOODS_PRICE", "Porcentaje"]` % |
+| OCCUPATION_TYPE | `r taula1["OCCUPATION_TYPE", "Nro_de_missings"]` | `r taula1["OCCUPATION_TYPE", "Porcentaje"]`%  |
+
+```{r, echo=FALSE, warning=FALSE}
+library(ggplot2)
+
+missings <- taula1[,"Porcentaje"]!=0
+
+m <- data.frame(Porcentaje=taula1$Porcentaje[missings])
+rownames(m)<- c('OWN_CAR_AGE','AMT_GOODS_PRICE','OCCUPATION_TYPE')
+
+ggplot(data = m, aes(x = rownames(m), y = Porcentaje), fill = rownames(m)) +
+  geom_bar(stat="identity", fill="#5299E3", color="#5299E3") +
+  labs(
+    title = "Gráfico de porcentaje de missings",
+    x = "Variables",
+    y = "Porcentaje de missings"
+  ) +
+  theme_minimal() + 
+  ylim(0,100)
+
+
+```
+
+Únicamente se han representado las variables que tienen algún valor faltante.
+
+## Diagrama de Gantt
+
+A continuación se muestra el código empleado para la generación del diagrama de Gantt:
+
+```{r}
+library(googleVis)
+datTL <- data.frame(Position=c("Planing y Distribución","Preprocessing y técnicas avanzadas", "Post preprocessing", "ACP y ACM", "Análisis factorial", "Clustering K-means y Jerarquico", "LDA y QDA", "Clustering avanzado" , "Basket market analysis" , "KNN", "Preparación primera exposición", "Primera exposición", "Arboles de decisión", "Random forest", "Naive Bayes", "SVM", "Ensemble methods", "Redes neuronales", "Conclusiones", "Preparación segunda exposición", "Segunda exposición"),
+                    Name=c("Todos", "Grupo 1", "Grupo 2", "Grupo 3", "Grupo 4", "Grupo 2", "Grupo 3","Grupo 4","Grupo 2","Grupo 1","Todos","Todos", "Grupo 1","Grupo 3","Grupo 2", "Grupo 4","Grupo 3","Grupo 1","Todos","Todos","Todos"),
+                    start=as.Date(x=c("2023-09-21", "2023-09-24", "2023-9-26", "2023-10-3" , "2023-10-05", "2023-10-5", "2023-10-7", "2023-10-17" , "2023-10-19" , "2023-10-26" , "2023-10-31" , "2023-11-09" , "2023-11-09", "2023-11-14" , "2023-11-21" , "2023-11-28" , "2023-12-05" , "2023-12-12", "2023-12-16" , "2023-12-16" , "2023-12-21"),),
+                    end=as.Date(x=c("2023-09-24", "2023-09-28", "2023-09-28", "2023-10-5" , "2023-10-07", "2023-10-7", "2023-10-17" ,"2023-10-19" , "2023-10-26" ,"2023-11-5", "2023-11-09", "2023-11-09", "2023-11-14", "2023-11-21", "2023-11-28", "2023-12-05", "2023-12-12", "2023-12-16", "2023-12-21", "2023-12-21", "2023-12-21"),))
+
+Timeline_Teoric <- gvisTimeline(data=datTL, 
+                         rowlabel="Name",
+                         barlabel="Position",
+                         start="start", 
+                         end="end",
+                         options=list(timeline="{groupByRowLabel:false}",
+                                      backgroundColor="#DCF0F8", 
+                                      height=900,
+                                      width=1300,
+                                      colors="['#8AB8D0', '#307BA5', '#19506F']"),)
+plot(Timeline_Teoric)
+```
+
+## Análisis de riesgos
+
+Se han identificado los siguientes riesgos que podrían afectar al correcto desarrollo del trabajo, así como su probabilidad de suceso y su solución:
+
+<table style="width:100%;">
+<colgroup>
+<col style="width: 35%" />
+<col style="width: 24%" />
+<col style="width: 39%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th><p>Posible problema</p></th>
+<th><p>Probabilidad de suceso</p></th>
+<th><p>Solución</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><p>Tarea crítica no finalizada a tiempo</p></td>
+<td><p>Baja</p></td>
+<td><p>Establecer una fecha límite previa para tener margen de maniobra</p></td>
+</tr>
+<tr class="even">
+<td><p>Falta y/o errores de comunicación entre los miembros del grupo</p></td>
+<td><p>Alta</p></td>
+<td><p>Canales de comunicación claros y efectivos y designar un líder por equipo</p></td>
+</tr>
+<tr class="odd">
+<td><p>Error en una tarea inicial que impida la correcta evolución</p></td>
+<td><p>Media</p></td>
+<td><p>Tareas iniciales revisadas por miembros de otros grupos</p>
+<p>Asignar a dos grupos para que trabajen de forma simultánea</p></td>
+</tr>
+<tr class="even">
+<td><p>Ausencia temporal de algún miembro del equipo</p></td>
+<td><p>Alta</p></td>
+<td><p>Un subgrupo dará soporte para la finalización de la tarea a tiempo</p>
+<p>Correcta explicación del avance realizado al integrante que ha faltado temporalmente</p></td>
+</tr>
+<tr class="odd">
+<td><p>Ausencia permanente de algún mienbro del equipo</p></td>
+<td><p>Baja</p></td>
+<td><p>Reasignación de los integrantes del subgrupo en otro y redistribución de las tareas.</p></td>
+</tr>
+<tr class="even">
+<td><p>Falta de conocimiento de tareas anteriores</p></td>
+<td><p>Alta</p></td>
+<td><p>Revisar todos los avances que se han realizado en cada uno de los grupos</p>
+<p>Asegurar que todos los miembros de cada grupo entiendan el proyecto</p></td>
+</tr>
+<tr class="odd">
+<td><p>Falta de comprensión del proyecto</p></td>
+<td><p>Baja</p></td>
+<td><p>Asegurar que los miembros del grupo se reúnan regularmente</p></td>
+</tr>
+<tr class="even">
+<td><p>Dificultad a la hora de interpretar las conclusiones obtenidas</p></td>
+<td><p>Media</p></td>
+<td><p>Asegurar que todos los miembros entiendan la totalidad de los resultados así como sus interpretaciones e implicaciones.</p></td>
+</tr>
+</tbody>
+</table>

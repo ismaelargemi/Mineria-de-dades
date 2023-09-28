@@ -1,0 +1,98 @@
+---
+title: "Untitled"
+output: html_document
+date: "2023-09-24"
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+install.packages("googleVis")
+library(googleVis)
+```
+
+```{r}
+
+datTL <- data.frame(Position=c("Planing y Distribución","Preprocessing y técnicas avanzadas", "Post preprocessing", "ACP y ACM", "Análisis factorial", "Clustering K-means y Jerarquico", "LDA y QDA", "Clustering avanzado" , "Basket market analysis" , "KNN", "Preparación primera exposición", "Primera exposición", "Arboles de decisión", "Random forest", "Naive Bayes", "SVM", "Ensemble methods", "Redes neuronales", "Conclusiones", "Preparación segunda exposición", "Segunda exposición"),
+                    Name=c("Todos", "Grupo A", "Grupo B", "Grupo C", "Grupo D", "Grupo B", "Grupo C","Grupo D","Grupo B","Grupo A","Todos","Todos", "Grupo A","Grupo A","Grupo B", "Grupo D","Grupo C","Grupo B","Todos","Todos","Todos"),
+                    start=as.Date(x=c("2023-09-21", "2023-09-24", "2023-9-26", "2023-10-3" , "2023-10-05", "2023-10-5", "2023-10-7", "2023-10-17" , "2023-10-19" , "2023-10-26" , "2023-10-31" , "2023-11-09" , "2023-11-09", "2023-11-14" , "2023-11-21" , "2023-11-28" , "2023-12-05" , "2023-12-12", "2023-12-16" , "2023-12-16" , "2023-12-21"),),
+                    end=as.Date(x=c("2023-09-24", "2023-09-28", "2023-09-28", "2023-10-5" , "2023-10-07", "2023-10-7", "2023-10-17" ,"2023-10-19" , "2023-10-26" ,"2023-11-5", "2023-11-09", "2023-11-09", "2023-11-14", "2023-11-21", "2023-11-28", "2023-12-05", "2023-12-12", "2023-12-16", "2023-12-21", "2023-12-21", "2023-12-21"),))
+
+Timeline_Teoric <- gvisTimeline(data=datTL, 
+                         rowlabel="Name",
+                         barlabel="Position",
+                         start="start", 
+                         end="end",
+                         options=list(timeline="{groupByRowLabel:false}",
+                                      backgroundColor="#DCF0F8", 
+                                      height=900,
+                                      width=1300,
+                                      colors="['#8AB8D0', '#307BA5', '#19506F']"),)
+plot(Timeline_Teoric)
+
+```
+
+##Análisis de riesgos
+
+Se han identificado los siguientes riesgos que podrían afectar al
+correcto desarrollo del trabajo:
+
++---------------------------+----------+------------------------------+
+| Posible problema          | Prob     | Solución                     |
+|                           | abilidad |                              |
+|                           | de       |                              |
+|                           | suceso   |                              |
++===========================+==========+==============================+
+| Tarea crítica no          | Baja     | Establecer una fecha límite  |
+| finalizada a tiempo       |          | previa para tener margen de  |
+|                           |          | maniobra                     |
++---------------------------+----------+------------------------------+
+| Falta y/o errores de      | Alta     | Canales de comunicación      |
+| comunicación entre los    |          | claros y efectivos y         |
+| miembros del grupo        |          | designar un líder por equipo |
++---------------------------+----------+------------------------------+
+| Error en una tarea        | Media    | Tareas iniciales revisadas   |
+| inicial que impida la     |          | por miembros de otros grupos |
+| correcta evolución        |          |                              |
+|                           |          | Asignar a dos grupos para    |
+|                           |          | que trabajen de forma        |
+|                           |          | simultánea                   |
++---------------------------+----------+------------------------------+
+| Ausencia temporal de      | Alta     | Un subgrupo dará soporte     |
+| algun membro del equipo   |          | para la finalización de la   |
+|                           |          | tarea a tiempo               |
+|                           |          |                              |
+|                           |          | Correcta explicación del     |
+|                           |          | avance realizado al          |
+|                           |          | integrante que ha faltado    |
+|                           |          | temporalmente                |
++---------------------------+----------+------------------------------+
+| Ausencia permanente de    | Baja     | Reasignación de los          |
+| algun mienbro del equipo  |          | integrantes del subgrupo en  |
+|                           |          | otro y redistribución de las |
+|                           |          | tareas.                      |
++---------------------------+----------+------------------------------+
+| Falta de conocimiento de  | Alta     | Revisar todos los avances    |
+| tareas anteriores         |          | que se han realizado en cada |
+|                           |          | uno de los grupos            |
+|                           |          |                              |
+|                           |          | Asegurar que todos los       |
+|                           |          | miembros de cada grupo       |
+|                           |          | entiendan el proyecto        |
++---------------------------+----------+------------------------------+
+| Falta de comprensión del  | Baja     | Asegurar que los miembros    |
+| proyecto                  |          | del grupo se reúnan          |
+|                           |          | regularmente                 |
++---------------------------+----------+------------------------------+
+| Dificultad a la hora de   | Media    | Asegurar que todos los       |
+| interpretar las           |          | miembros entienden la        |
+| conclusiones obtenidas    |          | totalidad de los resultados  |
+|                           |          | así como sus                 |
+|                           |          | interpretaciones e           |
+|                           |          | imlicaciones.                |
++---------------------------+----------+------------------------------+
