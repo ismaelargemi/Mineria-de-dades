@@ -191,9 +191,6 @@ df_final$ORGANIZATION_TYPE = factor(df_final$ORGANIZATION_TYPE)
 table(df_final$ORGANIZATION_TYPE, useNA = "always")
 ```
 
-```{r}
-little
-```
 
 
 
