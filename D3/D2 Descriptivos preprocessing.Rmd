@@ -1,0 +1,307 @@
+---
+link-citations: yes
+linkcolor: blue
+output:
+  pdf_document: 
+  fig_crop: no
+latex_engine: xelatex
+toc: no
+lang: "es"
+toc_depth: 2
+number_sections: yes
+theme: united
+highlight: tango
+html_document:
+  df_print: paged
+header-includes:
+ - \usepackage{floatrow}
+ - \floatsetup[figure]{capposition=top}
+ - \floatsetup[table]{style=plaintop}
+ - \usepackage{float}
+ - \floatplacement{figure}{H}
+editor_options: 
+  markdown: 
+  wrap: sentence
+---
+  
+```{r setup, include=FALSE} 
+knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
+#setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
+options(scipen=999)
+set.seed(1234)
+libraries<- c("kableExtra","naniar","tidyverse",
+              "scales","dplyr","lubridate","psych",
+              "labelled","gridExtra","ggplot2","compareGroups",
+              "lessR","ggcorrplot","class","cluster",
+              "StatMatch","tidyverse","rio","NbClust",
+              "dendextend","factoextra")
+
+installifnot <- function (pckgName){
+  if(!require(pckgName, character.only=TRUE)){
+      install.packages(pckgName, dep=TRUE)
+  }
+}
+
+for(i in libraries){
+  installifnot(i)
+  library(i, character.only = TRUE, quietly = TRUE)
+}
+```
+
+```{r echo=FALSE, results = 'hide'}
+#data <- read.csv("marketing_campaign.csv",header=T, sep = '\t')
+data<-df_final
+```
+
+```{=latex}
+\begin{titlepage}
+\begin{center}
+\vspace*{1cm}
+\Huge
+\textbf{Proyecto de Estudio: Data Mining}
+\vspace{0.5cm}
+\Huge
+Customer Personality Analysis
+\vspace{1.5cm}
+\Large
+\textbf{------------------------------------------------------------------------------------}
+\vspace{1cm}
+\Large
+\textmd{Jordi Álvarez García, Iker Meneses Sales, Alejandro Arcas Alberti,\\ 
+  Carlos Humet Aparici, Lucas Torres Valiente, Víctor Casals Torcal,\\ 
+  Víctor González Almena, David Martínez Álamos y Manel Contreras Ferret}
+\vfill
+\begin{figure}[ht]
+\centering
+\end{figure}
+\begin{figure}[!tbp]
+\centering
+\begin{minipage}[b]{0.4\textwidth}
+\includegraphics{logoUPC}
+\end{minipage}
+\hfill
+\begin{minipage}[b]{0.4\textwidth}
+\includegraphics{Logotip_UB}
+\end{minipage}
+\end{figure}
+Proyecto presentado para el grado en\\
+Estadística
+\Large
+Análisis Multivariante de Datos\\
+Universitat de Barcelona - Universitat Politècnica de Catalunya\\
+Barcelona, España\\
+Invierno 2023
+\end{center}
+\end{titlepage}
+```
+
+\newpage
+
+```{=latex}
+\hypersetup{linkcolor=black}
+\setcounter{tocdepth}{2}
+\tableofcontents
+\hypersetup{linkcolor=blue}
+```
+
+\newpage
+
+## Análisis de los valores missing en la base de datos usada
+
+El total de NAs alcanza las `r sum(is.na(data))` unidades (el $`r 100*(sum(is.na(data))/(ncol(data)*nrow(data)))`\%$ respecto el total), mientras que su disposición y resto de información requerida se encuentra disponible en la Tabla \ref{tab:tab0}.
+
+```{r tab0, echo=FALSE, warning = FALSE}
+kable(x,caption = "Estudio de NAs por variable", align = "c",booktabs=T) %>% 
+  kable_styling(position = "center", 
+                latex_options = "HOLD_position",  font_size = 9)
+```
+
+
+Como se puede observar, la mayoria de los NAs proceden de la variables Occupation_Type, own_car_age, solo unos pocos proceden de Amt_goods_price.  Este hecho se puede deber al ...
+
+El análisis gráfico muestra que el número de datos missing es muy reducido en toda la base de datos: el peso de estos es casi insignificante en el análisis a realizar posteriormente.
+
+```{r fig1,echo=F, fig.cap="Distribución de los NAs por variable",fig.show = 'hold'}
+data |> 
+  gg_miss_var()+
+  theme_minimal() +
+  theme(axis.title = element_text(color="grey10",face = "italic")) + 
+  ylab("") + xlab("")  
+```
+
+
+# ENTREGA D2
+
+# ENTREGA D3
+
+## Análisis Univariante 
+
+Con la intención de realizar un buen análisis descriptivo univariante de los datos anterior al pre-procesamiento, se ha decidido integrar conjuntamente gráficos y tablas con resultados numéricos para lograr el mejor entendimiento de estos.
+
+### Análisis Univariante Numérico
+
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, results='asis'}
+data[,c(1:7,14)] <- lapply(data[,c(1:7,14)],as.numeric)
+#data$Dt_Customer <- dmy(data$Dt_Customer)
+#data$Difference <- as.numeric(rep(Sys.Date(),nrow(data))) - as.numeric(data$Dt_Customer)
+#data$Dt_Customer<-NULL
+kable(describe(select_if(data, is.numeric)),
+      caption ="Descripción Univariante Variables Numéricas",
+      
+      align = "c",digits=2,booktabs = T) %>% 
+  kable_styling(position = "center", 
+                latex_options = c("HOLD_position","scale_down"),  font_size = 9)
+```
+
+Para empezar se ha construido una tabla dónde que aparecen una serie de estadísticos de todas las variables numéricas trabajadas. En la que además de aparecer los estadísticos más conocidos (como pueden ser la media, desviación típica, etc.), también aparecen otros estadísticos de dispersión y centralización menos conocidos:
+
+- `Trimmed:` Estimador que calcula un estadístico de la variable eliminando los valores más extremos de su distribución. En este caso, la `Trimmed Mean` calcula la media de cada variable utilizando sólo el intervalo de datos situados entre [5%,95%]           
+- `Skew:` Grado de asimetría. Toma valores positivos si esta se encuentra en la derecha y negativos si lo hace en la izquierda(media menor que la mediana).
+- `Kurtosis:`  La curtosis es una medida estadística que determina el grado de concentración que presentan los valores de una variable alrededor de la zona central de la distribución de frecuencias.  Alta concentración si es mayor que 3 y baja en caso contrario.
+- `SE:` El error estándar es la desviación estándar de la distribución muestral de un estadístico muestral. Es decir, la desviación típica dividida entre la raíz cuadrada de n.
+
+```{r, echo = F, message=F,warning=F,fig.show='hide'}
+data_n <- select_if(data, is.numeric)
+q <- NULL
+h <- NULL
+s <- NULL
+for(i in 1:ncol(data_n)){
+ q[[i]] <- ggplot(data_n, aes_string(sample=names(data_n[i]))) + 
+    stat_qq(col="#DCF0F8") + 
+    stat_qq_line(col="#8B3E2F",lwd=1) + theme_bw() +
+    xlab("Normal Theoretical Quantiles") + 
+    ylab("Variable Data") + 
+    ggtitle("Normal Q-Q Plot") + theme(plot.title = element_text(hjust = 0.5))
+  h[[i]] <- ggplot(data_n, aes_string(x = data_n[,i])) + 
+    geom_histogram(aes(y = after_stat(density)), color = "#53868B", fill = "#DCF0F8") +
+    geom_density(color = "#8B3E2F",lwd=1) + 
+    theme_bw() + xlab("") + ylab("Density") + 
+    ggtitle(paste0("Histograma ", names(data_n)[i])) + 
+    theme(plot.title = element_text(hjust = 0.5))
+  s[[i]] <- shapiro.test(data_n[,i])$p.value[[1]]
+}
+```
+
+```{r, echo = F, fig.cap = "Análisis Gráfico Variable Year Birth", fig.show='hold', out.height="75%",out.width="75%"}
+grid.arrange(h[[1]],q[[1]],ncol = 2)
+```
+
+Estos gráficos nos muestran como los datos de la variable "Amt income total" siguen una exponencial. Los resultados tienen sentido debido a la naturaleza de esta variable. Además, podemos observar como el test de normalidad "Shaphiro-Wilk" obtiene como p-valor `r s[[1]]`, confirmando nuestras hipótesis previas sobre la no normalidad de los datos.
+
+```{r, echo = F, fig.cap = "Análisis Gráfico Variable Income", fig.show='hold', out.height="75%",out.width="75%"}
+grid.arrange(h[[2]],q[[2]],ncol = 2)
+```
+
+```{r, echo = F, fig.cap = "Análisis Gráfico Variable Recency",fig.show='hold',out.height="75%",out.width="75%"}
+grid.arrange(h[[3]],q[[3]],ncol = 2)
+```
+
+```{r, echo = F, fig.cap = "Análisis Gráfico Variable MntWines", fig.show='hold',out.height="75%",out.width="75%"}
+grid.arrange(h[[4]],q[[4]],ncol = 2)
+```
+
+```{r, echo = F, fig.cap = "Análisis Gráfico Variable MntFruits", fig.show='hold',out.height="75%",out.width="75%"}
+grid.arrange(h[[5]],q[[5]],ncol = 2)
+```
+
+```{r, echo = F, fig.cap = "Análisis Gráfico Variable MntMeatProducts", fig.show='hold',out.height="75%",out.width="75%"}
+grid.arrange(h[[6]],q[[6]],ncol = 2)
+```
+
+```{r, echo = F, fig.cap = "Análisis Gráfico Variable MntFishProducts", fig.show='hold',out.height="75%",out.width="75%"}
+grid.arrange(h[[7]],q[[7]],ncol = 2)
+```
+
+```{r, echo = F, fig.cap = "Análisis Gráfico Variable MntSweetProducts", fig.show='hold',out.height="75%",out.width="75%"}
+grid.arrange(h[[8]],q[[8]],ncol = 2)
+```
+
+### Análisis Univariante Categórico
+
+Una vez se han analizado las variables numéricas una a una, se ha procedido a analizar de forma particular cada variable categórica. De hecho, en la siguiente tabla se presenta un resumen general sobre ellas:
+
+```{r,echo=F, fig.cap = "Tabla Summary Variables Categóricas"}
+data$OCCUPATION_TYPE<- as.factor(data$OCCUPATION_TYPE)
+data$ORGANIZATION_TYPE<- as.factor(data$ORGANIZATION_TYPE)
+
+export2md(createTable(compareGroups(select_if(data,is.factor)), show.ratio=TRUE))
+```
+
+
+Así pues, en la tabla se muestra la frecuencia absoluta y relativa de cada posible valor dentro de cada variable, ya sean dicotómicas o politómicas, siendo muy fácil de identificar su moda de esta manera.
+
+Una vez se ha realizado un resumen general, se ha procedido a analizar cada variable una a una:
+
+```{r echo = F, fig.show='hide',results = "hide"}
+data_f <- select_if(data,is.factor)
+p <- NULL
+for(i in 1:ncol(data_f)){
+  var <- factor(data_f[,i])
+  PieChart(var, data = data.frame(var), hole = 0,
+         fill = hcl.colors(length(levels(var)),"pastel"),
+         labels_cex = 0.6, main = "",width = 2, height = 2)
+  p[[i]] <- recordPlot()
+  plot.new()
+}
+```
+
+```{r, echo = F, fig.cap= "Pie Chart Variable Education",fig.show='hold',out.width="75%",out.height="75%"}
+p[[1]] 
+```
+
+```{r, echo = F, fig.cap= "Pie Chart Variable Education",fig.show='hold',out.width="75%",out.height="75%"}
+p[[2]] 
+```
+
+```{r, echo = F, fig.cap= "Pie Chart Variable Education",fig.show='hold',out.width="75%",out.height="75%"}
+p[[3]] 
+```
+
+```{r, echo = F, fig.cap= "Pie Chart Variable Education",fig.show='hold',out.width="75%",out.height="75%"}
+p[[4]] 
+```
+
+```{r, echo = F, fig.cap= "Pie Chart Variable Education",fig.show='hold',out.width="75%",out.height="75%"}
+p[[5]] 
+```
+
+```{r, echo = F, fig.cap= "Pie Chart Variable Education",fig.show='hold',out.width="75%",out.height="75%"}
+p[[6]] 
+```
+
+```{r, echo = F, fig.cap= "Pie Chart Variable Education",fig.show='hold',out.width="75%",out.height="75%"}
+p[[7]] 
+```
+
+```{r, echo = F, fig.cap= "Pie Chart Variable Education",fig.show='hold',out.width="75%",out.height="75%"}
+p[[8]] 
+```
+
+```{r, echo = F, fig.cap= "Pie Chart Variable Education",fig.show='hold',out.width="75%",out.height="75%"}
+p[[9]] 
+```
+
+### Análisis Bivariante Numérico
+
+Con el fin de conocer las variables numéricas con más relación entre sí se ha hecho un gráfico de correlaciones siguiendo la mecánica de un HeatMap. Este, según el color, nos indica las dependencias más fuertes existentes entre variables numéricas. Cuanto más cálido sea el color, más relación tendrá y mayor énfasis se hará en el estudio sobre ellas.
+
+```{r, echo = F, fig.cap="Matriz de Correlaciones para las Variables Numéricas", fig.show='hold'}
+ corr <- round(cor(select_if(data,is.numeric),use="complete.obs"), 1)
+ ggcorrplot(corr, hc.order = T,type = "lower",lab=T)
+```
+
+Tras ver el gráfico podemos destacar la notable relación entre las variables del Amt goods price, amt annuity y amt credit.  Son resultados coherentes, puesto que ... Sin embargo, si analizamos una a una dichas correlaciones, tal vez no se saquen las mismas conclusiones.
+
+```{r, echo=F,fig.cap = "Boxplot del Gasto Total en Carne vs Número de Compras en Catálogo", fig.show='hold',out.width="75%",out.height="75%"}
+boxplot(AMT_CREDIT~AMT_GOODS_PRICE,data,col=terrain.colors(14)) 
+```
+
+```{r, echo=F,fig.cap = "Gráfico de dispersión Gasto Total en Pescado vs Gasto Total en Fruta", fig.show='hold',out.width="75%",out.height="75%"}
+plot(data$AMT_ANNUITY, data$AMT_GOODS_PRICE, pch = 19, col = "black",
+     xlab="AMT_ANNUITY", ylab="AMT_GOODS_PRICE")
+abline(lm(data$AMT_ANNUITY ~ data$AMT_GOODS_PRICE), col = "red", lwd = 3)
+text(paste("Correlación:", round(cor(data$AMT_ANNUITY, data$AMT_GOODS_PRICE), 2)),
+     x = 40, y = 20)
+```
+### Análisis Bivariante Categórico-Descriptivo
