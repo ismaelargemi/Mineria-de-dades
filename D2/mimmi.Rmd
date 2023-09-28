@@ -1,0 +1,105 @@
+---
+title: "MIMMI"
+author: "Bertita"
+date: "2023-09-28"
+output: html_document
+---
+
+Per aplicar el mètode de MIMMI a les dades s'ha treballat sobre el codi de Karina Gibert: *Gibert, K. (2014). Mixed intelligent-multivariate missing imputation. International Journal of Computer Mathematics, 91(1), 85-96 Barcelona May 2019*
+
+````{r, echo = FALSE}
+# install.packages("StatMatch")
+library(cluster)
+require(StatMatch)
+
+# assume missings represented with NA
+uncompleteVar <- function(vector){any(is.na(vector))}
+
+Mode <- function(x) 
+{
+  x <- as.factor(x)
+  maxV <- which.max(table(x))
+  return(levels(x)[maxV])
+}
+````
+
+Diem que k=2 perquè la població es divideix en 2 categories
+
+````{r, echo = FALSE}
+# MiMMi <- function(data, priork=-1)
+# {
+#   # Identify columns without missings
+#   colsMiss <- which(sapply(data, uncompleteVar))
+#   if(length(colsMiss) == 0){
+#     print("Non missing values found")
+#     out <- dd
+#   } else {
+#     K <- dim(data)[2]
+#     colsNoMiss <- setdiff(c(1:K), as.vector(colsMiss))
+#     
+#     #cluster with complete data
+#     dissimMatrix <- daisy(data[ , colsNoMiss], metric = "gower", stand = TRUE)
+#     distMatrix <- dissimMatrix^2
+#     
+#     hcdata <- hclust(distMatrix, method = "ward.D2")
+#     plot(hcdata)
+#     
+#     if(priork == -1){
+#       nk <- readline("See the dendrogramm and enter a high number of clusters (must be a positive integer). k: ")
+#       nk <- as.integer(nk)
+#     } else {nk <- priork}
+#     
+#     partition <- cutree(hcdata, nk)
+#     
+#     CompleteData <- data
+#     # només cal per tenir traça de com s'ha fet la substitució
+#     newCol <- K+1
+#     CompleteData[ , newCol] <- partition
+#     names(CompleteData)[newCol] <- "ClassAux"
+#     
+#     setOfClasses <- as.numeric(levels(as.factor(partition)))
+#     imputationTable <- data.frame(row.names = setOfClasses)
+#     p <- 1
+#     
+#     for(k in colsMiss)
+#     {
+#       # Files amb valors utils
+#       rowsWithFullValues <- !is.na(CompleteData[,k])
+#       
+#       # Calcular valors d'imputació
+#       if(is.numeric(CompleteData[,k]))
+#       {
+#         imputingValues <- aggregate(CompleteData[rowsWithFullValues,k], by = list(partition[rowsWithFullValues]), FUN = mean)
+#       } else {
+#         imputingValues <- aggregate(CompleteData[rowsWithFullValues,k], by = list(partition[rowsWithFullValues]), FUN = Mode)
+#       }
+#       
+#       # Impute
+#       for(c in setOfClasses)
+#       {
+#         data[is.na(CompleteData[,k]) & partition == c,k] <- round(imputingValues[c,2],0)
+#       }
+#       
+#       # Imputation Table
+#       imputationTable[,p] <- imputingValues[,2]
+#       names(imputationTable)[p] <- names(data)[k]
+#       p <- p+1
+#     }
+#     
+#     rownames(imputationTable) <- paste0("c", 1:nk)
+#     out <- new.env()
+#     out$imputedData <-data
+#     out$imputation <- imputationTable
+#   }
+#   return(out)
+# }
+# 
+# # run MIMMI
+# dimpute <-MiMMi(rw)
+# 
+# # table of imputation values used
+# dimpute$imputation
+# 
+# # imputed dataset
+# prepro_data <- dimpute$imputedData
+````
