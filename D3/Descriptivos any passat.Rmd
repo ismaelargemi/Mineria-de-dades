@@ -1,0 +1,1000 @@
+---
+link-citations: yes
+linkcolor: blue
+output:
+  pdf_document: 
+  fig_crop: no
+latex_engine: xelatex
+toc: no
+lang: "es"
+toc_depth: 2
+number_sections: yes
+theme: united
+highlight: tango
+html_document:
+  df_print: paged
+header-includes:
+ - \usepackage{floatrow}
+ - \floatsetup[figure]{capposition=top}
+ - \floatsetup[table]{style=plaintop}
+ - \usepackage{float}
+ - \floatplacement{figure}{H}
+editor_options: 
+  markdown: 
+  wrap: sentence
+---
+  
+```{r setup, include=FALSE} 
+knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
+setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
+options(scipen=999)
+set.seed(1234)
+libraries<- c("kableExtra","naniar","tidyverse",
+              "scales","dplyr","lubridate","psych",
+              "labelled","gridExtra","ggplot2","compareGroups",
+              "lessR","ggcorrplot","class","cluster",
+              "StatMatch","tidyverse","rio","NbClust",
+              "dendextend","factoextra")
+
+installifnot <- function (pckgName){
+  if(!require(pckgName, character.only=TRUE)){
+      install.packages(pckgName, dep=TRUE)
+  }
+}
+
+for(i in libraries){
+  installifnot(i)
+  library(i, character.only = TRUE, quietly = TRUE)
+}
+```
+
+```{r echo=FALSE, results = 'hide'}
+#data <- read.csv("marketing_campaign.csv",header=T, sep = '\t')
+data<-df_final
+```
+
+```{=latex}
+\begin{titlepage}
+\begin{center}
+\vspace*{1cm}
+\Huge
+\textbf{Proyecto de Estudio: Data Mining}
+\vspace{0.5cm}
+\Huge
+Customer Personality Analysis
+\vspace{1.5cm}
+\Large
+\textbf{------------------------------------------------------------------------------------}
+\vspace{1cm}
+\Large
+\textmd{Jordi Álvarez García, Iker Meneses Sales, Alejandro Arcas Alberti,\\ 
+  Carlos Humet Aparici, Lucas Torres Valiente, Víctor Casals Torcal,\\ 
+  Víctor González Almena, David Martínez Álamos y Manel Contreras Ferret}
+\vfill
+\begin{figure}[ht]
+\centering
+\end{figure}
+\begin{figure}[!tbp]
+\centering
+\begin{minipage}[b]{0.4\textwidth}
+\includegraphics{logoUPC}
+\end{minipage}
+\hfill
+\begin{minipage}[b]{0.4\textwidth}
+\includegraphics{Logotip_UB}
+\end{minipage}
+\end{figure}
+Proyecto presentado para el grado en\\
+Estadística
+\Large
+Análisis Multivariante de Datos\\
+Universitat de Barcelona - Universitat Politècnica de Catalunya\\
+Barcelona, España\\
+Invierno 2023
+\end{center}
+\end{titlepage}
+```
+
+\newpage
+
+```{=latex}
+\hypersetup{linkcolor=black}
+\setcounter{tocdepth}{2}
+\tableofcontents
+\hypersetup{linkcolor=blue}
+```
+
+\newpage
+
+# ENTREGA D1
+
+## Presentación de integrantes y procedencia de los datos
+
+Para llevar a cabo el proyecto, se cuenta con un equipo compuesto por Alejandro Arcas Alberti, Carlos Humet Aparici, David Martínez Álamos, Iker Meneses Sales, Jordi Álvarez García, Lucas Torres Valiente, Manel Contreras Ferret, Víctor Casals Torcal y Víctor González Almena.
+
+En dicho trabajo se utilizará una base de datos obtenida a través de Kaggle, siendo el link el siguiente: <https://www.kaggle.com/datasets/imakash3011/customer-personality-analysis?resource=download>.
+Esta base de datos proviene de un análisis detallado sobre cómo sería el perfecto cliente para las empresas, cuya utilidad principal es ayudar a entender mejor a los mismos y también a modificar sus productos según las necesidades, comportamientos y preocupaciones de estos.
+
+## Características de la base de datos original
+
+La matriz de datos originalmente disponía de `r nrow(data)` observaciones (filas) y `r ncol(data)` variables (columnas).
+
+```{r echo=FALSE, results = 'hide'}
+#data <- data[,c(2:14,16:19,21:26,29)]
+x <- as.data.frame(sapply(data, function(x) sum(is.na(x))))
+x <- cbind(x,round(100*(x/(nrow(data))),2))
+names(x) <- c("Número de NAs","% NAs de la Variable")
+```
+
+Tras realizar una selección de las mismas, se obtiene un total de `r ncol(data)` variables; dichas variables divididas entre numéricas y categóricas, se obtiene la siguiente lista:
+  
+  Variables numéricas:
+  
+-   `Year_Birth`: Año de nacimiento del cliente
+
+-   `Income`: Ingresos anuales por vivienda del cliente
+
+-   `Recency`: Número de días desde la última compra del cliente
+
+-   `MntWines`: Gasto total en vino en los últimos dos años.
+
+-   `MntFruits`: Gasto total en fruta en los últimos dos años.
+
+-   `MntMeatProducts`: Gasto total en carne en los últimos dos años.
+
+-   `MntFishProducts`: Gasto total en pescado en los últimos dos años.
+
+-   `MntSweetProducts`: Gasto total en dulces en los últimos dos años.
+
+-   `NumWebPurchases`: Número de compras realizadas a través de la página web de la compañía.
+
+-   `NumCatalogPurchases`: Número de compras realizadas usando un catálogo.
+
+-   `NumStorePurchases`: Número de compras realizadas directamente en tienda.
+
+-   `Dt_Customer`: Fecha de inscripción del cliente en la compañía
+
+Variables categóricas:
+  
+-   `Education`: Nivel educativo del cliente.
+
+-   `Marital_Status`: Estado civil del cliente.
+
+-   `Kidhome`: Número de niños en la vivienda del cliente.
+
+-   `Teenhome`: Número de adolescentes en la vivienda del cliente.
+
+-   `Complain`: Variable que indica si un cliente se ha quejado en los últimos dos años.
+
+-   `AcceptedCmp1`: Variable que indica si el cliente ha aceptado la oferta en la primera campaña.
+
+-   `AcceptedCmp2`: Variable que indica si el cliente ha aceptado la oferta en la segunda campaña.
+
+-   `AcceptedCmp3`:Variable que indica si el cliente ha aceptado la oferta en la tercera campaña.
+
+-   `AcceptedCmp4`: Variable que indica si el cliente ha aceptado la oferta en la cuarta campaña.
+
+-   `AcceptedCmp5`: Variable que indica si el cliente ha aceptado la oferta en la quinta campaña.
+
+-   `Response`: Variable que indica si el cliente ha aceptado la oferta en la última campaña.
+
+Como se puede observar, hay variables como Kidhome o Teenhome que, pese a ser numéricas, el número de posibles valores que puede obtener es muy limitado, de forma que serán tratadas como categóricas.
+
+## Análisis de los valores missing en la base de datos usada
+
+El total de NAs alcanza las `r sum(is.na(data))` unidades (el $`r 100*(sum(is.na(data))/(ncol(data)*nrow(data)))`\%$ respecto el total), mientras que su disposición y resto de información requerida se encuentra disponible en la Tabla \ref{tab:tab0}.
+
+```{r tab0, echo=FALSE, warning = FALSE}
+kable(x,caption = "Estudio de NAs por variable", align = "c",booktabs=T) %>% 
+  kable_styling(position = "center", 
+                latex_options = "HOLD_position",  font_size = 9)
+```
+
+
+Como se puede observar, la mayoria de los NAs proceden de la variables Occupation_Type, own_car_age, solo unos pocos proceden de Amt_goods_price.  Este hecho se puede deber al ...
+
+\newpage
+
+El análisis gráfico muestra que el número de datos missing es muy reducido en toda la base de datos: el peso de estos es casi insignificante en el análisis a realizar posteriormente.
+
+```{r fig1,echo=F, fig.cap="Distribución de los NAs por variable",fig.show = 'hold'}
+data |> 
+  gg_miss_var()+
+  theme_minimal() +
+  theme(axis.title = element_text(color="grey10",face = "italic")) + 
+  ylab("") + xlab("")  
+```
+
+
+
+\pagebreak
+
+# ENTREGA D2
+
+## Secuenciación y Diagrama de Gantt
+
+A partir del siguiente diagrama, se muestra de una forma visual y esquematizada la planificación y la gestión del proyecto en función de la duración de las diversas tareas y cómo se relacionan entre sí.
+
+```{=latex}
+\begin{figure}
+\centering
+\includegraphics{gantt2}
+\caption{Diagrama de Gantt}
+\end{figure}
+```
+
+Como se puede observar, las tareas que suponen mayor dedicación de tiempo son, por una parte, analizar y tratar los datos, y por otra, la aplicación de algoritmos de análisis multivariante.
+
+Todas las tareas, a excepción del Análisis de Correspondencias Múltiples, se realizan de manera escalonada, es decir, que para realizar una tarea se requiere previamente la finalización de las tareas predecesoras.
+
+Dada la independencia entre la aplicación del ACP y el ACM, se ha decido realizar ambas ténicas de manera casi-secuencial.
+
+Cabe destacar, que aquellas tareas que requieren del contenido de todas las subtareas del proyecto, como pueden ser las conclusiones, serán realizadas por todos los miembros del equipo. Dichos grupos se componen de los siguientes miembros:
+  
+-   Grupo A: Alejandro Arcas Alberti, Carlos Humet Aparici y Lucas Torres Valiente
+
+-   Grupo B: Jordi Álvarez García, Manel Contreras Ferret y Víctor Casals Torcal
+
+-   Grupo C: Víctor González Almena, David Martínez Álamos e Iker Meneses Sales
+
+## Análisis de Riesgos
+
+Se han identificado los siguientes riesgos que podrían afectar al correcto desarrollo del trabajo:
+  
+1.  Posibilidad de que una tarea crítica no sea finalizada a tiempo
+
+2.  Error en una tarea inicial que impida la correcta evolución y que obligue a rehacerla
+
+3.  Falta y/o errores de comunicación entre los miembros del grupo
+
+4.  Falta de conocimiento de lo que se ha hecho que podría provocar que no se pudiera realizar la siguiente tarea
+
+5.  No comprensión de la evolución del proyecto por parte de algún integrante
+
+6.  Dificultad a la hora de interpretar las conclusiones obtenidas
+
+Por otro lado, también se han identificado posibles acontecimientos que, a pesar de ser trabas, no suponen un riesgo para la correcta evolución del trabajo
+
+-   Falta o ausencia de un miembro del grupo.
+-   Modificación de las fechas de entrega (ya sea por adelantamiento o retraso).
+
+## Plan de Contingencia
+
+Por cada uno de los posibles riesgos identificados, se podrían proponer las siguientes soluciones como plan de contingencia:
+  
+  -   Posibilidad de que una tarea crítica no sea finalizada a tiempo:
+  
+  -   Establecer una fecha límite alternativa siempre y cuando no afecte al plazo límite de entrega ni se produzca un retraso significativo. En el caso de que el grupo responsable de la tarea no sea capaz de realizarla, miembros de otros grupos ayudarán al grupo responsable para que pueda ser terminada a tiempo.
+
+-   Falta y/o errores de comunicación entre los miembros del grupo:
+  
+  -   Establecer canales de comunicación claros y efectivos para asegurar que todos los grupos estén en constante contacto. En nuestro caso los canales de distribución de las tareas es Trello, la organización del código se hará a través de Github y se usará Discord para las reuniones grupales y generales, así como las propias clases prácticas.
+
+-   Falta y/o errores de comunicación entre los miembros del grupo:
+  
+-   Establecer canales de comunicación claros y efectivos para asegurar que todos los grupos estén en constante contacto.
+En nuestro caso los canales de distribución de las tareas es Trello, la organización del código se hará a través de Github y se usará Discord para las reuniones grupales y generales, así como las propias clases prácticas.
+
+-   Designar a un líder para cada grupo para ayudar a coordinar la comunicación entre los miembros del grupo en caso de que haya una urgencia.
+
+-   Error en una tarea inicial que impida la evolución correcta y que obligue a rehacerla:
+  
+-   Las tareas iniciales han de ser revisadas por todos los miembros de un grupo y al menos con un miembro de uno de los grupos restantes antes de empezar una nueva tarea.
+
+-   Asignar a dos grupos para que trabajen de forma simultánea y puedan corregir el error con mayor velocidad.
+El grupo responsable de cada tarea deberá ponerla en común con el resto de componentes 48 horas antes de ser entregada, para así poder detectar posibles errores o aspectos a mejorar.
+Para ello, se usarán los canales de comunicación ya mencionados anteriormente.
+
+-   Falta de conocimiento de lo que se ha hecho que podría provocar que no se pudiera realizar la siguiente tarea:
+  
+-   Revisar todos los avances que se han realizado en cada uno de los grupos para que ningún miembro del trabajo esté desinformado.
+
+-   Asegurar que todos los miembros de cada grupo entiendan el proyecto y las tareas asignadas.
+
+-   No comprensión de la evolución del proyecto por parte de algún integrante:
+  
+-   Asegurar que los miembros del grupo se reúnan regularmente para discutir la evolución del proyecto.
+
+-   Establecer protocolos para la revisión y evaluación regular de los progresos del proyecto.
+
+-   Dificultad a la hora de interpretar las conclusiones obtenidas:
+  
+-   Asegurar que todo el mundo entienda el proceso y los métodos utilizados para llegar a las conclusiones.
+
+-   Establecer un plan de contingencia que incluye la revisión y evaluación de las conclusiones para garantizar que sean claras y concisas.
+
+\newpage
+
+# Estructura de los datos y descriptiva
+
+## Motivación del trabajo
+
+El objetivo y motivación principal del trabajo es analizar la base de datos obtenida para identificar al cliente perfecto y poder tener una visión integral y detallada de las características, necesidades y comportamientos de los clientes. Esto no sólo puede ayudar a las empresas a entender mejor a sus clientes y adaptar sus productos y servicios para satisfacer sus necesidades, sino que también puede ser clave para la toma de decisiones estratégicas de un negocio. La posibilidad de generar información valiosa y concreta, así como el hecho de poder influir positivamente en las decisiones empresariales, son razones por las cuales el análisis multivariante sea la herramienta perfecta.
+
+## Estructura formal de los datos
+
+Los datos se presentan de forma matricial, en una base de datos que consta de `r nrow(data)` filas (individuos) y `r ncol(data)` variables. Inicialmente, las base de datos constaba de 29 variables, pero se decidió descartar diferentes variables que se consideraron irrelevantes para el estudio. En concreto, las variables eliminadas fueron:
+
+- id: no aporta ninguna información en la segmentación de la clientela.
+
+- MntGoldProds: representa el gasto mensual del los clientes en oro. Esta variable se consideró que no tenía relación con el resto del estudio, de forma que fue desconsiderada.
+
+- Zrevenue: variable a la cual no se le encontró significado.
+
+- ZCostContract: variable a la cual no se le encontró significado.
+
+- NWebVisits: variable que, al igual que MntGoldProds no guarda demasiada relación con el resto del estudio. Además, puede tener una gran correlación con el número de veces que el cliente compró por internet.
+
+Además, ha habido una variable que se ha transformado, DtCustomer, la cual muestra el día en que el cliente se inscribió en la página web del negocio. Al estar en formato fecha, ésta ha sido transformada a "días que han pasado desde que el cliente se inscribió en la página web". Dicha información quedará guardada en la variable "Difference".
+
+## Análisis Univariante 
+
+Con la intención de realizar un buen análisis descriptivo univariante de los datos anterior al pre-procesamiento, se ha decidido integrar conjuntamente gráficos y tablas con resultados numéricos para lograr el mejor entendimiento de estos.
+
+### Análisis Univariante Numérico
+
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, results='asis'}
+data[,c(1:7,14)] <- lapply(data[,c(1:7,14)],as.numeric)
+#data$Dt_Customer <- dmy(data$Dt_Customer)
+#data$Difference <- as.numeric(rep(Sys.Date(),nrow(data))) - as.numeric(data$Dt_Customer)
+#data$Dt_Customer<-NULL
+kable(describe(select_if(data, is.numeric)),
+      caption ="Descripción Univariante Variables Numéricas",
+      
+      align = "c",digits=2,booktabs = T) %>% 
+  kable_styling(position = "center", 
+                latex_options = c("HOLD_position","scale_down"),  font_size = 9)
+```
+
+Para empezar se ha construido una tabla dónde que aparecen una serie de estadísticos de todas las variables numéricas trabajadas. En la que además de aparecer los estadísticos más conocidos (como pueden ser la media, desviación típica, etc.), también aparecen otros estadísticos de dispersión y centralización menos conocidos:
+
+- `Trimmed:` Estimador que calcula un estadístico de la variable eliminando los valores más extremos de su distribución. En este caso, la `Trimmed Mean` calcula la media de cada variable utilizando sólo el intervalo de datos situados entre [5%,95%]           
+- `Skew:` Grado de asimetría. Toma valores positivos si esta se encuentra en la derecha y negativos si lo hace en la izquierda(media menor que la mediana).
+- `Kurtosis:`  La curtosis es una medida estadística que determina el grado de concentración que presentan los valores de una variable alrededor de la zona central de la distribución de frecuencias.  Alta concentración si es mayor que 3 y baja en caso contrario.
+- `SE:` El error estándar es la desviación estándar de la distribución muestral de un estadístico muestral. Es decir, la desviación típica dividida entre la raíz cuadrada de n.
+
+```{r, echo = F, message=F,warning=F,fig.show='hide'}
+data_n <- select_if(data, is.numeric)
+q <- NULL
+h <- NULL
+s <- NULL
+for(i in 1:ncol(data_n)){
+ q[[i]] <- ggplot(data_n, aes_string(sample=names(data_n[i]))) + 
+    stat_qq(col="#DCF0F8") + 
+    stat_qq_line(col="#8B3E2F",lwd=1) + theme_bw() +
+    xlab("Normal Theoretical Quantiles") + 
+    ylab("Variable Data") + 
+    ggtitle("Normal Q-Q Plot") + theme(plot.title = element_text(hjust = 0.5))
+  h[[i]] <- ggplot(data_n, aes_string(x = data_n[,i])) + 
+    geom_histogram(aes(y = after_stat(density)), color = "#53868B", fill = "#DCF0F8") +
+    geom_density(color = "#8B3E2F",lwd=1) + 
+    theme_bw() + xlab("") + ylab("Density") + 
+    ggtitle(paste0("Histograma ", names(data_n)[i])) + 
+    theme(plot.title = element_text(hjust = 0.5))
+  s[[i]] <- shapiro.test(data_n[,i])$p.value[[1]]
+}
+```
+
+```{r, echo = F, fig.cap = "Análisis Gráfico Variable Year Birth", fig.show='hold', out.height="75%",out.width="75%"}
+grid.arrange(h[[1]],q[[1]],ncol = 2)
+```
+
+Estos gráficos nos muestran como los datos de la variable "Amt income total"
+
+se concentran en el intervalo de años entre el 1935 y 2000, viendo como la máxima concentración se encuentra en torno al año 1975, así pues, es deducible que casi todos los clientes estén comprimidos entre la adolescencia y la vejez. También observamos como prácticamente no hay clientes nacidos entre los años 1890 hasta 1935, a excepción de algunos registros encontrados en torno al año 1900. Los resultados tienen sentido debido a la naturaleza de esta variable. Además, podemos observar como el test de normalidad "Shaphiro-Wilk" obtiene como p-valor `r s[[1]]`, confirmando nuestras hipótesis previas sobre la no normalidad de los datos.
+
+
+
+```{r, echo = F, fig.cap = "Análisis Gráfico Variable Income", fig.show='hold', out.height="75%",out.width="75%"}
+grid.arrange(h[[2]],q[[2]],ncol = 2)
+```
+
+A causa de tener un outlier tan extremo, no podemos interpretar debidamente este histograma, ya que los valores de los ejes son muy desproporcionados. En el Q-Q Plot, observamos como tampoco se aleja mucho a una distribución normal, aunque debido a que sus colas se descentran, deducimos que no sigue una distribución normal. Además, podemos observar como el test de normalidad "Shaphiro-Wilk" obtiene como p-valor `r s[[2]]`, confirmando nuestras hipótesis previas sobre la no normalidad de los datos.
+
+
+```{r, echo = F, fig.cap = "Análisis Gráfico Variable Recency",fig.show='hold',out.height="75%",out.width="75%"}
+grid.arrange(h[[3]],q[[3]],ncol = 2)
+```
+
+Observando este histograma que nos muestra los días que han pasado desde la última compra que ha hecho el comprador, observamos como no sigue ningún tipo de normalidad y como los valores están repartidos casi equitativamente desde los 0 hasta 100 días, si bien podemos ver como hay algunos valores más altos de forma fluctuacional. Echándole un ojo al Q-Q Plot, vemos claramente como los valores se alejan drásticamente por las colas, deduciendo así que no sigue una distribución normal. También obteniendo el p-valor con el test de "Shaphiro-Wilk", que es de `r s[[2]]`, rechazamos que sigue una distribución normal.
+
+
+```{r, echo = F, fig.cap = "Análisis Gráfico Variable MntWines", fig.show='hold',out.height="75%",out.width="75%"}
+grid.arrange(h[[4]],q[[4]],ncol = 2)
+```
+
+Como se puede observar en el gráfico superior, el consumo de vino en la muestra tomada es bajo para la gran mayoría de la muestra; de hecho, se podría afirmar que la distribución del consumo de vino es casi exponencial. Lógicamente, el p-valor del test de Shaphiro-Wilk es muy bajo, concretamente de `r s[[4]]`. Así pues, rechazaremos normalidad.
+
+```{r, echo = F, fig.cap = "Análisis Gráfico Variable MntFruits", fig.show='hold',out.height="75%",out.width="75%"}
+grid.arrange(h[[5]],q[[5]],ncol = 2)
+```
+Nuevamente, tal y como se puede observar, el consumo de fruta en los clientes analizados presenta una gran cola a la derecha, recordando a una distribución exponencial: muchos clientes compran poco y progresivamente el número de clientes va disminuyendo a medida que aumenta el dinero gastado en fruta. En este caso, el p-valor del test de Shapiro-Wilk es de `r s[[5]]`, rechazamos que sigue una distribución normal, de forma que cabría rechaazar la hipótesis de normalidad.
+
+```{r, echo = F, fig.cap = "Análisis Gráfico Variable MntMeatProducts", fig.show='hold',out.height="75%",out.width="75%"}
+grid.arrange(h[[6]],q[[6]],ncol = 2)
+```
+Como hemos podido observar con los gráficos anteriores vemos como la compra de productos de carne no sigue una distribución normal, ya que la mayoría de los datos del histograma se agrupan en el intervalo de [0,200].También obteniendo el p-valor con el test de "Shaphiro-Wilk", que es de `r s[[6]]`, rechazamos que sigue una distribución normal. Así pues, la gran mayoría de clientes tienen un consumo bajo de carne.
+
+
+```{r, echo = F, fig.cap = "Análisis Gráfico Variable MntFishProducts", fig.show='hold',out.height="75%",out.width="75%"}
+grid.arrange(h[[7]],q[[7]],ncol = 2)
+```
+Nuevamente, se repite lo mismo con el consumo en pescado: parece ser que todos van muy de la mano. En este caso, el p-valor con el test de "Shaphiro-Wilk", que es de `r s[[7]]`, de forma que rechazamos que sigue una distribución normal, como anteriormente ha ocurrido.
+
+
+
+```{r, echo = F, fig.cap = "Análisis Gráfico Variable MntSweetProducts", fig.show='hold',out.height="75%",out.width="75%"}
+grid.arrange(h[[8]],q[[8]],ncol = 2)
+```
+
+Por último, si analizamos el consumo de dulces por cada hogar, notamos que pasa lo mismo que con los otros alimentos: claramente siguen una distribución exponencial, es decir, muchos clientes consumen poco y, seguidamente, se despliega una gran cola a la derecha, decreciente a medida que aumenta el dinero gastado en dulces. En este caso, Observamos en el histograma i en el Q-Q plot como no sigue una función normal.También obteniendo el p-valor con el test de "Shaphiro-Wilk", que es de `r s[[8]]`, rechazamos que sigue una distribución normal. 
+
+
+```{r, echo = F, fig.cap = "Análisis Gráfico Variable NumDealsPurchases", fig.show='hold',out.height="75%",out.width="75%"}
+grid.arrange(h[[9]],q[[9]],ncol = 2)
+```
+Observando este gráfico de barras que nos muestra el número de tratos realizado a través de la página web de la compañía, observamos como mayoritariamente solamente acuerdan un producto. También observamos un valor extremo en el 15, dificultando así la comprensión de la gráfica.
+
+
+```{r, echo = F, fig.cap = "Análisis Gráfico Variable NumWebPurchases", fig.show='hold',out.height="75%",out.width="75%"}
+grid.arrange(h[[10]],q[[10]],ncol = 2)
+```
+
+Observando este histograma que nos muestra el número de compras realizadas a través de la página web de la compañía, vemos como los datos se agrupan en el intervalo del [0;10]. Observamos como no nos muestran datos en la barra que corresponde al intervalo[7;8]. También observamos un outlier.
+
+```{r, echo = F, fig.cap = "Análisis Gráfico Variable NumCatalogPurchases", fig.show='hold',out.height="75%",,out.width="75%"}
+grid.arrange(h[[11]],q[[11]],ncol = 2)
+```
+
+Observando este histograma que nos muestra el número de compras realizadas a través del catálogo de la compañía, vemos como los datos se agrupan en el intervalo del [0;11], donde su moda es en el intervalo [0;1]. Como hemos podido observar en el gráfico anterior, vemos un valor extremo en torno al valor 35. Tanto este histograma como el anterior no siguen una distribución normal. También obteniendo el p-valor con el test de "Shaphiro-Wilk", que es de `r s[[11]]`, rechazamos que sigue una distribución normal.
+
+```{r, echo = F, fig.cap = "Análisis Gráfico Variable NumStorePurchases", fig.show='hold',out.height="75%",out.width="75%"}
+grid.arrange(h[[12]],q[[12]],ncol = 2)
+```
+
+Observando este histograma que nos muestra el número de compras realizadas directamente a través de la tienda, podemos ver que existen algunos valores mandantes en el intervalo del [0;15]. También vemos como los datos no son continuos, sino discretos y el valor más repetido es el 4. Este, a partir del Q-Q plot i del Shapiro, que nos da un resultado de `r s[[12]]`, llegamos a la conclusión que no sigue una distribución normal.
+
+
+
+```{r, echo = F, fig.cap = "Análisis Gráfico Variable Difference", fig.show='hold',out.height="75%",out.width="75%"}
+grid.arrange(h[[13]],q[[13]],ncol = 2)
+```
+
+Vemos como la variable Difference mantiene una semi-uniformidad en la distribución excepto en las dos colas. Esto es lógico debido a la naturaleza de la variable. Además el Q-Q Plot y el test de Shapiro, que nos da un resultado de `r s[[13]]`, nos confirma que se aleja de una normal.
+
+### Análisis Univariante Categórico
+
+Una vez se han analizado las variables numéricas una a una, se ha procedido a analizar de forma particular cada variable categórica. De hecho, en la siguiente tabla se presenta un resumen general sobre ellas:
+
+```{r,echo=F, fig.cap = "Tabla Summary Variables Categóricas"}
+data$OCCUPATION_TYPE<- as.factor(data$OCCUPATION_TYPE)
+data$ORGANIZATION_TYPE<- as.factor(data$ORGANIZATION_TYPE)
+
+export2md(createTable(compareGroups(select_if(data,is.factor)), show.ratio=TRUE))
+```
+
+Así pues, en la tabla se muestra la frecuencia absoluta y relativa de cada posible valor dentro de cada variable, ya sean dicotómicas o politómicas, siendo muy fácil de identificar su moda de esta manera.
+
+Una vez se ha realizado un resumen general, se ha procedido a analizar cada variable una a una:
+
+```{r echo = F, fig.show='hide',results = "hide"}
+data_f <- select_if(data,is.factor)
+p <- NULL
+for(i in 1:ncol(data_f)){
+  var <- factor(data_f[,i])
+  PieChart(var, data = data.frame(var), hole = 0,
+         fill = hcl.colors(length(levels(var)),"pastel"),
+         labels_cex = 0.6, main = "",width = 2, height = 2)
+  p[[i]] <- recordPlot()
+  plot.new()
+}
+```
+
+
+
+```{r, echo = F, fig.cap= "Pie Chart Variable Education",fig.show='hold',out.width="75%",out.height="75%"}
+p[[1]] 
+```
+
+En lo que a educación se refiere vemos como no más de un 11% de los clientes se ha quedado en un nivel muy básico de Enseñanza, equivalente a lo que sería aquí la ESO, bachillerato y ciclos formativos. En cambio, la mitad exacta de los clientes llegó a terminar una carrera, el 17% acabó un máster y el 22% restante consiguió adquirir un nivel formativo a la altura de un doctorado. 
+
+
+
+```{r, echo = F, fig.cap= "Pie Chart Variable Marital Status", fig.show='hold', out.width="75%", out.height="75%"}
+p[[2]]
+```
+
+Seguidamente, si analizamos el estado civil de los individuos, vemos como las categorías que predominan son las de clientes casados (39%), los que viven en pareja sin estar casados (26%) y los solteros (21%). También vemos como un 10% está divorciado y el 3% restante se encuentra en situación de viudedad. Además, hay algunas categorías (absurd, YOLO y alone) que tienen muy poca representación y son insignificantes o no tienen sentido.
+ 
+
+
+```{r, echo = F, fig.cap= "Pie Chart Variable Kidhome",fig.show='hold',out.width="75%",out.height="75%"}
+p[[3]]
+```
+
+Si se pasa a hablar sobre las características de los núcleos familiares de los individuos de interés, se puede observar como el 58% de los clientes no tiene niños en casa (hijos pequeños), el 40% tiene uno y el 2% restante 2.
+
+
+
+```{r, echo = F, fig.cap= "Pie Chart Variable Teenhome",fig.show='hold',out.width="75%",out.height="75%"}
+p[[4]]
+```
+
+En referencia a los adolescentes a cargo del cliente, vemos como el 52% no tiene, el 46% tiene 1 y 2 solo el 2%. De esta forma, se puede asumir que la gran mayoría de familias tendrán tres o cuatro miembros. Como se puede observar, es una distribució muy similar a la de la variable KidHome.
+
+
+
+```{r, echo = F, fig.cap= "Pie Chart Variable AcceptedCmp1",fig.show='hold',out.width="75%",out.height="75%"}
+p[[8]]
+```
+
+Si pasamos a analizar qué tan impulsivos son los clientes, se puede observar que el 6% de los clientes aceptaron la oferta en la primera campaña.
+
+
+
+```{r, echo = F, fig.cap= "Pie Chart Variable AcceptedCmp2",fig.show='hold',out.width="75%",out.height="75%"}
+p[[9]]
+```
+
+En cambio, únicamente el 1% de los clientes aceptaron la oferta en la segunda campaña, hecho bastante destacable como se verá más adelante.
+
+
+
+```{r, echo = F, fig.cap= "Pie Chart Variable AcceptedCmp3",fig.show='hold',out.width="75%",out.height="75%"}
+p[[5]]
+```
+
+Si seguimos analizando cómo funcionaron las campañas con el paso del tiempo, se observa que el 7% de los clientes aceptaron la oferta durante la tercera campaña. Este hecho denota que algún acontecimiento ocurrió durante la segunda campaña.
+
+
+
+```{r, echo = F, fig.cap= "Pie Chart Variable AcceptedCmp4",fig.show='hold',out.width="75%",out.height="75%"}
+p[[6]]
+```
+
+Seguidamente, el porcentaje de clientes que aceptó la oferta durante la cuarta campaña asciende al 7%.
+
+
+
+```{r, echo = F, fig.cap= "Pie Chart Variable AcceptedCmp5",fig.show='hold',out.width="75%",out.height="75%"}
+p[[7]]
+```
+
+En el gráfico anterior se puede observar cómo, durante la quinta campaña, el 7% de los clientes aceptaron la oferta.
+
+
+
+```{r, echo = F, fig.cap= "Pie Chart Variable Response",fig.show='hold',out.width="75%",out.height="75%"}
+p[[11]]
+```
+
+Por último, para acabar de analizar la impulsividad de los clientes, se concluye afirmando que un  15% de los clientes aceptó la oferta durante la última campaña.
+
+Teniendo todo esto en cuenta, podemos concluir que solo un 43% de los clientes aceptó la oferta, siendo el 57% complementario el grupo de los que nunca llegaron a aceptarla.
+
+
+
+```{r, echo = F, fig.cap= "Pie Chart Variable Complain",fig.show='hold',out.width="75%",out.height="75%"}
+p[[10]]
+```
+
+Siguiendo con el análisis de las variables categóricas, únicamente un 1% de los clientes ha dirigido una queja formal (reclamación) en los últimos 2 años, lo cual habla muy bien del servicio proporcionado por la tienda.
+
+
+### Análisis Bivariante Numérico
+
+Con el fin de conocer las variables numéricas con más relación entre sí se ha hecho un gráfico de correlaciones siguiendo la mecánica de un HeatMap. Este, según el color, nos indica las dependencias más fuertes existentes entre variables numéricas. Cuanto más cálido sea el color, más relación tendrá y mayor énfasis se hará en el estudio sobre ellas.
+
+```{r, echo = F, fig.cap="Matriz de Correlaciones para las Variables Numéricas", fig.show='hold'}
+ corr <- round(cor(select_if(data,is.numeric),use="complete.obs"), 1)
+ ggcorrplot(corr, hc.order = T,type = "lower",lab=T)
+```
+
+Tras ver el gráfico podemos destacar la notable relación entre las variables del Gasto total en carne y el número de compras usando un catálogo. Otras relaciones destacables son el gasto total en vino con el número de compras realizadas en tienda, los ingresos, el total gastado en carne y el número de compras realizadas en web, entre otras. Son resultados coherentes, puesto que el hecho de ingresar más llevará a un mayor número de compras o a un mayor consumo en ciertos alimentos. Sin embargo, si analizamos una a una dichas correlaciones, tal vez no se saquen las mismas conclusiones.
+
+```{r, echo=F,fig.cap = "Boxplot del Gasto Total en Carne vs Número de Compras en Catálogo", fig.show='hold',out.width="75%",out.height="75%"}
+boxplot(MntMeatProducts~NumCatalogPurchases,data,col=terrain.colors(14)) 
+```
+
+Tal y como podíamos prever, el gráfico de boxplots que relaciona las compras realizadas por catálogo y el gasto total en carne nos muestra que, a más compras por catálogo (y en general) más gasto en productos cárnicos.
+
+
+
+Para el estudio de las demás correlaciones numéricas usaremos un gráfico de dispersión con algún soporte visual para ver la relación existente entre las dos variables.
+
+```{r, echo=F,fig.cap = "Gráfico de dispersión Gasto Total en Pescado vs Gasto Total en Fruta", fig.show='hold',out.width="75%",out.height="75%"}
+plot(data$MntFruits, data$MntFishProducts, pch = 19, col = "black",
+     xlab="Gastado en Fruta", ylab="Gastado en pescado")
+abline(lm(data$MntFishProducts ~ data$MntFruits), col = "red", lwd = 3)
+text(paste("Correlación:", round(cor(data$MntFruits, data$MntFishProducts), 2)),
+     x = 40, y = 200)
+```
+
+Pese a ser uno de los valores más altos, vemos como la correlación no es lo suficientemente notable para establecer un vínculo entre lo gastado en pescado y frutas más allá de la lógica, a más gasto en el supermercado, más gasto en los productos en concreto.
+
+
+
+```{r, echo=F,fig.cap = "Gráfico de dispersión Gasto Total en Vinos vs Gasto Total en Carne", fig.show='hold',out.width="75%",out.height="75%"}
+plot(data$MntWines, data$MntMeatProducts, pch = 19, col = "black",
+     xlab="Gastado en vinos", ylab="Gastado en carne")
+abline(lm( data$MntMeatProducts ~ data$MntWines), col = "red", lwd = 3)
+text(paste("Correlación:", round(cor(data$MntWines,  data$MntMeatProducts), 2)),
+     x = 250, y = 1200)
+```
+
+Seguimos viendo como las relaciones a priori más fuertes no acaban de ser concluyentes una vez se grafican. Por lo tanto, no podemos decretar que el hecho de consumir carne induzca a beber más vino.
+
+```{r, echo=F,fig.cap = "Gráfico de dispersión Gasto Total en Vinos vs Número de compras vía Web", fig.show='hold',out.width="75%",out.height="75%"}
+plot(data$NumWebPurchases,data$MntWines,  pch = 19, col = "black",
+     xlab="Número de compras vía Web", ylab="Gastado en vinos")
+abline(lm(data$MntWines ~ data$NumWebPurchases), col = "red", lwd = 3)
+text(paste("Correlación:", round(cor(data$MntWines, data$NumWebPurchases), 2)),
+     x = 15, y = 700)
+```
+
+Seguimos viendo como las correlaciones numéricas más destacables no acaban de concretarse en algo claro. Pese a que los que más visitan la web son los compradores de vino, no se garantiza la relación.
+
+### Análisis Bivariante Categórico
+
+Tras haber analizado las correlaciones entre variables numéricas y comprobar que, pese a valores de correlación elevados no se pueden concluir relaciones emíricas entre variables, se procede a analizar qué tan relacionadas están las variables categóricas entre ellas.
+
+```{r, echo=F, fig.cap = "Mosaic Plot de Educación vs Número de Adolescentes", fig.show='hold',out.width="75%",out.height="75%"}
+mosaicplot(table(data$Education,data$Teenhome), xlab='Education',
+           ylab='Teenhome', col='#DCF0F8',main="")
+```
+
+Este mosaicplot nos muestra cómo a mayor grado de educación se tienen más hijos. Esto también se puede asociar a la consecuencia de que los salarios de los más "eruditos" suelen ser mayores, permitiendo a las familias tener más hijos. Añadir que el grupo de los que superaron la educación básica, el cual es muy pequeño, tiende a tener muy pocos hijos.
+
+```{r, echo=F, fig.cap = "Mosaic Plot de Educación vs Estado civil", fig.show='hold',out.width="75%",out.height="75%"}
+mosaicplot(table(data$Education,data$Marital_Status), xlab='Education',
+           ylab='Estado civíl', col='#DCF0F8',main="")
+```
+
+Aquí podemos ver cómo la mayoría de grupos según su educación tienen un estado civil muy parecido. Es decir, vemos cómo el estado civil no suele depender del nivel de estudios de la persona.
+
+```{r, echo=F, fig.cap = "Mosaic Plot de Educación vs Queja del cliente", fig.show='hold',out.width="75%",out.height="75%"}
+mosaicplot(table(data$Education,data$Complain), xlab='Education', 
+           ylab='Complain', col='#DCF0F8',main="")
+```
+
+Pese a que el bajo número de gente que ha realizado una queja formal dificulta sacar conclusiones, vemos una tendencia que nos revela que a menos nivel de estudios más quejas.
+
+
+
+### Análisis Bivariante Categórico-Descriptivo
+
+Para finalizar con el análisis descriptivo antes del procesamieto de los datos, falta analizar la relación entre las variables caregóricas y las numéricas para así concluir el análisis de forma clara y concisa. Para ello, será de ayuda la elaboración de diferentes boxplots.
+
+```{r, echo = F, fig.cap = "Boxplot Ingresos y nivel de educación", fig.show='hold',out.width="75%",out.height="75%"}
+boxplot(Income~Education,data,col=terrain.colors(5)) 
+```
+
+En este primer gráfico, se analiza el nivel de ingresos frente al nivel educativo del cliente. Pese a ser un análisis interesante, vemos como el outlier dificulta mucho su estudio. Pese a ello, vemos como el reducido grupo que acabó los estudios en la educación básica tiene unos ingresos sensiblemente inferiores.
+
+
+
+```{r, echo = F, fig.cap = "Boxplot Ingresos y Estado civil", fig.show='hold',out.width="75%",out.height="75%"}
+boxplot(Income~Marital_Status,data,col=terrain.colors(8))
+```
+
+En este caso, al querer comparar los ingresos con el estado civil de los encuestados, se observa como en el anterior caso, el outlier dificulta ver si existen diferencias en los ingresos según su estado civil.
+
+
+
+```{r, echo = F, fig.cap = "Boxplot Gastado en vino según número de hijos en casa",fig.show='hold',out.width="75%",out.height="75%"}
+boxplot(MntWines~Kidhome,data,col=terrain.colors(3)) 
+```
+
+Este revelador gráfico nos muestra como, a más hijos, menor consumo de vino. Siendo muy destacable la diferencia entre tener niños pequeños y no tenerlos más que el número de estos.
+
+```{r, echo = F, fig.cap = "Boxplots Número adolescentes en casa según Gastado en dulces y en carne",fig.show='hold',out.width="75%",out.height="75%"}
+boxplot(MntSweetProducts~Teenhome,data,col=terrain.colors(3))
+boxplot(MntMeatProducts~Teenhome,data,col=terrain.colors(3))
+```
+
+Estaría bien conocer si el número de hijos residentes en casa influye en la dieta de los clientes. Lamentablemente, debido a que las distribuciones en gasto según hijos pequeños (o adolescentes) son prácticamente iguales, sea cual sea el producto en cuestión, no podemos sacar nada en claro de estas aparte de que a menos hijos, mayor gasto general en tienda.
+
+```{r, echo = F, fig.cap = "Boxplots Número niños en casa según Gastado en dulces y fruta",fig.show='hold',out.width="75%",out.height="75%"}
+boxplot(MntSweetProducts~Kidhome,data,col=terrain.colors(3))
+boxplot(MntFruits~Kidhome,data,col=terrain.colors(3))
+```
+
+
+
+## Preprocessing de la base de datos
+
+En el preprocessing se realizan todos aquellos cambios en la base de datos con el objetivo de facilitar y permitir el análisis multivariante de forma correcta. Para ello, se seguirán una serie de pasos para así limpiar la base de datos e imputar de forma correcta los datos missing (NA) a través de métodos de imputación como KNN o MIMMI.
+
+Una vez se ha cambiado la clase de las variables, se procederá a modificar aquellas variables que se ha visto en la descriptiva pre processing que tienen valores extremos o sin sentido. Para empezar, si nos fijamos en la variable Marital_Status:
+
+```{r, echo=F}
+kbl(table(data$Marital_Status), col.names = c("Marital Status","Frecuencia"),
+    caption = "Descriptiva Univariante Numérica Variable Marital Status",
+    booktabs=T)%>% 
+  kable_styling(position = "center", 
+                latex_options = c("HOLD_position"))
+```
+
+Se puede observar que hay categorías que no tienen sentido o ya están codificadas bajo otro nombre: Absurd, YOLO y Alone. Así pues, se pasarán las categorías Absurd y YOLO a NA, mientras que Alone se pondrá en la categoría Single, resultando así:
+
+```{r, include = F}
+data["Marital_Status"][data["Marital_Status"] == "Absurd"] <- NA
+data["Marital_Status"][data["Marital_Status"] == "YOLO"] <- NA
+data["Marital_Status"][data["Marital_Status"] == "Alone"] <- "Single"
+data$Marital_Status <- droplevels(data$Marital_Status)
+```
+
+```{r, echo=F}
+kbl(table(data$Marital_Status), col.names = c("Marital Status","Frecuencia"),
+    caption = "Descriptiva Univariante Numérica Variable Marital Status Recodificada"
+    , booktabs=T)%>% 
+  
+  kable_styling(position = "center", 
+                latex_options = c("HOLD_position"))
+```
+
+En segundo lugar, como se puede observar en la descriptiva realizada a la variable Year_Birth, hay tres valores que pueden ser categorizados como outliers, ya que se ve como están bastante alejados respecto el resto de los datos de la muestra.
+De hecho, consideraremos que una observación es outlier si se encuentra a lejos de la distribución de los datos, esto es, más alejado de:
+
+$$
+Q_{i} \pm 1.5*IQR(x), \ i = 1,3
+$$
+
+En resumen, una observación será considerada outlier si ésta se halla más allá del primer quantil menos 1,5 veces el rango intercuartílico o, alternativamente, si se halla más allá del tercer quantil más 1,5 veces el IQR.
+
+De esta forma, para nuestro caso, observamos que el límite inferior de este límite es `r quantile(data$Year_Birth,0.25)-1.5*IQR(data$Year_Birth)`, el cual es superior a las observaciones identificadas como posibles outliers. Así pues, consideraremos que estas observaciones son outliers. En este caso, al ser datos ya existentes codificados de forma errónea, no podemos identificar de dónde provenían ni consideramos que sean datos fácilmente imputables. Así, se ha decidido eliminar estas observaciones, reduciendo el número de observaciones a 2237.
+
+```{r, include = F}
+delete <- which(data$Year_Birth <= 1910)
+data <- data[-delete,]
+```
+
+En tercer lugar, siguiendo con la limpieza de datos, si nos fijamos en la variable Income, como se ha visto en la descriptiva, hay un valor muy extremo, equivalente a 666666, el cual podemos considerar como desconocido y que sea la codificación elegida por los creadores de la base de datos para codificar datos donde el individuo no quiso contestar. De esta forma, se le imputará NA momentáneamente.
+
+```{r, include = F}
+data["Income"][data["Income"] == 666666] <- NA
+```
+
+Siguiendo con esta variable, se le realizará KNN como método de imputación para así asignarle valores a aquellas observaciones definidas como NAs. Concretamente, disponemos de 25 valores desconocidos de la variable Income.
+
+```{r, include = F}
+fullvariables = c(1,7,8,9,10,11,12,13,14,15,16,24)
+aux<-data[,fullvariables]
+
+Income <- data$Income
+aux1 <- aux[!is.na(Income),]
+aux2 <- aux[is.na(Income),]
+knn.ing = knn(aux1,aux2, Income[!is.na(Income)],k=8)
+IncomeOriginal<-Income
+Income[is.na(Income)] <- as.numeric(levels(knn.ing))
+data$Income<-as.integer(Income)
+```
+
+
+Tras haber recodificado correctamente la variable, obtenemos que número de NAs es de `r sum(which(is.na(data$Income)))`, de forma que esta variable ya puede ser usada para el proyecto. El valor asignado al hiperparámetro k ha sido 8, puesto que se ha considerado que los cambios que se realizaban en los valores a imputar si k se hacía más grande eran muy similares a los obtenidos con k=8.Así pues, se ha seguido un procedimiento 8NN.
+
+Otra variable a la que también hay que limpiarle los valores desconocidos es Marital_Status, ya que ahora hay 4 observaciones con valor no conocido. Sin embargo, al ser esta variable categórica, será necesario usar un método de imputación diferente, ya que el KNN únicamente funciona con variables numéricas. Así pues, se opta por el MIMMI (Mixed Intelligent-Multivariate Missing Imputation) como método de imputación, desarrollado por Karina Gibert en 2014 (<https://doi.org/10.1080/00207160.2013.783209>).
+
+```{r, echo = F}
+uncompleteVar<-function(vector){any(is.na(vector))}
+Mode <- function(x)
+{
+  x<-as.factor(x)
+  maxV<-which.max(table(x))
+  return(levels(x)[maxV])
+}
+MiMMi <- function(data, priork=-1)
+{
+  colsMiss<-which(sapply(data, uncompleteVar))
+  if(length(colsMiss)==0){
+    print("Non missing values found")
+    out<-dd
+  }else{
+    K<-dim(data)[2]
+    colsNoMiss<-setdiff(c(1:K),as.vector(colsMiss))
+
+    dissimMatrix <- daisy(data[,colsNoMiss], metric = "gower", stand=TRUE)
+    distMatrix<-dissimMatrix^2
+
+    hcdata<-hclust(distMatrix, method = "ward.D2")
+    plot(hcdata)
+
+    if(priork==-1){
+      nk<-readline("See the dendrogramm and enter a
+                   high number of clusters (must be a positive integer). k: ")
+    }else{nk<-priork}
+
+    partition<-cutree(hcdata, nk)
+
+    CompleteData<-data
+    newCol<-K+1
+    CompleteData[,newCol]<-partition
+    names(CompleteData)[newCol]<-"ClassAux"
+
+    setOfClasses<-as.numeric(levels(as.factor(partition)))
+    imputationTable<-data.frame(row.names=setOfClasses)
+    p<-1
+
+    for(k in colsMiss)
+    {
+      rowsWithFullValues<-!is.na(CompleteData[,k])
+
+      if(is.numeric(CompleteData[,k]))
+      {
+        imputingValues<-aggregate(CompleteData[rowsWithFullValues,k],
+                                  by=list(partition[rowsWithFullValues]), FUN=mean)
+      }else{
+        imputingValues<-aggregate(CompleteData[rowsWithFullValues,k],
+                                  by=list(partition[rowsWithFullValues]), FUN=Mode)
+      }
+
+      for(c in setOfClasses)
+      {
+        CompleteData[is.na(CompleteData[,k]) & partition==c,k]<-imputingValues[c,2]
+      }
+      imputationTable[,p]<-imputingValues[,2]
+      names(imputationTable)[p]<-names(data)[k]
+      p<-p+1
+    }
+    rownames(imputationTable)<-paste0("c", 1:nk)
+    out<-new.env()
+    out$imputedData<-data
+    out$imputation<-imputationTable
+  }
+  return(out)
+}
+```
+
+Así pues, tras la imputación del MIMMI, se ha obtenido que a todos los  valores nulos se les debe imputar la categoría `Married`. De esta forma, se le han imputado dichos valores.
+
+```{r, echo=F, message=F}
+ dd <- data[,-7]
+ dimpute <- MiMMi(dd,4)  
+ factor(dimpute$imputation[,1])
+ data[which(is.na(data$Marital_Status)),'Marital_Status']  = 
+  factor(dimpute$imputation[,1])
+```
+
+```{r, echo=F}
+j <- which(is.na(data$Marital_Status))
+data$Marital_Status[j] <- factor('Married')
+```
+
+Como se puede observar, a todos los valores missing se les ha imputado la categoría 'Married'. Una vez se imputan los datos, se puede comprobar que ahora el número de nulos pasa a ser de `r sum(which(is.na(data$Marital_Status)))`.
+
+Por último, para facilitar la comprensión de los niveles de las variables, se ha procedido a añadir labels para aquellas variables factor que no disponían de ellos.
+
+```{r, echo = F}
+for(i in 17:23){
+  data[,i] <- factor(data[,i],labels = c('No','Yes'))
+}
+```
+
+\newpage
+
+## Descriptiva post preprocessing
+
+Tras haber llevado a cabo la limpieza de la base de datos, así como la imputación de valores a aquellas observaciones donde había valores nulos, se procede a realizar la descriptiva post preprocessing.
+
+La matriz de datos después de realizar el preprocessing contiene `r nrow(data)` observaciones (filas) y `r ncol(data)` variables (columnas). Se puede apreciar como la cantidad de NAs en la matriz pasa a ser `r sum(is.na(data))`, debido a que en el preprocessing se han tratado y eliminado.
+
+```{r, echo = F, message=F}
+x <- as.data.frame(sapply(data, function(x) sum(is.na(x))))
+x <- cbind(x,round(100*(x/(nrow(data))),2))
+names(x) <- c("Número de NAs","% NAs de la Variable")
+kable(x,caption = "Estudio de NAs por variable post preprocessing",
+      align = "c",booktabs=T) %>% 
+  kable_styling(position = "center", 
+                latex_options = "HOLD_position",  font_size = 9)
+```
+
+Realizamos el análisis gráfico, que nos indica también los NAs que hay en la base de datos.
+
+```{r, echo=F,fig.cap = "Distribución de NAs por cada variable post preprocessing", fig.show='hold', message = F}
+data |> 
+  gg_miss_var()+
+  theme_minimal() +
+  theme(axis.title = element_text(color="grey10",face = "italic")) + 
+  ylab("") + xlab("") 
+```
+
+## Análisis Univariante 
+
+Con el objetivo de elaborar un análisis descriptivo univariante completo de los datos posterior al pre-procesamiento, se ha decidido integrar gráficos y tablas con resultados numéricos conjuntamente para lograr una mejor comprensión.
+
+### Análisis Univariante Numérico
+
+```{r, message = F, echo = F}
+kable(describe(select_if(data, is.numeric)),
+      caption = "Descripción Univariante de Variables Numéricas", align = "c",
+      digits=2,booktabs = T) %>% kable_styling(position = "center", 
+                latex_options = c("HOLD_position","scale_down"),  font_size = 9)
+```
+
+Se ha elaborado una tabla (tal y como se ha realizado en la descriptiva de antes del pre-procesamiento) en la que aparecen una serie de estadísticos de todas las variables numéricas, en la que además de aparecer los más conocidos (como pueden ser la media, desviación típica, etc.), también aparecen otros de dispersión y centralización menos conocidos.
+
+Nuevamente, se procede a realizar un análisis de aquellas variables de interés, en este caso, aquellas que han sido modificadas.
+
+```{r, echo = F, message=F, fig.show='hide'}
+data_n <- select_if(data, is.numeric)
+q <- NULL
+h <- NULL
+s <- NULL
+#únicamente las variables modificadas
+for(i in 1:2){
+  q[[i]] <- ggplot(data_n, aes_string(sample=names(data_n[i]))) + 
+    stat_qq(col="#DCF0F8") + 
+    stat_qq_line(col="#8B3E2F",lwd=1) + theme_bw() +
+    xlab("Normal Theoretical Quantiles") + 
+    ylab("Variable Data") + 
+    ggtitle("Normal Q-Q Plot") + theme(plot.title = element_text(hjust = 0.5))
+  h[[i]] <- ggplot(data_n, aes_string(x = data_n[,i])) + 
+    geom_histogram(aes(y = after_stat(density)), color = "#53868B", fill = "#DCF0F8") +
+    geom_density(color = "#8B3E2F",lwd=1) + 
+    theme_bw() + xlab("") + ylab("Density") + 
+    ggtitle(paste0("Histograma ", names(data_n)[i])) + 
+    theme(plot.title = element_text(hjust = 0.5))
+  s[[i]] <- shapiro.test(data_n[,i])$p.value[[1]]
+}
+```
+
+```{r, echo=F,fig.cap = "Análisis gráfico de la variable Year Birth post preprocessing", fig.show='hold', out.height="75%",out.width="75%"}
+grid.arrange(h[[1]],q[[1]],ncol = 2)
+```
+
+El Histograma Year_Birth y su Normal Q-Q Plot nos muestran la variable "Year_Birth" al eliminar los datos que hemos considerado como NAs en el pre-procesamiento (valores inferiores a 1910). Esto nos permite visualizar el histograma de manera más clara, donde podemos apreciar e intuir que la distribución de esta función no es una normal. Los datos se concentran en el intervalo entre el año 1940 y el 1996 y vemos como la máxima concentración se encuentra en torno al año 1975. Podemos observar como el test de normalidad "Shaphiro-Wilk" obtiene como p-valor `r s[[1]]`, confirmando nuestras hipótesis previas sobre la no normalidad de los datos.
+
+
+```{r, echo=F, fig.cap = "Análisis gráfico de la variable Income post preprocessing", fig.show='hold', out.height="75%",out.width="75%"}
+grid.arrange(h[[2]],q[[2]],ncol = 2)
+```
+
+El histograma Income y su Normal Q-Q Plot nos muestran la variable "Income" al eliminar los datos que hemos considerado como NAs en el pre-procesamiento (valores iguales a 666666). Este cambio nos permite observar ambos gráficos de manera más clara. En el Q-Q Plot, observamos como la variable no se aleja mucho de una distribución normal, aunque debido a que sus colas se descentran, deducimos que no sigue una distribución normal. Además, podemos observar como el test de normalidad "Shaphiro-Wilk" obtiene como p-valor `r s[[2]]`, confirmando nuestras hipótesis previas sobre la no normalidad de los datos.
+
+
+### Análisis Univariante Categórico
+
+Una vez se han analizado las variables numéricas, se procede a realizar el análisis para las variables categóricas que han sido modificadas en el preprocessing de los datos.
+
+```{r, echo=F,fig.cap = "Tabla de variables categóricas (summary)", fig.show='hold',out.width="75%", out.height="75%"}
+export2md(createTable(compareGroups(select_if(data,is.factor)), show.ratio=TRUE))
+```
+
+En esta tabla podemos apreciar las correciones realizadas respecto a la tabla creada en la descriptiva pre-processing, entre ellos, la limpieza de niveles o etiquetas de la variable Marital_Status (Absurd, etc.) que no eran adecuados a la pregunta realizada. En la tabla se muestra la frecuencia absoluta y relativa de cada posible valor dentro de cada variable, ya sean dicotómicas o politómicas.
+
+```{r echo = F, fig.show='hide',results = "hide", message = F}
+data_f <- select_if(data,is.factor)
+p <- NULL
+for(i in 1:2){
+  var <- factor(data_f[,i])
+  PieChart(var, data = data.frame(var), hole = 0,
+         fill = hcl.colors(length(levels(var)),"pastel"),
+         labels_cex = 0.6, main = "",width = 2, height = 2)
+  p[[i]] <- recordPlot()
+  plot.new()
+}
+```
+
+```{r, echo=F,fig.cap= "Pie Chart de la variable Marital Status post preprocessing", fig.show='hold'}
+p[[2]]
+```
+
+En este caso, únicamente la variable Marital_Status ha sido modificada, de forma que ésta será analizada gráficamente. Vemos como en el estado civil las categorías que predominan son las de clientes casados (39%), los que viven en pareja sin estar casados (26%) y los solteros (22%). También vemos como un 10% está divorciado y el 3% restante se encuentra en situación de viudedad.
+
+
+### Análisis Bivariante Categórico-Descriptivo
+
+A raíz de los cambios realizados en la variable Income, podemos repetir los gráficos anteriores para obtener una información más clara.
+
+```{r, echo = F, fig.cap = "Boxplot de las variables Income y Education post preprocessing", fig.show='hold',out.width="75%", out.height="75%"}
+boxplot(Income~Education,data,col=terrain.colors(5))
+```
+
+Este boxplot es más sencillo de visualizar en primera instancia que el anterior al pre-processing. Vemos claramente como el reducido grupo que acabó los estudios en la educación básica tiene unos ingresos sensiblemente inferiores a los demás grupos de la variable Education.
+
+```{r, echo = F, fig.cap = "Boxplot de las variables Income y Marital Status post preprocessing", fig.show='hold',out.width="75%", out.height="75%"}
+boxplot(Income~Marital_Status,data,col=terrain.colors(8))
+```
+
+Observamos que el grupo Single tiene una mediana ligeramente más baja que los demás grupos. Otro aspecto a destacar es que el grupo Widow tiene la mediana más alta y el tercer quartil visiblemente superior.
