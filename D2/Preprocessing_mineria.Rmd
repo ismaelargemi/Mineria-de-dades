@@ -14,9 +14,8 @@ library(ggplot2)
 library(dplyr)
 library(corrplot)
 library(cluster)
-library(naniar)
 
-load("C:/Users/iker1/Downloads/Dades seleccionades.RData")
+load("/Users/blancaromero/Documents/GitHub/Mineria-de-dades/D1/Dades seleccionades.RData")
 ```
 
 Para realizar el preprocesamiento de los datos, será óptimo seguir los pasos propuestos por Karina Gibert con el objetivo de desarrollar correctamente el KDD y, así, obtener conclusiones óptimas a partir de nuestros datos.
@@ -159,19 +158,7 @@ Una vez hemos recategorizado todas aquellas variables que presentaban problemas,
 ```{r}
 colSums(is.na(df_final))
 ```
-
-Una vez tenemos identificados todos los valores missing de nuestra base de datos, será necesario identificar si éstos son completamente aleatorios (MCAR), aleatorios (MAR), o no aleatorios (MNAR). Para ello, realizaremos el test de Little, el cual indica si los missings disponibles en la base de datos son fruto del azar o si siguen un patrón.
-
-Para este test, diremos que los datos no siguen un patrón si no se rechaza hipótesis nula o, alternativamente, si no encuentra patrones entre los missings. Así pues, este es el resultado:
-
-```{r, echo = F}
-little = mcar_test(df_final)
-little
-```
-
-Como se puede apreciar, el algoritmo ha detectado 7 patrones entre los valores missing, de forma que no se puede decir que hay un patrón aleatorio, de forma que calificaremos nuestros valores missing como MNAR.
-
-Seguidamente, imputaremos los valores por los tres métodos de imputación conocido, pero antes de imputar los valores numéricos, será necesario pasar los NA a categoría `unknown`:
+Antes de imputar los valores numéricos, será necesario pasar los NA a categoría `unknown`:
 
 ```{r}
 ind = which(is.na(df_final$OCCUPATION_TYPE))
@@ -191,119 +178,52 @@ df_final$ORGANIZATION_TYPE = factor(df_final$ORGANIZATION_TYPE)
 table(df_final$ORGANIZATION_TYPE, useNA = "always")
 ```
 
-
+```{r}
+little
+```
 
 
 ### Imputación por kNN
 
+El algoritmo K-Nearest Neighbors (KNN), es un método de clasificación supervisada, que utiliza la proximidad para hacer clasificaciones o predicciones sobre un punto de datos desconocido. 
+El algortimo, utiliza un hiperparámetro llamado "k", que representa el número de vecinos más cercanos y el cual se ha obtenido mediante el cálculo de $k= \sqrt{n}$. 
 
+```{r}
+df_knn <- select_if(df_final, is.numeric)
+n <- nrow(df_knn)
+
+library(class)
+```
+
+A continuación, se crean dos objetos: `fullVariables`, que corresponde a las variables que no presentan ningún dato faltante y `uncompleteVars`, que guarda las variables con missings.
+
+```{r}
+fullVariables <- names(df_knn)[which(colSums(is.na(df_knn))==0)] 
+aux <- df_knn[,fullVariables]
+dim(aux)
+names(aux)
+
+uncompleteVars<- names(df_knn)[which(colSums(is.na(df_knn))>0)] 
+
+for (k in uncompleteVars){
+  aux1 <- aux[!is.na(df_knn[,k]),]
+  dim(aux1) 
+  aux2 <- aux[is.na(df_knn[,k]),]
+  dim(aux2)
+  
+  RefValues<- df_knn[!is.na(df_knn[,k]),k]
+  knn.values = knn(aux1,aux2,RefValues, k = round(sqrt(n)) )  
+  df_knn[is.na(df_knn[,k]),k] = as.numeric(as.character(knn.values))
+  fullVariables<-c(fullVariables, k)
+  aux<-df_knn[,fullVariables]
+}
+```
+
+Como se puede observar, se obtiene la imputación de los valores faltantes en el dataframe `df_knn` utilizando el algoritmo descrito previamente.
 
 ### Imputación por MiMMi
 
-La imputación por MiMMi se realiza utilizando un enfoque basado en clústeres y se utiliza la distancia de Gower como métrica de distancia para medir la similitud entre observaciones.
 
-La función uncompleteVar se define para verificar si hay valores faltantes (representados como NA) en un vector dado.
-
-La función Mode se define para calcular la moda de un vector. Esta función se utiliza más adelante para imputar valores faltantes en variables categóricas.
-````{r, echo = FALSE}
-# install.packages("StatMatch")
-library(cluster)
-require(StatMatch)
-
-# assume missings represented with NA
-uncompleteVar <- function(vector){any(is.na(vector))}
-
-Mode <- function(x) 
-{
-  x <- as.factor(x)
-  maxV <- which.max(table(x))
-  return(levels(x)[maxV])
-}
-````
-
-
-Se define la función MiMMi.
-````{r, echo = FALSE}
-MiMMi <- function(data, priork=-1)
-{
-  # Identify columns without missings
-  colsMiss <- which(sapply(data, uncompleteVar))
-  if(length(colsMiss) == 0){
-    print("Non missing values found")
-    out <- data
-  } else {
-    K <- dim(data)[2]
-    colsNoMiss <- setdiff(c(1:K), as.vector(colsMiss))
-
-    #cluster with complete data
-    dissimMatrix <- daisy(data[ , colsNoMiss], metric = "gower", stand = TRUE)
-    distMatrix <- dissimMatrix^2
-
-    hcdata <- hclust(distMatrix, method = "ward.D2")
-    plot(hcdata)
-
-    if(priork == -1){
-      nk <- readline("See the dendrogramm and enter a high number of clusters (must be a positive integer). k: ")
-      nk <- as.integer(nk)
-    } else {nk <- priork}
-
-    partition <- cutree(hcdata, nk)
-
-    CompleteData <- data
-    # només cal per tenir traça de com s'ha fet la substitució
-    newCol <- K+1
-    CompleteData[ , newCol] <- partition
-    names(CompleteData)[newCol] <- "ClassAux"
-
-    setOfClasses <- as.numeric(levels(as.factor(partition)))
-    imputationTable <- data.frame(row.names = setOfClasses)
-    p <- 1
-
-    for(k in colsMiss)
-    {
-      # Files amb valors utils
-      rowsWithFullValues <- !is.na(CompleteData[,k])
-
-      # Calcular valors d'imputació
-      if(is.numeric(CompleteData[,k]))
-      {
-        imputingValues <- aggregate(CompleteData[rowsWithFullValues,k], by = list(partition[rowsWithFullValues]), FUN = mean)
-      } else {
-        imputingValues <- aggregate(CompleteData[rowsWithFullValues,k], by = list(partition[rowsWithFullValues]), FUN = Mode)
-      }
-
-      # Impute
-      for(c in setOfClasses)
-      {
-        data[is.na(CompleteData[,k]) & partition == c,k] <- round(imputingValues[c,2],0)
-      }
-
-      # Imputation Table
-      imputationTable[,p] <- imputingValues[,2]
-      names(imputationTable)[p] <- names(data)[k]
-      p <- p+1
-    }
-
-    rownames(imputationTable) <- paste0("c", 1:nk)
-    out <- new.env()
-    out$imputedData <-data
-    out$imputation <- imputationTable
-  }
-  return(out)
-}
-```
-
-
-Se usa la función MiMMi y se obtienen los resultados imputados.
-```{r}
-dimpute<-MiMMi(df_final, priork = 5)
-
-# table of imputation values used
-dimpute$imputation
-
-# imputed dataset
-MiMMi_imp<- dimpute$imputedData
-```
 
 ### Imputación por MICE
 
@@ -358,8 +278,6 @@ grid.arrange(pca_var, pca_ind, ncol = 2)
 Como se puede apreciar, la combinación de las dos primeras dimensiones del PCA acumulan un total del 60% de la inercia total explicada, de forma que es un método de detección bastante fiable en nuestro caso. Identificamos, especialmente, un punto que sobresale del segundo plano factorial, mientras que podemos catalogar una decena de grupos realmente alejados del grupo en la primera dimensión:
 
 ```{r, echo = F}
-pca_ind = fviz_pca_ind(pc1, hide = T) # hide individual labels
-
 pca_ind + 
   annotate("pointrange", x = 0.75, y = 4.9, ymin = 4.9, ymax = 4.9, colour = "orange", size = 1.5, alpha=0.5) +
   annotate("pointrange", x = 12, y = -0, ymin = -0.5, ymax = -0.5, colour = "orange", size = 20, alpha=0.5)
