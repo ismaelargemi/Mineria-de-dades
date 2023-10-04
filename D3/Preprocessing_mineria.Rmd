@@ -386,20 +386,20 @@ bbc_style = function()
 {
   font <- "Helvetica"
   ggplot2::theme(plot.title = ggplot2::element_text(family = font, 
-                                                    size = 22, face = "bold", color = "#222222"), plot.subtitle = ggplot2::element_text(family = font, 
-                                                                                                                                        size = 16, margin = ggplot2::margin(2, 0, 5, 0)), plot.caption = ggplot2::element_blank(), 
+                                                    size = 18, face = "bold", color = "#222222"), plot.subtitle = ggplot2::element_text(family = font, 
+                                                                                                                                        size = 15, margin = ggplot2::margin(2, 0, 5, 0)), plot.caption = ggplot2::element_blank(), 
                  legend.position = "top", legend.text.align = 0, legend.background = ggplot2::element_blank(), 
                  legend.title = ggplot2::element_blank(), legend.key = ggplot2::element_blank(), 
                  legend.text = ggplot2::element_text(family = font, size = 12, 
                                                      color = "#222222"), axis.title = ggplot2::element_blank(), axis.text.y = ggplot2::element_text(margin = ggplot2::margin(0,0,0,2)), 
-                 axis.text = ggplot2::element_text(family = font, size = 12, 
-                                                   color = "#222222"), axis.text.x = ggplot2::element_text(margin = ggplot2::margin(-5, 
-                                                                                                                                    b = 2)), axis.ticks = ggplot2::element_blank(), 
+                 axis.text = ggplot2::element_text(family = font, size = 10, 
+                                                   color = "#222222"), 
+axis.text.x = ggplot2::element_text(margin = ggplot2::margin(-5, b = 2)), axis.ticks = ggplot2::element_blank(), 
                  axis.line = ggplot2::element_blank(), panel.grid.minor = ggplot2::element_blank(), 
                  panel.grid.major.y = ggplot2::element_line(color = "#cbcbcb"), 
                  panel.grid.major.x = ggplot2::element_blank(), panel.background = ggplot2::element_blank(), 
                  strip.background = ggplot2::element_rect(fill = "white"), 
-                 strip.text = ggplot2::element_text(size = 22, hjust = 0))
+                 strip.text = ggplot2::element_text(size = 10, hjust = 0))
 }
 ```
 
@@ -441,8 +441,8 @@ g = ggplot(goods_price, aes(valors, group = etiq, colour = etiq)) +
   scale_x_continuous(limits = c(0, 3500000),
                      breaks = seq(0, 3500000, by = 500000),
                      labels = c("0", "500000", "1000000", "1500000", "2000000", "2500000", "3000000", "3500000")) +
-  theme(axis.title = element_text(size = 14),
-        title = element_text(size = 70)) +
+  theme(axis.title = element_text(size = 12),
+        title = element_text(size = 18)) +
   labs(title = "Distribución de la variable AMT_GOODS_PRICE",
        subtitle = "Por los 3 métodos de imputación",
        x = "Cantidad (en $)",
@@ -538,7 +538,7 @@ Por último, realizaremos la selección de variables final para nuestra base de 
 
 En primer lugar, se resolverán problemas relacionados con las variables numéricas. Como tenemos variables relacionadas con cantidades monetarias (salario, cantidad prestada...), tal vez sería mejor aplicar una transformación logarítmica: 
 
-```{r}
+```{r, include = F}
 df_preprocessed$log_AMT_INCOME_TOTAL = log(df_preprocessed$AMT_INCOME_TOTAL)
 df_preprocessed$log_AMT_CREDIT = log(df_preprocessed$AMT_CREDIT)
 df_preprocessed$log_AMT_ANNUITY = log(df_preprocessed$AMT_ANNUITY)
@@ -567,7 +567,7 @@ x = c(factor_vars, num_vars)
 
 Antes de avanzar, haremos un correlograma para ver los pares de variables con un mayor coeficiente de correlación de Pearson:
 
-```{r}
+```{r, echo = F}
 corr_mat = cor(df_preprocessed[,num_vars])
 corrplot(corr_mat)
 ```
@@ -579,7 +579,7 @@ Como se puede apreciar y como era de esperar, hay 3 variables que presentan una 
 -   RATIO_ANNUITY_CREDIT: Ratio entre la anuidad del préstamo y el crédito total solicitado
 -   DTI_RATIO: El DTI (Debt-to-income) ratio mide la capacidad del cliente para pagar la annuity de su préstamo en relación con sus ingresos
 
-```{r}
+```{r, echo = F}
 df_preprocessed$DIFF_CREDIT_GOODS = df_preprocessed$AMT_CREDIT - df_preprocessed$AMT_GOODS_PRICE
 df_preprocessed$RATIO_CREDIT_INCOME = df_preprocessed$AMT_CREDIT / df_preprocessed$AMT_INCOME_TOTAL
 df_preprocessed$RATIO_ANNUITY_CREDIT = df_preprocessed$AMT_ANNUITY / df_preprocessed$AMT_CREDIT
