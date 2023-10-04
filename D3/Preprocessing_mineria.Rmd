@@ -1,0 +1,602 @@
+---
+title: "Preprocessing"
+author: "Iker Meneses Sales"
+date: "2023-09-25"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, include = F, warning = F, message = F}
+library(ggplot2)
+library(dplyr)
+library(corrplot)
+library(cluster)
+library(naniar)
+
+load("C:/Users/iker1/Downloads/Dades seleccionades.RData")
+```
+
+Para realizar el preprocesamiento de los datos, será óptimo seguir los pasos propuestos por Karina Gibert con el objetivo de desarrollar correctamente el KDD y, así, obtener conclusiones óptimas a partir de nuestros datos.
+
+Para ello, seguiremos 4 grandes bloques:
+-   Limpieza de datos y estandarización de formato
+-   Detección y tratamiento de missings
+-   Detección y tratamiento de outliers
+-   Feature Engineering
+
+# Limpieza de datos y estandarización de formato
+
+Una vez hemos realizado la descriptiva preprocessing y hemos identificado el número de valores missing en nuestra base de datos, es óptimo analizar todas las variables una a una, así como algunas variables categóricas a las cuales se les puede reducir el número de categorías.
+
+Para empezar, se puede apreciar que la variable `OCCUPATION_TYPE` tiene un total de 18 categorías:
+
+```{r, echo = F}
+table(df_final$OCCUPATION_TYPE, useNA = "always")
+```
+
+
+Una buena idea sería combinar algunas categorías con el objetivo de reducir el número de categorías y, además, aumentar el número de individuos por categoría. Seguidamente, se muestran los cambios realizados:
+
+-   Nueva categoría: `Auxiliar staff`, la cual englobará a "Medicine staff", "Security staff", "Waiters/barmen staff", "Cooking staff", "Private service staff", "Secretaries", "HR staff" y "Cleaning staff".
+-   "Low-skill Laborers" se fusionará con "Laborers".
+-   "IT staff" y "Realty agents" se unirán a "High skill tech staff"
+
+```{r, echo = F}
+df_final$OCCUPATION_TYPE = as.character(df_final$OCCUPATION_TYPE)
+
+df_final$OCCUPATION_TYPE[which(df_final$OCCUPATION_TYPE == "Security staff")] = "Low skill laborers"
+df_final$OCCUPATION_TYPE[which(df_final$OCCUPATION_TYPE == "Cooking staff")] = "Low skill laborers"
+df_final$OCCUPATION_TYPE[which(df_final$OCCUPATION_TYPE == "Cleaning staff")] = "Low skill laborers"
+df_final$OCCUPATION_TYPE[which(df_final$OCCUPATION_TYPE == "Drivers")] = "Low skill laborers"
+df_final$OCCUPATION_TYPE[which(df_final$OCCUPATION_TYPE == "Low-skill Laborers")] = "Low skill laborers"
+df_final$OCCUPATION_TYPE[which(df_final$OCCUPATION_TYPE == "Waiters/barmen staff")] = "Low skill laborers"
+
+df_final$OCCUPATION_TYPE[which(df_final$OCCUPATION_TYPE == "Secretaries")] = "Low-mid skill laborers"
+df_final$OCCUPATION_TYPE[which(df_final$OCCUPATION_TYPE == "Private service staff")] = "Low-mid skill laborers"
+df_final$OCCUPATION_TYPE[which(df_final$OCCUPATION_TYPE == "Laborers")] = "Low-mid skill laborers"
+
+df_final$OCCUPATION_TYPE[which(df_final$OCCUPATION_TYPE == "Accountants")] = "Mid skill laborers"
+df_final$OCCUPATION_TYPE[which(df_final$OCCUPATION_TYPE == "HR staff")] = "Mid skill laborers"
+df_final$OCCUPATION_TYPE[which(df_final$OCCUPATION_TYPE == "Sales staff")] = "Mid skill laborers"
+
+df_final$OCCUPATION_TYPE[which(df_final$OCCUPATION_TYPE == "IT staff")] = "Mid-high skill laborers"
+df_final$OCCUPATION_TYPE[which(df_final$OCCUPATION_TYPE == "Realty agents")] = "Mid-high skill laborers"
+df_final$OCCUPATION_TYPE[which(df_final$OCCUPATION_TYPE == "Core staff")] = "Mid-high skill laborers"
+
+df_final$OCCUPATION_TYPE[which(df_final$OCCUPATION_TYPE == "High skill tech staff")] = "High skill laborers"
+df_final$OCCUPATION_TYPE[which(df_final$OCCUPATION_TYPE == "Managers")] = "High skill laborers"
+df_final$OCCUPATION_TYPE[which(df_final$OCCUPATION_TYPE == "Medicine staff")] = "High skill laborers"
+
+df_final$OCCUPATION_TYPE = factor(df_final$OCCUPATION_TYPE)
+table(df_final$OCCUPATION_TYPE, useNA = "always")
+```
+
+Este proceso lo repetiremos con la variable `ORGANIZATION_TYPE`:
+
+```{r, echo = F}
+table(df_final$ORGANIZATION_TYPE, useNA = "always")
+```
+
+Como se puede apreciar, en este caso disponemos de muchísimas categorías, pero es de destacar la categoría XNA, la cual deberíamos sustituir a NA, para después poder imputarle algún valor.
+
+```{r, echo = F}
+a = as.character(df_final$ORGANIZATION_TYPE)
+
+a[which(startsWith(a,"Trade"))] = "Trade and telecom"
+a[which(startsWith(a,"Transp"))] = "Transport"
+a[which(startsWith(a,"Indus"))] = "Industry and construction"
+a[which(startsWith(a, "Business"))] = "Business and bank"
+a[which(startsWith(a,"Transp"))] = "Transport"
+a[which(a == "XNA")] = NA
+
+a[which(a == "Construction")] = "Industry and construction"
+
+a[which(a == "School")] = "Education"
+a[which(a == "University")] = "Education"
+a[which(a == "Kindergarten")] = "Education"
+a[which(a == "Culture")] = "Other"
+
+a[which(a == "Security Ministries")] = "Public services"
+a[which(a == "Police")] = "Public services"
+a[which(a == "Emergency")] = "Public services"
+a[which(a == "Military")] = "Public services"
+
+
+a[which(a == "Postal")] = "Other"
+a[which(a == "Cleaning")] = "Personal services"
+a[which(a == "Restaurant")] = "Other"
+a[which(a == "Advertising")] = "Other"
+a[which(a == "Legal Services")] = "Personal services"
+a[which(a == "Realtor")] = "Personal services"
+a[which(a == "Hotel")] = "Personal services"
+a[which(a == "Insurance")] = "Business and bank"
+a[which(a == "Bank")] = "Business and bank"
+
+
+a[which(a == "Housing")] = "Personal services"
+a[which(a == "Services")] = "Personal services"
+a[which(a == "Security")] = "Personal services"
+
+
+a[which(a == "Mobile")] = "Other"
+a[which(a == "Telecom")] = "Trade and telecom"
+a[which(a == "Religion")] = "Other"
+a[which(a == "Agriculture")] = "Other"
+
+
+a[which(a == "Electricity")] = "Public services"
+a[which(a == "Government")] = "Public services"
+
+
+table(a)
+df_final$ORGANIZATION_TYPE = factor(a)
+```
+
+Ahora, esta variable pasa a tener 10 categorías, las cuales representan los diferentes sectores presentes en la economía presente hoy en día.
+
+Así pues, el resto de variables tienen una uniformidad evidente: se puede apreciar cómo las variables categóricas presentan un número de categorías pequeño y, por parte de las variables numéricas, todas están expresadas en las mismas unidades, de forma que no habrá problemas con la manipulación de éstas.
+
+
+# Detección y tratamiento de missings
+
+Para este apartado, trataremos de identificar aquellos valores desconocidos y valorar sobre su aleatoriedad para, posteriormente, imputar valores. Para empezar, es de destacar cómo hay 47 individuos con un coche de 64 años y 11 con un coche de 65. Si nos fijamos en la distribución de esta variable, es muy extraño que haya tantos individuos con valores atípicos, ya que el siguiente valor máximo es 46. Así, se potará por imputar valores nulos a estos individuos:
+
+```{r, echo = F}
+df_final$OWN_CAR_AGE[which(df_final$OWN_CAR_AGE == 64)] = NA
+df_final$OWN_CAR_AGE[which(df_final$OWN_CAR_AGE == 65)] = NA
+table(df_final$OWN_CAR_AGE, useNA = "always")
+```
+
+Seguidamente, pasaremos a imputar diferentes valores a aquellas variables donde hay observaciones sobre las cuales se desconocen sus valores reales. Este paso es necesario, ya que el hecho de disponer de valores desconocidos (también conocidos como NA) dificulta el análisis posterior de la variable. 
+
+Una vez hemos recategorizado todas aquellas variables que presentaban problemas, el número de NA por variables es el siguiente:
+
+```{r, echo = F}
+colSums(is.na(df_final))
+```
+
+Una vez tenemos identificados todos los valores missing de nuestra base de datos, será necesario identificar si éstos son completamente aleatorios (MCAR), aleatorios (MAR), o no aleatorios (MNAR). Para ello, realizaremos el test de Little, el cual indica si los missings disponibles en la base de datos son fruto del azar o si siguen un patrón.
+
+Para este test, diremos que los datos no siguen un patrón si no se rechaza hipótesis nula o, alternativamente, si no encuentra patrones entre los missings. Así pues, este es el resultado:
+
+```{r, echo = F}
+little = mcar_test(df_final)
+little
+```
+
+Como se puede apreciar, el algoritmo ha detectado 7 patrones entre los valores missing, de forma que no se puede decir que hay un patrón aleatorio, de forma que calificaremos nuestros valores missing como MNAR.
+
+Seguidamente, imputaremos los valores por los tres métodos de imputación conocido, pero antes de imputar los valores numéricos, será necesario pasar los NA a categoría `unknown`:
+
+```{r, echo = F}
+ind = which(is.na(df_final$OCCUPATION_TYPE))
+
+df_final$OCCUPATION_TYPE = as.character(df_final$OCCUPATION_TYPE)
+df_final$OCCUPATION_TYPE[ind] = "Unknown"
+df_final$OCCUPATION_TYPE = factor(df_final$OCCUPATION_TYPE)
+
+
+
+ind = which(is.na(df_final$ORGANIZATION_TYPE))
+
+df_final$ORGANIZATION_TYPE = as.character(df_final$ORGANIZATION_TYPE)
+df_final$ORGANIZATION_TYPE[ind] = "Unknown"
+df_final$ORGANIZATION_TYPE = factor(df_final$ORGANIZATION_TYPE)
+table(df_final$ORGANIZATION_TYPE, useNA = "always")
+```
+
+Seguidamente, toca imputar los NA disponibles en las variables numéricas de nuestros datos. Para ello, utilizaremos tres métodos distintos: kNN, MiMMi y MICE. Posteriormente, se comparará la imputación entre estos métodos y se seleccionará el método que resulte una distribución más parecida a la original antes de imputar
+
+```{r, include = F}
+df_knn = df_final
+df_mimmi = df_final
+df_mice = df_final
+```
+
+
+### Imputación por kNN
+
+El algoritmo K-Nearest Neighbors (KNN), es un método de clasificación supervisada, que utiliza la proximidad para hacer clasificaciones o predicciones sobre un punto de datos desconocido. 
+El algortimo, utiliza un hiperparámetro llamado "k", que representa el número de vecinos más cercanos y el cual se ha obtenido mediante el cálculo de $k= \sqrt{n}$. 
+
+```{r, message = F, warning = F, include = F}
+df_knn <- select_if(df_final, is.numeric)
+n <- nrow(df_knn)
+
+library(class)
+```
+
+A continuación, se crean dos objetos: `fullVariables`, que corresponde a las variables que no presentan ningún dato faltante y `uncompleteVars`, que guarda las variables con missings.
+
+```{r, include = F}
+fullVariables <- names(df_knn)[which(colSums(is.na(df_knn))==0)] 
+aux <- df_knn[,fullVariables]
+dim(aux)
+names(aux)
+
+uncompleteVars<- names(df_knn)[which(colSums(is.na(df_knn))>0)] 
+
+for (k in uncompleteVars){
+  aux1 <- aux[!is.na(df_knn[,k]),]
+  dim(aux1) 
+  aux2 <- aux[is.na(df_knn[,k]),]
+  dim(aux2)
+  
+  RefValues<- df_knn[!is.na(df_knn[,k]),k]
+  knn.values = knn(aux1,aux2,RefValues, k = round(sqrt(n)) )  
+  df_knn[is.na(df_knn[,k]),k] = as.numeric(as.character(knn.values))
+  fullVariables<-c(fullVariables, k)
+  aux<-df_knn[,fullVariables]
+}
+
+df_preprocessed_knn = data.frame(aux,select_if(df_final, is.factor))
+
+```
+
+Como se puede observar, se obtiene la imputación de los valores faltantes en el dataframe `df_knn` utilizando el algoritmo descrito previamente.
+
+
+### Imputación por MiMMi
+
+La imputación por MiMMi se realiza utilizando un enfoque basado en clústeres y se utiliza la distancia de Gower como métrica de distancia para medir la similitud entre observaciones.
+
+La función uncompleteVar se define para verificar si hay valores faltantes (representados como NA) en un vector dado.
+
+La función Mode se define para calcular la moda de un vector. Esta función se utiliza más adelante para imputar valores faltantes en variables categóricas.
+
+````{r, echo = FALSE, warning = F, message = F}
+# install.packages("StatMatch")
+library(cluster)
+require(StatMatch)
+
+# assume missings represented with NA
+uncompleteVar <- function(vector){any(is.na(vector))}
+
+Mode <- function(x) 
+{
+  x <- as.factor(x)
+  maxV <- which.max(table(x))
+  return(levels(x)[maxV])
+}
+````
+
+
+Se define la función MiMMi.
+
+````{r, echo = FALSE}
+MiMMi <- function(data, priork=-1)
+{
+  # Identify columns without missings
+  colsMiss <- which(sapply(data, uncompleteVar))
+  if(length(colsMiss) == 0){
+    print("Non missing values found")
+    out <- data
+  } else {
+    K <- dim(data)[2]
+    colsNoMiss <- setdiff(c(1:K), as.vector(colsMiss))
+
+    #cluster with complete data
+    dissimMatrix <- daisy(data[ , colsNoMiss], metric = "gower", stand = TRUE)
+    distMatrix <- dissimMatrix^2
+
+    hcdata <- hclust(distMatrix, method = "ward.D2")
+    plot(hcdata)
+
+    if(priork == -1){
+      nk <- readline("See the dendrogramm and enter a high number of clusters (must be a positive integer). k: ")
+      nk <- as.integer(nk)
+    } else {nk <- priork}
+
+    partition <- cutree(hcdata, nk)
+
+    CompleteData <- data
+    # només cal per tenir traça de com s'ha fet la substitució
+    newCol <- K+1
+    CompleteData[ , newCol] <- partition
+    names(CompleteData)[newCol] <- "ClassAux"
+
+    setOfClasses <- as.numeric(levels(as.factor(partition)))
+    imputationTable <- data.frame(row.names = setOfClasses)
+    p <- 1
+
+    for(k in colsMiss)
+    {
+      # Files amb valors utils
+      rowsWithFullValues <- !is.na(CompleteData[,k])
+
+      # Calcular valors d'imputació
+      if(is.numeric(CompleteData[,k]))
+      {
+        imputingValues <- aggregate(CompleteData[rowsWithFullValues,k], by = list(partition[rowsWithFullValues]), FUN = mean)
+      } else {
+        imputingValues <- aggregate(CompleteData[rowsWithFullValues,k], by = list(partition[rowsWithFullValues]), FUN = Mode)
+      }
+
+      # Impute
+      for(c in setOfClasses)
+      {
+        data[is.na(CompleteData[,k]) & partition == c,k] <- round(imputingValues[c,2],0)
+      }
+
+      # Imputation Table
+      imputationTable[,p] <- imputingValues[,2]
+      names(imputationTable)[p] <- names(data)[k]
+      p <- p+1
+    }
+
+    rownames(imputationTable) <- paste0("c", 1:nk)
+    out <- new.env()
+    out$imputedData <-data
+    out$imputation <- imputationTable
+  }
+  return(out)
+}
+```
+
+Se usa la función MiMMi y se obtienen los resultados imputados.
+
+```{r, include = F}
+dimpute<-MiMMi(df_mimmi, priork = 3)
+
+# table of imputation values used
+#dimpute$imputation
+
+# imputed dataset
+df_preprocessed_mimmi <- dimpute$imputedData
+```
+
+### Imputación por MICE
+
+Por último, se recurrirá a imputar a través del MICE como último método de imputación de valores numéricos. El MICE (Multiple Imputation by chained Equations) se basa en un método iterativo a partir del cual se resuelven ecuaciones consecutivamente con el objetivo de imputar valores de la forma más aproximada posible. Así pues, es momento de imputarlo:
+
+
+```{r, echo=F, message=F, warning = F}
+library(mice)
+factor_vars = c("CODE_GENDER", "NAME_INCOME_TYPE", "NAME_EDUCATION_TYPE", 
+                "NAME_FAMILY_STATUS", "OCCUPATION_TYPE", "ORGANIZATION_TYPE", 
+                "REGION_RATING_CLIENT", "TARGET")
+
+num_vars = c("AMT_INCOME_TOTAL", "AMT_CREDIT", "AMT_ANNUITY", "DAYS_BIRTH",
+             "OWN_CAR_AGE", "AMT_GOODS_PRICE", "CNT_FAM_MEMBERS")
+
+x = c(factor_vars, num_vars)
+
+dd <- df_mice[, x]
+mice_data = mice(dd, method = "cart")
+df_preprocessed_mice = complete(mice_data,5)
+```
+
+```{r, include = F, echo = F}
+summary(df_preprocessed_mice)
+colSums(is.na(df_preprocessed_mice))
+```
+
+
+### Decisión del método de imputación elegido
+
+Llegados a este punto, en el momento de seleccionar el método de imputación elegido para el método de imputación final. En nuestro caso, como únicamente disponemos de dos variables numéricas con missings, podemos comparar la función de densidad de los datos originales contra los imputados por cada método. Así pues, vamos a mirar variable por variable:
+
+```{r, echo = F, include = F}
+bbc_style = function() 
+{
+  font <- "Helvetica"
+  ggplot2::theme(plot.title = ggplot2::element_text(family = font, 
+                                                    size = 22, face = "bold", color = "#222222"), plot.subtitle = ggplot2::element_text(family = font, 
+                                                                                                                                        size = 16, margin = ggplot2::margin(2, 0, 5, 0)), plot.caption = ggplot2::element_blank(), 
+                 legend.position = "top", legend.text.align = 0, legend.background = ggplot2::element_blank(), 
+                 legend.title = ggplot2::element_blank(), legend.key = ggplot2::element_blank(), 
+                 legend.text = ggplot2::element_text(family = font, size = 12, 
+                                                     color = "#222222"), axis.title = ggplot2::element_blank(), axis.text.y = ggplot2::element_text(margin = ggplot2::margin(0,0,0,2)), 
+                 axis.text = ggplot2::element_text(family = font, size = 12, 
+                                                   color = "#222222"), axis.text.x = ggplot2::element_text(margin = ggplot2::margin(-5, 
+                                                                                                                                    b = 2)), axis.ticks = ggplot2::element_blank(), 
+                 axis.line = ggplot2::element_blank(), panel.grid.minor = ggplot2::element_blank(), 
+                 panel.grid.major.y = ggplot2::element_line(color = "#cbcbcb"), 
+                 panel.grid.major.x = ggplot2::element_blank(), panel.background = ggplot2::element_blank(), 
+                 strip.background = ggplot2::element_rect(fill = "white"), 
+                 strip.text = ggplot2::element_text(size = 22, hjust = 0))
+}
+```
+
+
+```{r, warning = F, echo = F}
+library(gridExtra)
+
+valors = c(df_final$OWN_CAR_AGE, df_preprocessed_knn$OWN_CAR_AGE, df_preprocessed_mimmi$OWN_CAR_AGE, df_preprocessed_mice$OWN_CAR_AGE)
+
+etiq = factor(rep(c("Original", "kNN", "MiMMi", "MICE"), each = 5000))
+
+own_car_age = data.frame(valors, etiq)
+
+p = ggplot(own_car_age, aes(valors, group = etiq, colour = etiq)) +
+  geom_density(aes(fill = etiq), alpha = 0.5) + 
+  geom_hline(yintercept = 0, size = 1, colour="#333333") +
+  bbc_style() +
+  scale_x_continuous(limits = c(0, 50),
+                     breaks = seq(0, 50, by = 10),
+                     labels = c("0", "10", "20", "30", "40", "50")) +
+  theme(axis.title = element_text(size = 14),
+        title = element_text(size = 70)) +
+  labs(title = "Distribución de la variable OWN_CAR_AGE",
+       subtitle = "Por los 3 métodos de imputación",
+       x = "Años",
+       y = "Densidad")
+
+
+valors = c(df_final$AMT_GOODS_PRICE, df_preprocessed_knn$AMT_GOODS_PRICE, df_preprocessed_mimmi$AMT_GOODS_PRICE, df_preprocessed_mice$AMT_GOODS_PRICE)
+
+etiq = factor(rep(c("Original", "kNN", "MiMMi", "MICE"), each = 5000))
+
+goods_price = data.frame(valors, etiq)
+
+g = ggplot(goods_price, aes(valors, group = etiq, colour = etiq)) +
+  geom_density(aes(fill = etiq), alpha = 0.5) +
+  geom_hline(yintercept = 0, size = 1, colour="#333333") +
+  bbc_style() +
+  scale_x_continuous(limits = c(0, 3500000),
+                     breaks = seq(0, 3500000, by = 500000),
+                     labels = c("0", "500000", "1000000", "1500000", "2000000", "2500000", "3000000", "3500000")) +
+  theme(axis.title = element_text(size = 14),
+        title = element_text(size = 70)) +
+  labs(title = "Distribución de la variable AMT_GOODS_PRICE",
+       subtitle = "Por los 3 métodos de imputación",
+       x = "Cantidad (en $)",
+       y = "Densidad")
+```
+
+*OWN_CAR_AGE*
+
+Esta variable es la que presenta más valores no disponibles en nuestra base de datos, de forma que se acepta un mayor margen de error en cuanto a la imputación de valores se refiere. Así, la densidad resultante para cada método es la siguiente:
+
+```{r, warning = F, echo = F}
+p
+```
+
+Como se puede apreciar, hay dos métodos de imputación que claramente se alejan mucho de la distribución inicial de los datos: kNN y MiMMi. Así pues, se puede apreciar como el MICE es el algoritmo que aproxima la densidad de los datos a los originales, de forma que este será el método escogido.
+
+*AMT_GOODS_PRICE*
+
+Como se ha visto previamente en al descriptiva preprocessing, esta variable únicamente presentaba 3 NA, de forma que la densidad en todos los métodos será muy similar:
+
+```{r, warning = F, echo = F}
+g
+```
+
+Como se puede apreciar, todos los métodos retornan una estimación similar de la densidad, por lo que se podría decir que es indiferente escoger un método en concreto. De esta forma, se decide usar el MICE como método de imputación final seleccionado.
+
+```{r, include = F}
+df_preprocessed = df_preprocessed_mice
+```
+
+
+
+# Detección y tratamiento de outliers
+
+En este apartado se tratará de visualizar aquellas observaciones extremas y, además, discernir sobre si deben ser corregidas o no, dependiendo de la naturaleza de la variable. Para ello, se utilizarán métodos multivariantes, como el análisis de componentes principales (PCA). Así, se procede a representar la proyección de los individuos en los primeros planos factoriales para así observar cuáles se alejan del resto de puntos: 
+
+
+```{r, warning = F, message = F, echo = F}
+library(dplyr)
+library(FactoMineR)
+library(factoextra)
+
+df_prep_num = select_if(df_preprocessed, is.numeric)
+
+
+pc1 = prcomp(df_prep_num, scale=TRUE)
+
+pca_var = fviz_pca_var(pc1, repel = T)
+pca_ind = fviz_pca_ind(pc1) +
+  xlim(-20,20) +
+  ylim(-6,6)
+
+grid.arrange(pca_var, pca_ind, ncol = 2)
+
+```
+
+Como se puede apreciar, la combinación de las dos primeras dimensiones del PCA acumulan un total del 60% de la inercia total explicada, de forma que es un método de detección bastante fiable en nuestro caso. Identificamos, especialmente, un punto que sobresale del segundo plano factorial, mientras que podemos catalogar una decena de grupos realmente alejados del grupo en la primera dimensión:
+
+```{r, echo = F}
+pca_ind = fviz_pca_ind(pc1, label = "none") # hide individual labels
+
+pca_ind + 
+  annotate("pointrange", x = 0.75, y = 4.9, ymin = 4.9, ymax = 4.9, colour = "orange", size = 1.5, alpha=0.5) +
+  annotate("pointrange", x = 12, y = -0, ymin = -0.5, ymax = -0.5, colour = "orange", size = 20, alpha=0.5)
+
+```
+
+Procedemos a analizar estos indiviuos, empezando por el que destaca en la dimensión 2:
+
+```{r, echo = F}
+name_outlier = pca_ind$data$name[which(pca_ind$data$y>4.5)]
+
+df_preprocessed[rownames(df_preprocessed)==name_outlier,]
+```
+
+Observamos que, en este caso, la variable que más destaca en este individuo es el número de miembros en su familia: 8. Pese a que este número sea muy elevado, es verosímil pensar que en una vivienda puedan vivir 8 personas, y más si en la base de datos únicamente hay 1 individuo que cumple esta característica. De esta forma, por tanto, este outlier se puede dejar en la base de datos sin sustituir.
+
+Una vez hemos analizado este outlier, podemos pasar a analizar los que son valores extremos por la dimensión 1:
+
+```{r, echo = F}
+name_outlier = which(pca_ind$data$x>8.5)
+
+df_preprocessed[name_outlier,]
+```
+
+Como se puede apreciar, el primer plano factorial viene dado por las variables referidas a cantidad de dinero de nuestra base de datos. Así pues, los outliers presentes son personas con unos ingresos muy altos y que, además, realizaron préstamos por una cantidad de dinero muy superior al que cobran. Así pues, se trata de personas ricas, las cuales existen en nuestra sociedad, de forma que se quedan en la base de datos tal y como aparece. Más adelante, se aplicará alguna transformación que pueda permitir corregir estos valores tan extremos.
+
+
+
+# Feature engineering
+
+Por último, realizaremos la selección de variables final para nuestra base de datos, así como aplicar transformaciones correctas a nuestras variables para que cumplan algunas hipótesis, como normalidad o heteroscedasticidad. Para este apartado se hace una disección de cada variable una a una.
+
+En primer lugar, se resolverán problemas relacionados con las variables numéricas. Como tenemos variables relacionadas con cantidades monetarias (salario, cantidad prestada...), tal vez sería mejor aplicar una transformación logarítmica: 
+
+```{r}
+df_preprocessed$log_AMT_INCOME_TOTAL = log(df_preprocessed$AMT_INCOME_TOTAL)
+df_preprocessed$log_AMT_CREDIT = log(df_preprocessed$AMT_CREDIT)
+df_preprocessed$log_AMT_ANNUITY = log(df_preprocessed$AMT_ANNUITY)
+df_preprocessed$log_AMT_GOODS_PRICE = log(df_preprocessed$AMT_GOODS_PRICE)
+```
+
+Así pues, esta transformación debería resolver problemas relacionados con la normalidad de estas variables. Otro cambio a realizar es el respectivo a la variable `DAYS_BIRTH`, la cual muestra el número de días que lleva vivo el individuo. Sin embargo, el hecho de que esta variable esté en negativo y expresada en días (cuando normalmente se hace en años) hace que su interpretación sea complicada. De esta forma, se harán los cambios permanentes para encontrar la edad de los clientes, guardándola en una variable llamada `AGE_YEARS`.
+
+```{r, include = F}
+df_preprocessed$AGE_YEARS = floor(-df_preprocessed$DAYS_BIRTH/365)
+```
+
+
+Ahora, vamos a unir aquellas variables ya preprocesadas con el objetivo de tener el dataset preparado para crear nuevas variables.
+
+```{r, include = F}
+factor_vars = c("CODE_GENDER", "NAME_INCOME_TYPE", "NAME_EDUCATION_TYPE", 
+                "NAME_FAMILY_STATUS", "OCCUPATION_TYPE", "ORGANIZATION_TYPE", 
+                "REGION_RATING_CLIENT", "TARGET")
+
+num_vars = c("log_AMT_INCOME_TOTAL", "log_AMT_CREDIT", "log_AMT_ANNUITY", "AGE_YEARS",
+             "OWN_CAR_AGE", "log_AMT_GOODS_PRICE", "CNT_FAM_MEMBERS")
+
+x = c(factor_vars, num_vars)
+```
+
+Antes de avanzar, haremos un correlograma para ver los pares de variables con un mayor coeficiente de correlación de Pearson:
+
+```{r}
+corr_mat = cor(df_preprocessed[,num_vars])
+corrplot(corr_mat)
+```
+
+Como se puede apreciar y como era de esperar, hay 3 variables que presentan una gran autocorrelación entre ellas: `log_AMT_CREDIT`, `log_AMT_GOODS_PRICE` y `log_AMT_ANNUITY`. de esta forma, sería ideal nuevas variables a partir de éstas con las cuales se pueda resolver este problema, ya que explican exactamente lo mismo. Para ello, será necesario basarse en la teoría económica y en qué se fijan las entidades de crédito para conceder préstamos. Así, el siguiente objetivo será crear ratios y variables que pretendan controlar y relacionar dinero prestado con capacidad del cliente para retornarlo:
+
+-   DIFF_CREDIT_GOODS: Diferencia entre el crédito pedido y el valor del bien para el que se quiere usar
+-   RATIO_CREDIT_INCOME: Ratio entre el crédito pedido y el salario anual del prestatario. También se puede contar como el número de años que se tarda en devolver el crédito
+-   RATIO_ANNUITY_CREDIT: Ratio entre la anuidad del préstamo y el crédito total solicitado
+-   DTI_RATIO: El DTI (Debt-to-income) ratio mide la capacidad del cliente para pagar la annuity de su préstamo en relación con sus ingresos
+
+```{r}
+df_preprocessed$DIFF_CREDIT_GOODS = df_preprocessed$AMT_CREDIT - df_preprocessed$AMT_GOODS_PRICE
+df_preprocessed$RATIO_CREDIT_INCOME = df_preprocessed$AMT_CREDIT / df_preprocessed$AMT_INCOME_TOTAL
+df_preprocessed$RATIO_ANNUITY_CREDIT = df_preprocessed$AMT_ANNUITY / df_preprocessed$AMT_CREDIT
+df_preprocessed$DTI_RATIO = df_preprocessed$AMT_ANNUITY / df_preprocessed$AMT_INCOME_TOTAL
+
+
+
+num_vars = c("log_AMT_INCOME_TOTAL", "log_AMT_CREDIT", "log_AMT_ANNUITY", "AGE_YEARS",
+             "OWN_CAR_AGE", "log_AMT_GOODS_PRICE", "CNT_FAM_MEMBERS", "DIFF_CREDIT_GOODS",
+             "RATIO_CREDIT_INCOME", "RATIO_ANNUITY_CREDIT", "DTI_RATIO")
+
+corr_mat = cor(df_preprocessed[,num_vars])
+corrplot(corr_mat)
+```
+
+Se puede apreciar que, ahora, las nuevas variables creadas no presentan tanta correlación entre ellas como anteriormente había. Se puede apreciar, además, que las correlaciones entre las variables donde había problemas siguen teniéndolos y, como se aprecia en el PCA sencillo realizado antes, será necesario descartar alguna variable, ya que explican cosas similares en las mismas dimensiones. Así, en el PCA se deberá realizar el descarte adecuado de variables.
+
+```{r, include = F, eval = F}
+save(df_preprocessed, file = "Dades preprocessades.RData")
+```
