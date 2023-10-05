@@ -49,7 +49,7 @@ for(i in libraries){
 ```
 
 ```{r echo=FALSE, results = 'hide'}
-#data <- read.csv("marketing_campaign.csv",header=T, sep = '\t')
+data <- load("Dades_seleccionades.Rdata")
 data<-df_final
 ```
 
@@ -121,9 +121,7 @@ kable(x,caption = "Estudio de NAs por variable", align = "c",booktabs=T) %>%
 ```
 
 
-Como se puede observar, la mayoria de los NAs proceden de la variables Occupation_Type, own_car_age, solo unos pocos proceden de Amt_goods_price.  Este hecho se puede deber al ...
-
-El análisis gráfico muestra que el número de datos missing es muy reducido en toda la base de datos: el peso de estos es casi insignificante en el análisis a realizar posteriormente.
+Como se puede observar, la mayoria de los NAs proceden de la variables own_car_age y Occupation_Type, siendo solo unos pocos proceden de Amt_goods_price.
 
 ```{r fig1,echo=F, fig.cap="Distribución de los NAs por variable",fig.show = 'hold'}
 data |> 
@@ -132,13 +130,13 @@ data |>
   theme(axis.title = element_text(color="grey10",face = "italic")) + 
   ylab("") + xlab("")  
 ```
-
+El análisis gráfico muestra que el número de datos missing es muy reducido en toda la base de datos: el peso de estos es casi insignificante en el análisis a realizar posteriormente.
 
 # ENTREGA D3
 
 ## Análisis Univariante 
 
-Con la intención de realizar un buen análisis descriptivo univariante de los datos anterior al pre-procesamiento, se ha decidido integrar conjuntamente gráficos y tablas con resultados numéricos para lograr el mejor entendimiento de estos.
+Con la intención de realizar un buen análisis descriptivo univariante de los datos previo al pre-procesamiento se ha decidido integrar conjuntamente gráficos y tablas con resultados numéricos para lograr el mejor entendimiento de estos.
 
 ### Análisis Univariante Numérico
 
@@ -156,12 +154,15 @@ kable(describe(select_if(data, is.numeric)),
                 latex_options = c("HOLD_position","scale_down"),  font_size = 9)
 ```
 
-Para empezar se ha construido una tabla dónde que aparecen una serie de estadísticos de todas las variables numéricas trabajadas. En la que además de aparecer los estadísticos más conocidos (como pueden ser la media, desviación típica, etc.), también aparecen otros estadísticos de dispersión y centralización menos conocidos:
+Para comenzar, hemos creado una tabla que muestra varios estadísticos de todas las variables numéricas que hemos analizado. Además de los estadísticos más comunes, como la media o la desviación estándar, también hemos incluido otros estadísticos menos conocidos relacionados con la dispersión y centralización de los datos:
 
-- `Trimmed:` Estimador que calcula un estadístico de la variable eliminando los valores más extremos de su distribución. En este caso, la `Trimmed Mean` calcula la media de cada variable utilizando sólo el intervalo de datos situados entre [5%,95%]           
-- `Skew:` Grado de asimetría. Toma valores positivos si esta se encuentra en la derecha y negativos si lo hace en la izquierda(media menor que la mediana).
-- `Kurtosis:`  La curtosis es una medida estadística que determina el grado de concentración que presentan los valores de una variable alrededor de la zona central de la distribución de frecuencias.  Alta concentración si es mayor que 3 y baja en caso contrario.
-- `SE:` El error estándar es la desviación estándar de la distribución muestral de un estadístico muestral. Es decir, la desviación típica dividida entre la raíz cuadrada de n.
+- 'Trimmed mean': Este es un estimador que calcula un estadístico para la variable al eliminar los valores más extremos de su distribución. En el caso de la 'Trimmed Mean', calcula la media de cada variable utilizando solo los datos que se encuentran en el intervalo [5%, 95%]. Al usar la 'Trimmed Mean', observamos que la variable "Amt credit" tiene una media similar a la mediana, lo que indica un alto grado de simetría.
+
+- Skew: Este estadístico mide el grado de asimetría de la distribución. Toma valores positivos si la asimetría está hacia la derecha y negativos si está hacia la izquierda (es decir, si la media es menor que la mediana). Un alto grado de asimetría puede indicar la presencia de valores atípicos. Las variables "Amt annuity" y "Amt goods price" muestran una asimetría positiva.
+
+- Kurtosis: La curtosis es una medida que determina cuán concentrados están los valores de una variable alrededor del centro de la distribución de frecuencias. Un valor de 3 es considerado como el nivel central de curtosis. Una distribución mesocúrtica tiene un cociente de asimetría igual a 3, leptocúrticas por encima de 3 y las platicúrticas por debajo de 3. Las variables "Amt annuity", "Own car age" y sobre todo "Amt income" tienen coeficientes de curtosis muy elevados, lo que indica distribuciones con colas muy pesadas.
+
+- SE: El error estándar es la desviación estándar de la distribución muestral de un estadístico muestral. Es decir, es la desviación típica dividida por la raíz cuadrada del tamaño de la muestra (n). Tanto las variables "Amt credit" como "amt goods price" muestran una variabilidad muy alta.
 
 ```{r, echo = F, message=F,warning=F,fig.show='hide'}
 data_n <- select_if(data, is.numeric)
@@ -189,39 +190,55 @@ for(i in 1:ncol(data_n)){
 grid.arrange(h[[1]],q[[1]],ncol = 2)
 ```
 
-Estos gráficos nos muestran como los datos de la variable "Amt income total" siguen una exponencial. Los resultados tienen sentido debido a la naturaleza de esta variable. Además, podemos observar como el test de normalidad "Shaphiro-Wilk" obtiene como p-valor `r s[[1]]`, confirmando nuestras hipótesis previas sobre la no normalidad de los datos.
+Estos gráficos muestran que los datos de la variable "Amt income total" no siguen una distribución normal y parecen seguir una distribución exponencial. Esto tiene sentido, ya que la distribución de los ingresos totales de los individuos en una población generalmente no sigue una distribución normal. Además, al observar los resultados del test de normalidad "Shapiro-Wilk," se confirma la hipótesis anterior sobre la no normalidad de los datos, ya que el p-valor obtenido es `r s[[1]]`.
 
 ```{r, echo = F, fig.cap = "Análisis Gráfico Variable Income", fig.show='hold', out.height="75%",out.width="75%"}
 grid.arrange(h[[2]],q[[2]],ncol = 2)
 ```
-Como en el caso interior, la variable sigue una exponencial.
+
+Al igual que en el caso anterior, la variable tampoco sigue una distribución normal, lo cual se confirma además por el test de Shapiro-Wilk con un p-valor de `r s[[2]]`. Parece que sigue una distribución exponencial.
+
 ```{r, echo = F, fig.cap = "Análisis Gráfico Variable Recency",fig.show='hold',out.height="75%",out.width="75%"}
 grid.arrange(h[[3]],q[[3]],ncol = 2)
 ```
-Como en el caso interior, la variable sigue una exponencial.
+
+Como en el caso interior, la variable sigue aparenta exponencial, con p-valor `r s[[3]]` del test de Shapiro Wilk.
+
 ```{r, echo = F, fig.cap = "Análisis Gráfico Variable MntWines", fig.show='hold',out.height="75%",out.width="75%"}
 grid.arrange(h[[4]],q[[4]],ncol = 2)
 ```
 
+Como se puede apreciar en el histograma, la variable "Days Birth" presenta valores negativos. Esto se debe a que los datos indican la cantidad de días transcurridos desde el nacimiento del individuo hasta el momento en que solicitó el crédito. Por lo tanto, es necesario transformar los datos para que sean positivos y modificar la variable de manera que represente las edades de los sujetos en años, lo que facilitará un mejor tratamiento y comprensión de los resultados.
+
 ```{r, echo = F, fig.cap = "Análisis Gráfico Variable MntFruits", fig.show='hold',out.height="75%",out.width="75%"}
 grid.arrange(h[[5]],q[[5]],ncol = 2)
 ```
-Como en el caso interior, la variable sigue una exponencial, con un pico final en ...
+
+En la variable 'Own car age', también se observa que no sigue una distribución normal, como lo demuestra el test de Shapiro-Wilk con un p-valor de `r s[[5]]`. Se puede notar una alta concentración de datos alrededor de los 10 años, lo que muestra una estructura similar a una distribución exponencial. Por otro lado, también se observa una fuerte concentración de datos en los 60 años.
+
 ```{r, echo = F, fig.cap = "Análisis Gráfico Variable MntMeatProducts", fig.show='hold',out.height="75%",out.width="75%"}
 grid.arrange(h[[6]],q[[6]],ncol = 2)
 ```
-Como en el caso interior, la variable sigue una exponencial.
+
+Al igual que en el caso anterior, la variable parece seguir una distribución exponencial, y la normalidad se rechaza con un p-valor de `r s[[6]]`. Aunque el Q-Q Plot y el histograma muestran una concentración de datos de forma periódica, una posible explicación podría ser que los bienes de alto costo tienden a tener precios redondeados o cantidades enteras en lugar de valores precisos. Por ejemplo, la moda podría ser `r names(sort(table(datos), decreasing = TRUE)[1])`.
+
 ```{r, echo = F, fig.cap = "Análisis Gráfico Variable MntFishProducts", fig.show='hold',out.height="75%",out.width="75%"}
 grid.arrange(h[[7]],q[[7]],ncol = 2)
 ```
+
+La variable que representa el número de hijos, al ser discreta, no debe evaluarse como si siguiera una distribución normal. Aun así, es importante tener en cuenta que la mayoría de los clientes tienen al menos un hijo.
+
+### Análisis Univariante Categórico
+
+Tras haber completado el análisis univariante numérico se procede a hacer el análisis categórico.
 
 ```{r, echo = F, fig.cap = "Análisis Gráfico Variable MntSweetProducts", fig.show='hold',out.height="75%",out.width="75%"}
 grid.arrange(h[[8]],q[[8]],ncol = 2)
 ```
 
-### Análisis Univariante Categórico
+Esta variable evalúa la calidad de la zona en la que vive el cliente en términos de nivel de ingresos, calidad de vida y otras variables relacionadas.
 
-Una vez se han analizado las variables numéricas una a una, se ha procedido a analizar de forma particular cada variable categórica. De hecho, en la siguiente tabla se presenta un resumen general sobre ellas:
+En la siguiente tabla se presenta un resumen general sobre ellas:
 
 ```{r,echo=F, fig.cap = "Tabla Summary Variables Categóricas"}
 data$OCCUPATION_TYPE<- as.factor(data$OCCUPATION_TYPE)
@@ -230,8 +247,7 @@ data$ORGANIZATION_TYPE<- as.factor(data$ORGANIZATION_TYPE)
 export2md(createTable(compareGroups(select_if(data,is.factor)), show.ratio=TRUE))
 ```
 
-
-Así pues, en la tabla se muestra la frecuencia absoluta y relativa de cada posible valor dentro de cada variable, ya sean dicotómicas o politómicas, siendo muy fácil de identificar su moda de esta manera.
+Por lo tanto, en la tabla se presentan tanto la frecuencia absoluta como la frecuencia relativa de cada valor posible en cada variable categórica, ya sean dicotómicas o politómicas. Esto facilita la identificación de la moda de manera sencilla.
 
 Una vez se ha realizado un resumen general, se ha procedido a analizar cada variable una a una:
 
@@ -248,56 +264,99 @@ for(i in 1:ncol(data_f)){
 }
 ```
 
-```{r, echo = F, fig.cap= "Pie Chart Variable Education",fig.show='hold',out.width="75%",out.height="75%"}
-p[[1]] 
+```{r}
+p <- vector("list", length = ncol(data_f))
+for (i in 1:ncol(data_f)) {
+  var <- names(data_f)[i]
+  freq_table <- table(data[[var]])
+  num_classes <- length(freq_table)
+  
+  if (num_classes <= 4) {
+    p[[i]] <- ggplot(data, aes(x = factor(1), fill = .data[[var]])) +
+      geom_bar() +
+      coord_polar(theta = "y") +
+      labs(x = NULL, y = NULL, fill = var, title = var) + 
+      theme_void() +
+      theme(legend.position = "bottom") +
+      scale_fill_brewer(palette = "muted")
+  } else {
+    p[[i]] <- ggplot(data, aes(x = .data[[var]])) +
+      geom_bar(fill = "skyblue") +
+      labs(x = var, y = "Frecuencia", title = var) +  
+      theme_minimal() +
+      theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  }
+}
 ```
 
 ```{r, echo = F, fig.cap= "Pie Chart Variable Education",fig.show='hold',out.width="75%",out.height="75%"}
-p[[2]] 
+p[[1]]
 ```
 
 ```{r, echo = F, fig.cap= "Pie Chart Variable Education",fig.show='hold',out.width="75%",out.height="75%"}
-p[[3]] 
+p[[2]]
 ```
 
 ```{r, echo = F, fig.cap= "Pie Chart Variable Education",fig.show='hold',out.width="75%",out.height="75%"}
-p[[4]] 
+p[[3]]
 ```
 
 ```{r, echo = F, fig.cap= "Pie Chart Variable Education",fig.show='hold',out.width="75%",out.height="75%"}
-p[[5]] 
+p[[4]]
 ```
 
 ```{r, echo = F, fig.cap= "Pie Chart Variable Education",fig.show='hold',out.width="75%",out.height="75%"}
-p[[6]] 
+p[[5]]
 ```
 
-```{r, echo = F, fig.cap= "Pie Chart Variable Education",fig.show='hold',out.width="75%",out.height="75%"}
-p[[7]] 
-```
 
 ```{r, echo = F, fig.cap= "Pie Chart Variable Education",fig.show='hold',out.width="75%",out.height="75%"}
-p[[8]] 
+p[[6]]
 ```
 
+
 ```{r, echo = F, fig.cap= "Pie Chart Variable Education",fig.show='hold',out.width="75%",out.height="75%"}
-p[[9]] 
+library(dplyr)
+library(RColorBrewer)
+
+org_type <- data_f %>%
+  mutate(organization_group = case_when(
+    grepl("Business Entity Type", ORGANIZATION_TYPE) ~ "Business Entity",
+    grepl("Industry: type", ORGANIZATION_TYPE) ~ "Industry",
+    grepl("Trade: type", ORGANIZATION_TYPE) ~ "Trade",
+    grepl("Transport: type", ORGANIZATION_TYPE) ~ "Transport",
+    grepl("Culture|Religion|Kindergarten", ORGANIZATION_TYPE) ~ "Culture/Religion/Kindergarten",
+    grepl("Bank|Insurance", ORGANIZATION_TYPE) ~ "Finance/Insurance",
+    TRUE ~ "Other"
+  ))
+
+mi_paleta <- brewer.pal(n = length(unique(org_type$organization_group)), name = "Set2")
+p <- ggplot(org_type, aes(x = organization_group, fill = organization_group)) +
+  geom_bar() +
+  labs(x = "Organization Group", y = "Frecuencia") +
+  scale_fill_manual(values = mi_paleta) +  
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+print(p)
 ```
+
 
 ### Análisis Bivariante Numérico
 
-Con el fin de conocer las variables numéricas con más relación entre sí se ha hecho un gráfico de correlaciones siguiendo la mecánica de un HeatMap. Este, según el color, nos indica las dependencias más fuertes existentes entre variables numéricas. Cuanto más cálido sea el color, más relación tendrá y mayor énfasis se hará en el estudio sobre ellas.
+Con el propósito de identificar las relaciones más significativas entre las variables numéricas, se ha creado un gráfico de correlación utilizando la técnica de HeatMap. En este gráfico, los colores indican el grado de dependencia entre las variables numéricas. Cuanto más intenso sea el color, mayor será la relación, y se prestará una mayor atención a estas relaciones en nuestro análisis.
 
 ```{r, echo = F, fig.cap="Matriz de Correlaciones para las Variables Numéricas", fig.show='hold'}
  corr <- round(cor(select_if(data,is.numeric),use="complete.obs"), 1)
  ggcorrplot(corr, hc.order = T,type = "lower",lab=T)
 ```
 
-Tras ver el gráfico podemos destacar la notable relación entre las variables del Amt goods price, amt annuity y amt credit.  Son resultados coherentes, puesto que ... Sin embargo, si analizamos una a una dichas correlaciones, tal vez no se saquen las mismas conclusiones.
+Tras analizar el gráfico, se destacan notables correlaciones entre las variables amt_credit y amt_goods_price. Esta correlación tiene sentido, ya que los prestamistas suelen otorgar créditos en función del valor del activo que el prestatario desea adquirir. En caso de impago, el prestamista retiene dicho activo como garantía. Además, se observa una alta correlación entre las variables amt_annuity y amt_credit. Esto se debe a que un mayor monto de crédito conlleva, de manera directa, una anualidad más elevada, especialmente cuando se busca un período de reembolso similar. También se aprecia una fuerte relación entre las variables amt_goods_price y amt_annuity, reflejando la conexión entre el crédito y el valor del activo.
 
 ```{r, echo=F,fig.cap = "Boxplot del Gasto Total en Carne vs Número de Compras en Catálogo", fig.show='hold',out.width="75%",out.height="75%"}
 boxplot(AMT_CREDIT~AMT_GOODS_PRICE,data,col=terrain.colors(14)) 
 ```
+En este gráfico se evidencia una fuerte correlación entre el valor del bien que el prestatario desea adquirir y la cantidad solicitada para el crédito. Es importante resaltar que los créditos de mayor cuantía muestran una correlación menor con el valor del bien, un aspecto que se explorará con mayor detalle en el transcurso del proyecto.
 
 ```{r, echo=F,fig.cap = "Gráfico de dispersión Gasto Total en Pescado vs Gasto Total en Fruta", fig.show='hold',out.width="75%",out.height="75%"}
 plot(data$AMT_ANNUITY, data$AMT_GOODS_PRICE, pch = 19, col = "black",
@@ -307,22 +366,38 @@ text(paste("Correlación:", round(cor(data$AMT_ANNUITY, data$AMT_GOODS_PRICE), 2
      x = 40, y = 20)
 ```
 
+De manera similar, la correlación entre el valor de los bienes y la anualidad también es bastante alta. Es importante señalar que los clientes que posean una relación entre la anualidad y el valor del bien que compren (teniendo en cuenta que el precio del bien es igual al valor del préstamo) serán aquellos que deban destinar una proporción menor de sus ingresos al reembolso de la deuda.
+
 ### Análisis Bivariante Categórico-Descriptivo
 
-Para finalizar con el análisis descriptivo antes del procesamieto de los datos, falta analizar la relación entre las variables caregóricas y las numéricas para así concluir el análisis de forma clara y concisa. Para ello, será de ayuda la elaboración de diferentes boxplots.
+Para concluir el análisis descriptivo antes de proceder al procesamiento de los datos, es necesario examinar la relación entre las variables categóricas y las numéricas. Para este propósito, utilizaremos la creación de varios boxplots, lo que nos permitirá presentar nuestras conclusiones de manera precisa y concisa.
 
-```{r, echo = F, fig.cap = "Boxplot Ingresos y nivel de educación", fig.show='hold',out.width="75%",out.height="75%"}
-boxplot(NAME_INCOME_TYPE~CODE_GENDER,data,col=terrain.colors(5)) 
+
+```{r}
+q <- list()
+
+currelas <- c("CODE_GENDER", "NAME_INCOME_TYPE", "NAME_EDUCATION_TYPE", "NAME_FAMILY_STATUS", "OCCUPATION_TYPE", "ORGANIZATION_TYPE", "TARGET")
+
+for (i in 1:length(currelas)){
+  q[[i]] <- ggplot(data, aes(x = .data[[currelas[i]]], fill = CODE_GENDER)) +
+    geom_bar(position = "fill") +  
+    labs(title = paste("Grouped Bar Chart:", currelas[i], "vs. CODE_GENDER"),
+         x = currelas[i], y = "Proportion") +
+    theme_minimal() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    scale_fill_manual(values = c("M" = "blue", "F" = "pink"))
+}
+
+print(q)
 ```
+
+
+```{r}
+q[[1]]
+```
+
 
 En este primer gráfico, se analiza el NAMEINCOME TYPE al sexo del cliente. Pese a ser un análisis interesante, vemos como el outlier dificulta mucho su estudio. Pese a ello, vemos como ...
 
 
 
-```{r, echo = F, fig.cap = "Boxplot Ingresos y Estado civil", fig.show='hold',out.width="75%",out.height="75%"}
-boxplot(CODE_GENDER~OCCUPATION_TYPE,data,col=terrain.colors(8))
-```
-
-...
-altres boxplot?
-...
