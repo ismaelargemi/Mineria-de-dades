@@ -1,0 +1,110 @@
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
+```
+
+## Clustering
+
+Instal·lació de paquet si és necessària i carregar les llibreries
+
+```{r}
+# # install.packages("NbClust")
+# library(NbClust)
+# library('dendextend')
+# library(scales)
+# library(cluster)
+```
+
+Es fa un primer dendrograma amb el mètode de Ward amb la distància de Gower, donat que el k-means no es pot fer perquè hi ha tant variables quantitatives com qualitatives.
+
+```{r}
+# load("prepro_data.Rdata")
+# 
+# mydata <- prepro_data
+# rm(prepro_data)
+# 
+# dd <- mydata
+# dd <- as.data.frame(lapply(mydata, function(x) if(is.numeric(x)){
+#              scale(x, center=TRUE, scale=TRUE)
+#           } else x))
+# 
+# # es calcula la distància de gower:
+# dissimMatrix <- daisy(dd, metric = "gower", stand = TRUE)
+# 
+# distMatrix <- dissimMatrix^2
+# 
+# h1 <- hclust(distMatrix, method = "ward.D2")
+# 
+# plot(h1)
+```
+
+A primera vista amb el dendrograma ja es veu que el tall òptim són 3 clústers. De totes maneres, es comprova analíticament.
+
+Coeficient de Silhouette:
+
+Per calcular el nombre de clústers que s'haurien d'agafar primer es fa amb el coeficient de Silhouette.
+
+```{r}
+# avg_sil <- c()
+# for (k in 2:15) {
+#   hc_result <- hclust(distMatrix, method = "complete")
+#   clust <- cutree(hc_result, k)
+#   sil <- silhouette(clust, distMatrix)
+#   avg_sil[k-1] <- mean(sil[,3])
+# }
+# plot(avg_sil, type = "b", xlab = "Number of clusters", ylab = "Average silhouette width")
+```
+
+Es veu que el que té un valor més gran de la mitjana de Silhouette és k = 2, però el pròxim millor és k = 3.
+
+2n mètode (només numèriques): Nbclust
+
+```{r}
+# Objectos <- sapply(dd, class)
+# Numeriques <- names(Objectos)[which(Objectos%in%c("numeric"))]
+# 
+# nb_clustering <- NbClust(dd[,Numeriques], distance = "euclidean", min.nc = 2, max.nc = 10, method = "ward.D", index = "all")
+# 
+# nb_clustering$Best.nc
+```
+
+*******************************************************************
+* Among all indices:
+* 1 proposed 2 as the best number of clusters
+* 9 proposed 3 as the best number of clusters
+* 5 proposed 4 as the best number of clusters
+* 1 proposed 5 as the best number of clusters
+* 2 proposed 7 as the best number of clusters
+* 2 proposed 10 as the best number of clusters
+
+                   ***** Conclusion *****
+
+* According to the majority rule, the best number of clusters is  3
+*******************************************************************
+
+Amb NbClust el millor nombre de clústers és 3.
+
+Es torna a fer el dendrograma.
+
+```{r}
+# hc <- hclust(daisy(dd, metric = "gower")^2, "ward.D2") # metrica euclidiana sin elevar al quadrado
+# dd = res.PCA
+# dend <- as.dendrogram(hc)
+# plot(dend)
+```
+
+Amb el dendrograma es confirma que el millor tall (després de k = 2) és k = 3.
+
+```{r}
+# objecto <- cutree(hc, 3)
+# # s'apliquen els resultats a les dades no normalitzades
+# mydata$cluster <- objecto
+# colors <- c("red", "green", "blue")
+# colors_dend <- color_branches(dend, labels = objecto, k = 3, col = colors)
+# plot(colors_dend)
+```
+
+Es guarden les dades preprocessades amb els clústers fets.
+
+```{r}
+# save(mydata, file = 'data_clust.Rdata')
+```
