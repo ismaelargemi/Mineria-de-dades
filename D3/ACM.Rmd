@@ -26,8 +26,9 @@ library(ggplot2)
 
 ```{r, include=FALSE}
 # Lectura de la base de datos
-df <-get(load("C:/Users/Bertita/Downloads/Dades preprocessades.RData"))
-df2<- df[1:15] #CAL TREURE VAR TARGET DE L'ANÀLISI
+df <-get(load("Dades preprocessades.RData"))
+df2<- df[1:15] 
+df2 <- df2[,-8] #eliminamos la variable TARGET del análisis
 ```
 
 El Multiple Correspondance Analysis, ACM en adelante, es un método de análisis factorial para variables categóricas que permite analizar relaciones entre variables, así como reducir la dimensionalidad de la base de datos seleccionando sólo aquellas variables relevantes. Para realizarlo se deben escoger unas variables activas y otras de complementarias. En este caso, como el número de variables es relativamente bajo y se consideran todas relevantes, no se considerará ninguna variable complementaria. Además, se añadirán al análisis las variables numéricas como variables suplementarias, aunque solamente aquellas que se han considerado relevantes en el ACP. 
@@ -36,12 +37,13 @@ El Multiple Correspondance Analysis, ACM en adelante, es un método de análisis
 ## Desarrollo del ACM
 
 ```{r, out.width="95%"}
-res.mca <- MCA(df2, quanti.sup = c(9:15), method = "Burt")
+res.mca <- MCA(df2, quanti.sup = c(8:14), method = "Burt")
 res.mca
 ```
-En la primera figura se representan las relaciones entre las modalidades de todas las variables categóricas con las dos primeras dimensiones del MCA. Se observa que la dimensión 1 se asocia con las variables que tengan relación con la edad, como la modalidad de Pensionista y Viudo. Se aprecia que la dimensión 2 se asocia a las modalidades relacionadas con la cualificación del trabajo del individuo, con una asociación positiva entre la dimensión y la cualificación del trabajador. Por tanto, se llamará a la dimensión 1 Edad, y a la dimensión 2 como cualificiación del trabajador. 
+En la primera figura se representan las relaciones entre las modalidades de todas las variables categóricas con las dos primeras dimensiones del MCA. Se observa que la dimensión 1 se asocia con las variables que tienen relación con la edad, como la modalidad de Pensionista y Viudo. Se aprecia que la dimensión 2 se asocia a las modalidades relacionadas con la cualificación del trabajo del individuo, con una asociación positiva entre la dimensión y la cualificación del trabajador. Por tanto, se llamará a la dimensión 1 Edad, y a la dimensión 2 como cualificiación del trabajador. 
 
-En los gráficos obtenidos puede verse la variabilidad que expresen cada una de las variables categóricas en función de las dimensiones 1 y 2. Aquellas variables que estén más cerca del origen de coordenadas aporten muy poca información respecto a la variabilidad de los datos y, por tanto, son poco importantes. En cambio, aquellas variables más alejadas del centro aportan información más relevante.
+En los gráficos obtenidos puede verse la variabilidad que expresan cada una de las variables categóricas en función de las dimensiones 1 y 2. Aquellas variables que estén más cerca del origen de coordenadas aportan muy poca información respecto a la variabilidad de los datos y, por tanto, son poco importantes. En cambio, aquellas variables más alejadas del centro aportan información más relevante.
+
 
 Se representan gráficamente la inercia que explica cada una de las dimensiones generadas:
 ```{r, out.width="90%"}
@@ -83,11 +85,22 @@ Salen muchas categorías que no están muy bien representadas por las dos primer
 ## Plot individuos
 
 Se representa gráficamente cómo se distribuyen los individuos en función de las dos primeras dimensiones que explican un 29.99% de la variabilidad:
-QUITAR NUMERITOS
+
 ```{r, out.width="95%"}
-plot(res.mca, invisible = c("var","quali.sup"), cex=0.7)
+fviz_mca_ind(res.mca, geom = "point", col.ind = "black")
 ```
-A simple vista, se aprecian varios grupos de individups pero resulta difícil distinguir cuántos. Sin embargo, sí podríamos decir que los individuos se dividen en como mínimo 2. Para distinguir mejor las agrupaciones de individuos y su asociación con algunas modalidades se pasa a estudiar cada variable para observar si existe algún tipo de asociación entre ellas.
+A simple vista, se aprecian varios grupos de individups pero resulta difícil distinguir cuántos. Sin embargo, sí podríamos decir que los individuos se dividen en como mínimo 2 grupos. Para distinguir mejor las agrupaciones de individuos y su asociación con algunas modalidades se pasa a estudiar cada variable para observar si existe algún tipo de asociación entre ellas.
+
+A continuación representamos los mismos individuos pero coloreandolos según la variable "target", es decir, nuestra varible output, donde 1 indica aquel cliente con dificultades de pago, y 0 altramente:
+
+```{r}
+library(FactoMineR)
+
+fviz_mca_ind(res.mca, geom = "point", col.ind = df_preprocessed$TARGET, 
+             palette = c("blue", "red"))  # Reemplaza con los colores deseados
+
+```
+Observamos... ACABAR DE ANALIZAR
 
 HACER EL MISMO GRÁFICO Y PINTAR LOS PNTOS CON VAR TARGET. Si cuadra con los grupos de individuos, se podría hacer profiling a partir de este ACM. Segurament no, però ho podem fer i dir que no es veuen associacions clares entre la variable TARGET i les modalitats de les variables ben representades en aquest parell de dimensions.
 
