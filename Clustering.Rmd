@@ -1,0 +1,138 @@
+---
+output: pdf_document
+header-includes:
+  - \usepackage{fullpage} 
+  - \usepackage[spanish]{babel}
+  - \usepackage{fancyhdr}
+  - \setlength{\headsep}{7mm} 
+  - \usepackage[linktoc=page]{hyperref}
+---
+
+```{=tex}
+\setlength{\headheight}{13.6pt}
+\setlength{\topmargin}{-10mm}
+
+\rhead{Minería de Datos}
+\lhead{Entrega D2}
+```
+\pagestyle{fancy}
+```{=tex}
+\cfoot{\thepage}
+\setcounter{page}{5}
+```
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
+```
+#Clustering
+
+En este apartado se aplican diversos algoritmos de clasificación, en concreto el K-means y el Jerárquico. Esto con el objetivo de determinar a que grupo pertenece cada observación, para después realizar un Profiling en el que se terminará etiquetando a cada uno de estos grupos con sus características más relevantes.
+
+## K-means
+
+## Clustering jerárquico
+
+```{r, include=FALSE}
+library(NbClust)
+library('dendextend')
+library(scales)
+library(cluster)
+```
+
+Lo primero que se realiza en el clustering jerárquico es un primer dendograma con el méotodo de Ward con la distáncia de Gower^2. Esto dado que en el k-means solo se puede trabajar con las variables numéricas y en la base de datos hay variables tanto numéricas como cualitativas.
+
+```{r}
+load("Dades preprocessades.Rdata")
+
+
+mydata <- df_preprocessed
+mydata$AMT_INCOME_TOTAL <- NULL
+mydata$AMT_CREDIT <- NULL
+mydata$AMT_ANNUITY <- NULL
+mydata$AMT_GOODS_PRICE <- NULL
+
+rm(df_preprocessed)
+ 
+dd <- mydata
+dd <- as.data.frame(lapply(mydata, function(x) if(is.numeric(x)){
+            scale(x, center=TRUE, scale=TRUE)
+         } else x))
+ 
+# es calcula la distància de gower:
+dissimMatrix <- daisy(dd, metric = "gower", stand = TRUE)
+ 
+distMatrix <- dissimMatrix^2
+ 
+h1 <- hclust(distMatrix, method = "ward.D2")
+ 
+plot(h1)
+```
+
+A primera vista se puede apreciar que el corte óptimo parece ser 2 clústers. Esta cantidad de clústers parece quedarse pequeña para los objetivos, por lo que trataremos de tomar la decisión analíticamente, usando coeficientes que ayudan a decidir cual es la mejor cantidad de clusters.
+
+Uno de ellos es el Coeficiente de Silhouette:
+
+Los valores que retorna el Coeficiente de Silhouette van del 1 al -1.
+Generalmente tomarán valores entre 1 y 0, siendo el 1 el mejor valor y 0 indicando la sobreposición de clusters. Los valores negativos indicarian la asignación incorrecta de la muestra a los clusters.
+
+Lo que se hace es calcular el Coeficiente de Silhouette para diferentes cantidades de clusters y gráficarlo, de manera que se cogerá el mayor valor como el númmero de clusters según este criterio de Silhouette.
+
+```{r}
+avg_sil <- c()
+for (k in 2:15) {
+ hc_result <- hclust(distMatrix, method = "complete")
+ clust <- cutree(hc_result, k)
+ sil <- silhouette(clust, distMatrix)
+ avg_sil[k] <- mean(sil[,3])
+}
+plot(avg_sil, type = "b", xlab = "Number of clusters", ylab = "Average silhouette width")
+```
+
+Como se puede ver, según el criterio de Silhouette, el número de clusters óptimo es 2.
+
+De todas maneras, como existen muchos otros criterios
+2n mètode (només numèriques): Nbclust
+
+```{r}
+NbClust(dd, method = "ward.D2", index = "all")
+nb <- NbClust(distMatrix, method = "ward.D2", index = "all")
+
+```
+
+```{r}
+Objectos <- sapply(dd, class)
+Numeriques <- names(Objectos)[which(Objectos%in%c("numeric"))]
+
+dd2 <- dd[,Numeriques]
+nb_clustering <- NbClust(dd2, distance = "euclidean", min.nc = 2, max.nc = 10, method = "ward.D2", index = "all")
+ 
+nb_clustering$Best.nc
+```
+
+
+
+Es torna a fer el dendrograma.
+
+```{r}
+hc <- hclust(daisy(dd, metric = "gower")^2, "ward.D2") # metrica euclidiana sin elevar al quadrado
+dd = res.PCA
+dend <- as.dendrogram(hc)
+plot(dend)
+```
+
+Amb el dendrograma es confirma que el millor tall (després de k = 2) és k = 3.
+
+```{r}
+objecto <- cutree(hc, 6)
+# s'apliquen els resultats a les dades no normalitzades
+mydata$cluster <- objecto
+colors <- c("red", "green", "blue","purple","orange","black")
+colors_dend <- color_branches(dend, labels = objecto, k = 6, col = colors)
+plot(colors_dend)
+```
+
+Es guarden les dades preprocessades amb els clústers fets.
+
+```{r}
+# save(mydata, file = 'data_clust.Rdata')
+```
