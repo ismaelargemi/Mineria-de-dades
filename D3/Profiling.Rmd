@@ -12,7 +12,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 Cargamos los datos
 ```{r}
-load()
+load(data_clust.Rdata)
 ```
 
 Estudio de la significación de las variables en los clústers
@@ -52,16 +52,16 @@ ValorTestXquali <- function(P,Xquali){
 }
 ```
 ```{r}
-
 #### ACONDICIONAMOS LOS DATOS PARA LAS FUNCIONES Y GRAFS ####
 #datos sin columna de clústers
-dades <- mydata[,-19]
+dades <- mydata[,-mydata$cluster]
 
 #número de variables
 K <- ncol(dades)
 
 #grupos de los clústers
 P <- mydata[,"cluster"]
+# P <- mydata$cluster
 nameP <- "classe"
 
 #número de clústers
@@ -195,3 +195,65 @@ for(k in 1:K){
     }
   }#endfor
 ```
+
+```{r}
+# VARIABLE NUM AGRUPANDO POR CLUSTER P
+library(ggplot2)
+
+# GRAF DE LA PROPORCION POSITIVA YNEGATIvA DE VALORESP POR CATEGORIA
+ggplot(data = dades, aes(x = P, y = num_var)) +
+  geom_line(stat = "summary", fun.y = "mean") +
+  geom_hline(yintercept = mean(dades$num_var)) +
+  labs(title = paste("Means of", names(dades)[k], "by", nameP), y = "Mean")
+
+#bARPLOT
+ggplot(data = dades, aes(x = P, y = num_var)) +
+  geom_bar(stat = "summary", fun = "mean") +
+  geom_hline(yintercept = mean(dades$num_var)) +
+  labs(title = paste("Means of", names(dades)[k], "by", nameP), y = "Mean")
+
+```
+
+```{r}
+# CATEGORICA AGRUPANDO POR P
+library(ggplot2)
+
+# pORPORCION POSITIVA Y NEGATIVA DE VALORES POR CATEGORIA, CONDICIONADO EN LAS FILAS
+ggplot(data = dades, aes(x = P, y = prop.table(table(P, cat_var))[,"positive"])) +
+  geom_line() +
+  labs(title = paste("Prop. of pos & neg by", names(dades)[k]), y = "Proportion") +
+  theme(legend.position = "top")
+
+```
+
+```{r}
+# CATEGORICA AGRUPANDO POR P
+library(ggplot2)
+
+# pORPORCION POSITIVA Y NEGATIVA DE VALORES POR CATEGORIA, CONDICIONADO EN LAS COLUMNAS
+ggplot(data = dades, aes(x = P, y = prop.table(table(cat_var, P))["positive",])) +
+  geom_line() +
+  labs(title = paste("Prop. of pos & neg by", names(dades)[k]), y = "Proportion") +
+  theme(legend.position = "top")
+
+```
+
+```{r}
+# CATEGORICA AGRUPANDO POR P
+library(ggplot2)
+
+# GRAFICO DE LA PROPORCION DE VALORES POR CATEGORIA CON LA VARIABLE NE EL EJE X
+ggplot(data = dades, aes(x = cat_var)) +
+  geom_bar(aes(fill = P), position = "fill") +
+  labs(title = paste("Prop. of pos & neg by", names(dades)[k]), y = "Proportion", x = "Categories") +
+  theme(legend.position = "top")
+
+#Barplot
+ggplot(data = dades, aes(x = P, fill = cat_var)) +
+  geom_bar(position = "dodge") +
+  labs(title = paste("Prop. of pos & neg by", names(dades)[k]), y = "Proportion") +
+  theme(legend.position = "top")
+
+```
+
+
