@@ -1,0 +1,345 @@
+---
+title: "Elección de la k óptima para Kmeans y cluster jerárquico"
+author: "Iker Meneses Sales Jordi Alvarez Garcia"
+date: "2023-03-17"
+output:
+  pdf_document: default
+html_document: default
+---
+  
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = F, warning = F)
+```
+
+Con el objetivo de elegir el número de clústers óptimo para los datos presentados, se procede a realizar diferentes índices para determinar la k más adecuada de cara a realizar los procedimientos kmeans y clustering jerárquico. Para ello, se usará la función `NbClust`, la cual incluye muchos criterios para elegir la k óptima. Antes de realizar este procedimiento, se debe normalizar los datos, ya que así las distancias son similares para variables con escalas diferentes:
+  
+```{r}
+library(kableExtra)
+library(NbClust)
+library(dendextend)
+library(cluster)
+nums = c(1,4,8:17,25)
+aux = data
+for(i in 1:ncol(aux[,nums])){
+  aux[,nums][i] = (aux[,nums][i] - min(aux[,nums][i]))/(max(aux[,nums][i])-min(aux[,nums][i]))
+}
+```
+
+Una vez se ha normalizado la base de datos, se procede a realizar los tests:
+  
+```{r}
+res<-NbClust(aux[,nums], distance = "euclidean", min.nc=3, max.nc=10, 
+             method = "ward.D2", index = "all")
+round(res$Best.nc,0) %>%
+  kbl() %>%
+  kable_styling()
+```
+
+Como se puede observar en la tabla presentada, el número óptimo de clusters debe ser 4, ya que es el resultado más repetido entre todos los índices. Así pues, de aquí en adelante, se determinará que $k=4$. Nótese que se ha determinado los índices entre 3 y 10, ya que se ha considerado que hacer dos clusters es una partición muy simple y más de diez puede llevar a clusters con muy pocas observaciones.
+
+Una vez se conoce la k óptima para seguir con la creación de clusters, se puede realizar Kmeans con $K=4$:
+  
+```{r}
+kmeans = kmeans(aux[,nums],4)
+Bss <- sum(rowSums(kmeans$centers^2)*kmeans$size)
+Wss <- sum(kmeans$withinss)
+Tss <- kmeans$totss
+Ib1 <- 100*Bss/(Bss+Wss)
+n_cluster = data.frame(table(kmeans$cluster))
+colnames(n_cluster) = c('Cluster','Número de observaciones')
+n_cluster %>%
+  kbl() %>%
+  kable_styling()
+```
+
+
+Como se puede observar, la partición de los datos usando kmeans nos lleva a un número de observaciones por cluster relativamente equilibrado. 
+
+Teniendo en cuenta que el clústering jerárquico hace uso de variables tanto numéricas como categóricas, se observa que la $k$ resultante es distinta.
+
+En este caso, tras utilizar los métodos silhouette, wss y gap_stat, la $k$ óptima es 4.
+
+```{r}
+library(factoextra)
+x<-fviz_nbclust(aux[,-c(7)], hcut , method = c("silhouette", "wss", "gap_stat"))
+x<-x$data
+max_cluster<-as.numeric(x$clusters[which.max(x$y)])
+```
+
+```{r}
+a = hclust(dist(aux), method = 'ward.D2')
+plot(a,labels=F, hang = F)
+a = as.dendrogram(a)
+d1 = color_branches(a,k=4,col=c('#458B74','#0000CD','#CD3333',"lightblue"),labels = F)
+plot(d1, hang = -1, ylab = 'Altura', labels = F)
+```
+
+```{r}
+groups_hclust = cutree(a,4)
+table(groups_hclust)
+data = cbind(data,groups_hclust)
+```
+
+
+## Profiling (Jordi)
+
+```{r}
+attach(data)
+groups_hclust    <- as.factor(groups_hclust)
+levels(groups_hclust) <- 1:4
+#Calcula els valor test de la variable Xnum per totes les modalitats del factor P
+ValorTestXnum <- function(Xnum,P){
+  #freq dis of fac
+  nk <- as.vector(table(P)); 
+  n <- sum(nk); 
+  #mitjanes x grups
+  xk <- tapply(Xnum,P,mean);
+  #valors test
+  txk <- (xk-mean(Xnum))/(sd(Xnum)*sqrt((n-nk)/(n*nk))); 
+  #p-values
+  pxk <- pt(txk,n-1,lower.tail=F);
+  for(c in 1:length(levels(as.factor(P)))){if (pxk[c]>0.5){pxk[c]<-1-pxk[c]}}
+  print(names(P)[i])
+  return (pxk)
+}
+## Recency y Difference son poco 
+ValorTestXquali <- function(P,Xquali){
+  taula <- table(P,Xquali);
+  n <- sum(taula); 
+  pk <- apply(taula,1,sum)/n;
+  pj <- apply(taula,2,sum)/n;
+  pf <- taula/(n*pk);
+  pjm <- matrix(data=pj,nrow=dim(pf)[1],ncol=dim(pf)[2], byrow=TRUE);      
+  dpf <- pf - pjm; 
+  dvt <- sqrt(((1-pk)/(n*pk))%*%t(pj*(1-pj))); 
+  #i hi ha divisions iguals a 0 dona NA i no funciona
+  zkj <- dpf
+  zkj[dpf!=0]<-dpf[dpf!=0]/dvt[dpf!=0]; 
+  pzkj <- pnorm(zkj,lower.tail=F);
+  for(c in 1:length(levels(as.factor(P)))){for (s in 1:length(levels(Xquali))){if (pzkj[c,s]> 0.5){pzkj[c,s]<-1- pzkj[c,s]}}}
+  return (list(rowpf=pf,vtest=zkj,pval=pzkj))
+}
+# MIRAR SOLO PV, No significativo 
+#source("file")
+#data contain the dataset
+data<-data
+#data<-data[filtro,]
+#data<-df
+K<-dim(data)[2]
+par(ask=TRUE)
+```
+
+```{r}
+#P must contain the class variable
+P<-data[,ncol(data)]
+#P<-c2
+#P<-data[,18]
+nameP<-"classe"
+#P<-df[,33]
+nc<-length(levels(factor(P)))
+nc
+pvalk <- matrix(data=0,nrow=nc,ncol=K, dimnames=list(levels(P),names(data)))
+nameP<-"Class"
+n<-dim(data)[1]
+for(k in 1:K){
+  if (is.numeric(data[,k])){ 
+    print(paste("Anàlisi per classes de la Variable:", names(data)[k]))
+    boxplot(data[,k]~P, main=paste("Boxplot of", names(data)[k], "vs", nameP ), horizontal=TRUE)
+    
+    barplot(tapply(data[[k]], P, mean),main=paste("Means of", names(data)[k], "by", nameP ))
+    abline(h=mean(data[[k]]))
+    legend(0,mean(data[[k]]),"global mean",bty="n")
+    print("Estadístics per groups:")
+    for(s in levels(as.factor(P))) {print(summary(data[P==s,k]))}
+    o<-oneway.test(data[,k]~P)
+    print(paste("p-valueANOVA:", o$p.value))
+    kw<-kruskal.test(data[,k]~P)
+    print(paste("p-value Kruskal-Wallis:", kw$p.value))
+    pvalk[,k]<-ValorTestXnum(data[,k], P)
+    print("p-values ValorsTest: ")
+    print(pvalk[,k])      
+  }else{
+    if(class(data[,k])=="Date"){
+      print(summary(data[,k]))
+      print(sd(data[,k]))
+      #decide breaks: weeks, months, quarters...
+      hist(data[,k],breaks="weeks")
+    }else{
+      #qualitatives
+      print(paste("Variable", names(data)[k]))
+      table<-table(P,data[,k])
+         print("Cross-table")
+         print(table)
+      rowperc<-prop.table(table,1)
+      colperc<-prop.table(table,2)
+        print("Distribucions condicionades a files")
+       print(rowperc)
+      
+      #ojo porque si la variable es true o false la identifica amb el tipus Logical i
+      #aquest no te levels, por tanto, coertion preventiva
+      
+      data[,k]<-as.factor(data[,k])
+      
+      
+      marg <- table(as.factor(P))/n
+      print(append("Categories=",levels(as.factor(data[,k]))))
+      #from next plots, select one of them according to your practical case
+      plot(marg,type="l",ylim=c(0,1),main=paste("Prop. of pos & neg by",names(data)[k]))
+      paleta<-rainbow(length(levels(data[,k])))
+      for(c in 1:length(levels(data[,k]))){lines(colperc[,c],col=paleta[c]) }
+      #with legend
+      plot(marg,type="l",ylim=c(0,1),main=paste("Prop. of pos & neg by",names(data)[k]))
+      paleta<-rainbow(length(levels(data[,k])))
+      for(c in 1:length(levels(data[,k]))){lines(colperc[,c],col=paleta[c]) }
+      legend("topright", levels(data[,k]), col=paleta, lty=2, cex=0.6)
+      
+      #condicionades a classes
+      print(append("Categories=",levels(data[,k])))
+      plot(marg,type="n",ylim=c(0,1),main=paste("Prop. of pos & neg by",names(data)[k]))
+      paleta<-rainbow(length(levels(data[,k])))
+      for(c in 1:length(levels(data[,k]))){lines(rowperc[,c],col=paleta[c]) }
+      
+      #with legend
+      plot(marg,type="n",ylim=c(0,1),main=paste("Prop. of pos & neg by",names(data)[k]))
+      paleta<-rainbow(length(levels(data[,k])))
+      for(c in 1:length(levels(data[,k]))){lines(rowperc[,c],col=paleta[c]) }
+      legend("topright", levels(data[,k]), col=paleta, lty=2, cex=0.6)
+      
+      #amb variable en eix d'abcisses
+      marg <-table(data[,k])/n
+      print(append("Categories=",levels(data[,k])))
+      plot(marg,type="l",ylim=c(0,1),main=paste("Prop. of pos & neg by",names(data)[k]), las=3)
+      #x<-plot(marg,type="l",ylim=c(0,1),main=paste("Prop. of pos & neg by",names(data)[k]), xaxt="n")
+      #text(x=x+.25, y=-1, adj=1, levels(CountryName), xpd=TRUE, srt=25, cex=0.7)
+      paleta<-rainbow(length(levels(as.factor(P))))
+      for(c in 1:length(levels(as.factor(P)))){lines(rowperc[c,],col=paleta[c]) }
+      #with legend
+      plot(marg,type="l",ylim=c(0,1),main=paste("Prop. of pos & neg by",names(data)[k]), las=3)
+      for(c in 1:length(levels(as.factor(P)))){lines(rowperc[c,],col=paleta[c])}
+      legend("topright", levels(as.factor(P)), col=paleta, lty=2, cex=0.6)
+      
+      #condicionades a columna 
+      plot(marg,type="n",ylim=c(0,1),main=paste("Prop. of pos & neg by",names(data)[k]), las=3)
+      paleta<-rainbow(length(levels(as.factor(P))))
+      for(c in 1:length(levels(as.factor(P)))){lines(colperc[c,],col=paleta[c]) }
+      
+      #with legend
+      plot(marg,type="n",ylim=c(0,1),main=paste("Prop. of pos & neg by",names(data)[k]), las=3)
+      for(c in 1:length(levels(as.factor(P)))){lines(colperc[c,],col=paleta[c])}
+      legend("topright", levels(as.factor(P)), col=paleta, lty=2, cex=0.6)
+      
+      table<-table(data[,k],P)
+      print("Cross Table:")
+      print(table)
+      print("Distribucions condicionades a columnes:")
+      print(colperc)
+      #diagrames de barres apilades                                         
+      
+      paleta<-rainbow(length(levels(data[,k])))
+      barplot(table(data[,k], as.factor(P)), beside=FALSE,col=paleta )
+      barplot(table(data[,k], as.factor(P)), beside=FALSE,col=paleta )
+      legend("topright",levels(as.factor(data[,k])),pch=1,cex=0.5, col=paleta)
+      
+      #diagrames de barres adosades
+      barplot(table(data[,k], as.factor(P)), beside=TRUE,col=paleta )
+      barplot(table(data[,k], as.factor(P)), beside=TRUE,col=paleta)
+      legend("topright",levels(as.factor(data[,k])),pch=1,cex=0.5, col=paleta)
+      
+      print("Test Chi quadrat: ")
+      print(chisq.test(data[,k], as.factor(P)))
+      
+      print("valorsTest:")
+      print( ValorTestXquali(P,data[,k]))
+      #calcular els pvalues de les quali
+    }
+  }
+}#endfor
+#descriptors de les classes més significatius. Afegir info qualits
+for (c in 1:length(levels(as.factor(P)))) {
+  if(!is.na(levels(as.factor(P))[c])){
+    print(paste("P.values per class:",levels(as.factor(P))[c]));
+    print(sort(pvalk[c,]), digits=3) 
+  }
+}
+#afegir la informacio de les modalitats de les qualitatives a la llista de pvalues i fer ordenacio global
+#saving the dataframe in an external file
+#write.table(data, file = "credscoClean.csv", sep = ";", na = "NA", dec = ".", row.names = FALSE, col.names = TRUE)
+```
+
+
+
+Analisis numerico y gráfico (HACER CONSTANTES REFERENCIAS A LOS GRAFICOS PERO INTENTAR NO HACER TANTAS A LAS TABLAS): 
+- Yearbirth: La variable yearbirth presenta unos pvalores significativos de ANOVA y Kruskal-Wallis que confirman la importancia de la variable para el profiling.  Los pvalores inidviduales para cada una de las clases presentan valores estadisticamente significativos para las clases 2,3,4, siendo la 3 especialmente significativa. Esto se puede deber a que, tal y como se puede apreciar en el boxplot, la clase 1 tiene el rango de edad mas amplio de entre todas.
+En linea con la anterior argumentacion observamos como la clase 3 presenta la media de edad mas joven de entre todas.
+
+- Education: Para la variable educacion observamos un pvalor de la Chi-Cuadrado estadisticamente significativo, hecho que indica la no independencia entre el tipo de clase y la variable en sí.
+
+La variable en cuestion presenta un alto grado de homogeneidad del nivel de educacion para todo tipo de clases, pese a que existe una mayor concentracion de la poblacion (obejto de estudio) en el nivel graduation. 
+Pese a eso exsite una concentracion de poblacion "basic" para la clase 3, siendo el 60% de las personas basic pertenecen al bloque 3. Aun así, hay que tener en consideración que el porcentaje de basic es muy bajo respecto al total. Ademas, la clase 4 es la que presenta una mayor concentración de individuos con mejor educación (con PhD o master).
+En general observamos una poblacion concentrada en niveles altos de educacion en todo tipo de clases.
+
+CONSIDERACION: LA CLASE 3 SON LOS MAS JOVENES Y LOS QUE TIENEN MENOS ESTUDIOS MIENTRAS QUE LOS DE LA CLASE 4 TIENEN MAS ESTUDIOS AUNQUE TIENEN UNA EDAD PARECIDA A LAS CLASES 1 Y 2.
+
+- Marital status: La variable marital status presenta un pvalor nuevamente significativo en cuanto a la correlación con respecto al tipo de clase. La clase 4 presenta el estrato mas grande asi como es la clase mas homogenea en cuanto a niveles se refiere para dicha variable. Destacamos que para las clases 1,2 y 3 la mayoria de la población presenta la categoría married, seguidos cerca de single y toghether.
+Destacar la ausencia de personas widow para la clase 3, tal y como se puede ver en el gráfico.
+
+- Income: La variable income presenta unos pvalores significativos de ANOVA y Kruskal-Wallis.
+Los grupos presentan perfines diversos en cuanto a la variable en cuestión, siendo el grupo 1 el mas adinerado y el grupo 3 el que menos (INCLUIR GRAFICO GLOBAL MEAN, SE PUEDE MIRAR TAMBIEN EL BOXPLOT PARA VER LAS VARIABILIDADES). Igualmente destacamos la gran disparidad existente en cuanto a la riqueza para el grupo 1, ya que hay individuos con ingresos cercanos a 0 mientras que hay sujetos con ingresos sobre los 150.000$.
+
+-Kidhome: La variable kidhome presenta unos pvalores significativos de Chi-Cuadrado especialmente relevantes en comparación con el resto de variables analizadas. Para la matriz de pvalores todos los valores son significativos. Observamos que casi todos los individuos de la clase 1 y 4 no tienen niños pequeños, mientras que los sujetos del grupo 3 tienen 1 niño. Los de la clase 2 tienen mayoritariamente un hijo, además de tener todos los individuos con dos hijos de toda la base de datos.
+
+- Teenhome: La variable Teenhome presenta unos pvalores significativos de chi-cuadrado (MUY SIGNIFICATIVO).
+Como se puede observar en el análisis de esta  variable, queda muy claro que todos aquellos individuos sin jóvenes a su cargo forman parte de los grupos 1 y 3, mientras que los individuos con 1 joven pertenecen a los grupos 2 y 4. Por otro lado, aquellos individuos con dos individuos forman parte de forma íntegra del grupo 4.
+
+- Recency: Como se puede observar en los resultados obtenidos por los test ANOVA y Kruskall-Wallis, esta variable no es significativa en la definición de los perfiles de los clusters, de forma que será descartada.
+
+- Mnt wines: La variable que indica el gasto en vino de la persona analizada presenta unos pvalores significativos de ANOVA y Kruskal-Wallis. 
+Observamos que la variable presenta valores muy dispares entre clases, resaltando que el grupo 1 y 4 gastan el cuadruple que los grupos 2 y 3 en vino.
+
+- Mnt Fruits: La variable que indica el gasto en fruta de la persona analizada presenta unos pvalores significativos de ANOVA y Kruskal-Wallis. 
+Observamos que la variable presenta valores muy dispares entre clases, resaltando que el grupo 1 es el que tiene un mayor consumo y, seguidamente, a cierta distancia, el grupo 4. Los grupos 2 y 3 tienen un grupo de fruta bajo.
+
+- Mnt Meat: La variable que indica el gasto en carne de la persona analizada presenta unos pvalores significativos de ANOVA y Kruskal-Wallis. 
+Observamos que la variable presenta valores muy dispares entre clases, resaltando que el grupo 1 es el que tiene un mayor consumo y, seguidamente, a cierta distancia, el grupo 4. Los grupos 2 y 3 tienen un consumo de carne bajo
+
+-Mnt Fish:  La variable que indica el gasto en pescado de la persona analizada presenta unos pvalores significativos de ANOVA y Kruskal-Wallis. 
+Observamos que la variable presenta valores muy dispares entre clases, resaltando que el grupo 1 es el que mas consume, siendo su consumo el doble que el del siguiente grupo que mas consume, el grupo 4. Los grupos 2 y 3 tienen un consumo de pescado muy bajo.
+
+HACER HISTOGRAMA DE LAS 4 CLASES DE LOS INGRESOS Y DE LOS DISTINTOS CONSUMOS (EN LA BARRA DE AL LADO) DISTINGUIENDO POR COLORES.
+
+-NumDealPurchases: La variable mnt meat presenta unos pvalores significativos de ANOVA y Kruskal-Wallis. 
+El grupo 2 es el que mas se aprovecha de las ofertas, siendo el grupo 1 el que menos aprovecha las ofertas.
+
+-NumWebPurchases: La variable mnt meat presenta unos pvalores significativos de ANOVA y Kruskal-Wallis. 
+La clase 4 es la que, en promedio, más compras a través de la web realizan, seguidamente de la 1, sin estar muy alejados en terminos porcentuales del resto de clases.
+
+-NumCatalogPurchases: La variable num catalog purchases presenta unos pvalores significativos de ANOVA y Kruskal-Wallis. 
+La clase 1 es la que, en promedio, más compras realizadas a usando el catálogo, seguidos de la clase 4. Las otras dos clases no usan el catálogo para sus compras. De hecho, cabe destacar que el 50% de los sujetos de la clase 3 no han usado el catálogo para la compra, según nuestros datos.
+
+-NumStorePurchases: La variable mnt meat presenta unos pvalores significativos de ANOVA y Kruskal-Wallis.
+La clase 1 y la 4 tienen el mismo consumo, siendo las dos las que mas consumen respecto a las clases 2 y 3, que, teneinedo el mismo consumo, este es mucho menor.
+
+-Acceptedcmpt1: La variable mnt meat presenta unos pvalores significativos de Chi-Cuadrado.
+
+-Acceptedcmpt2: La variable mnt meat presenta unos pvalores significativos de Chi-Cuadrado.
+ 
+-Acceptedcmpt4: La variable mnt meat presenta unos pvalores significativos de Chi-Cuadrado.
+
+-Acceptedcmpt5: La variable mnt meat presenta unos pvalores significativos de Chi-Cuadrado.
+
+En cuanto a las variables binarias respecto a si aceptan o no las ofertas en segun que momento se observa un patrón claro: en la clase 1 es donde se manifiestan la gran mayoría de personas que sí aceptan las ofertas en cualquier momento. Así pues, la gran mayoría de personas que sí eligen las ofertas en cuanto se la proponen se encuentran en el cluster número 1.
+
+-Acceptedcmpt3: Como se puede observar en los resultados obtenidos por el test de la Chi-Cuadrado, esta variable no es significativa en la definición de los perfiles de los clusters, de forma que será descartada.
+
+
+## Resultado del profiling
+
+Tras haber analizado la significación de cada variable una a una y haber discutido sobre las diferencias entre las clases resultantes, se han definido las siguientes descripciones para las cuatro clases encontradas:
+
+  - Clase 1: Individuos generalmente solteros, adinerados mayoritariamente y sin personas a cargo. Se consideran individuos con gasto elevado en cualquier tipo de producto, además de tener un comportamiento a veces irracionall, ya que aceptan las ofertas propuestas al momento. Hacen bastante la compra a través del catálogo.
+  
+  - Clase 2: Individuos de clase media, generalmente con un niño y un joven a su cargo con una gran propensión al ahorro, debido a que su gasto en comparación con sus ingresos es bajo. Son el grupo que más productos en oferta compra, por lo que se podría considerar un grupo bastante racional.
+  
+  - Clase 3: Individuos jóvenes de clase baja y con un nivel educativo medio-bajo (no disponen de título universitario). Se trata de personas con un ingreso bajo en comparación con el resto, pero pese a ello disponen de un niño a cargo, generalmente. Además, son clientes que no usan para nada el catálogo a la hora de hacer la compra.
+  
+  - Clase 4: Individuos con un rango de edad muy dispar (aunque hay gente mayor, generalmente), de clase medio-alta y con un nivel de estudios superior (máster o doctorado). No tienen niños a cargo, pero sí tienen 1 o 2 jóvenes viviendo en su mismo techo. A pesar de lo que se podría presumir, son individuos que suelen hacer la compra de forma online.
