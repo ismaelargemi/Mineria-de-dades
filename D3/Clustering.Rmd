@@ -24,23 +24,21 @@ header-includes:
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
 ```
+
+```{r, include=FALSE}
+library(NbClust)
+library(dendextend)
+library(scales)
+library(cluster)
+library(dplyr)
+library(ggplot2)
+```
+
 #Clustering
 
 En este apartado se aplican diversos algoritmos de clasificación, en concreto el K-means y el Jerárquico. Esto con el objetivo de determinar a que grupo pertenece cada observación, para después realizar un Profiling en el que se terminará etiquetando a cada uno de estos grupos con sus características más relevantes.
 
 ## K-means
-
-## Clustering jerárquico
-
-```{r, include=FALSE}
-library(NbClust)
-library('dendextend')
-library(scales)
-library(cluster)
-```
-
-Lo primero que se realiza en el clustering jerárquico es un primer dendograma con el méotodo de Ward con la distáncia de Gower^2. Esto dado que en el k-means solo se puede trabajar con las variables numéricas y en la base de datos hay variables tanto numéricas como cualitativas.
-
 ```{r}
 load("Dades preprocessades.Rdata")
 
@@ -51,20 +49,90 @@ mydata$AMT_CREDIT <- NULL
 mydata$AMT_ANNUITY <- NULL
 mydata$AMT_GOODS_PRICE <- NULL
 
+
+
 rm(df_preprocessed)
- 
-dd <- mydata
-dd <- as.data.frame(lapply(mydata, function(x) if(is.numeric(x)){
-            scale(x, center=TRUE, scale=TRUE)
-         } else x))
- 
+
+Objectos <- sapply(mydata, class)
+Numeriques <- names(Objectos)[which(Objectos%in%c("numeric"))]
+
+dd <- mydata[,Numeriques]
+```
+
+Primero se aplicará el algoritmo K-means, lo que solamente nos permitirá utilizar las variables numéricas.
+
+Antes de aplicar el propio algoritmo, se necesita seleccionar el número óptimo de clústers. Para realizar esto, existen diversos métodos.
+
+Uno de ellos es el método del codo, que consiste en calcular el K-means para un rango de valores k y luego graficar la suma de los cuadrados de las distancias intraclúster en función de k. Para encontrar el óptimo con este método, sencillamente hace falta encontrar el codo del gráfico.
+
+
+```{r}
+wss <- (nrow(dd)-1)*sum(apply(dd,2,var))
+  for (i in 2:15) wss[i] <- sum(kmeans(dd,
+                                       centers=i)$withinss)
+plot(1:15, wss, type="b", xlab="Number of Clusters",
+     ylab="Within groups sum of squares", main = "Método del codo")
+```
+
+Como se puede apreciar en el gráfico, el número óptimo de clústers para el K-means de nuestra base de datos según el método del codo, seria k=2.
+
+Como existen muchos otros criterios para la selección de el k óptimo, se usará la función NbClust, que permite aplicar una cantidad de 26 criterios para la selección de k, de esta manera se sabrá con mayor seguridad cual es el óptimo real.
+
+
+```{r}
+nb_clustering <- NbClust(dd, distance = "euclidean", min.nc = 2, max.nc = 10, method = "ward.D2", index = "all")
+
+t <- table(nb_clustering$Best.nc[1,])
+t <- as.data.frame(t)
+ggplot(t, aes(x = Var1, y = Freq)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Número óptimo de clústers para el K-means", x = "k", y = "nº de métodos") +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+Como se puede apreciar en el histograma, tras haber utilizado todos los criterios, el número óptimo de clústers que más métodos han escogido es k=3.
+
+
+```{r}
+k <- 3
+resultado <- kmeans(x = dd,centers = k,iter.max = 10)
+clusters <- resultado$cluster
+
+colors <- ifelse(clusters == 1, "blue",
+                       ifelse(clusters == 2, "green",
+                       ifelse(clusters == 3, "red", "Otros")))
+
+pc1 <- prcomp(dd, scale = TRUE)
+
+numer <- dd
+numer$clusters <- colors
+PC1 <- pc1$x[,1]
+PC2 <- pc1$x[,2]
+ggplot(numer, 
+       aes(x = PC1, 
+           y = PC2, 
+           color = clusters)) +
+  geom_point() +
+  stat_ellipse() +
+  geom_hline(yintercept = 0, colour = "red") +
+  geom_vline(xintercept = 0, colour = "red")
+
+for(i in )
+```
+
+## Clustering jerárquico
+
+Lo primero que se realiza en el clustering jerárquico es un primer dendograma con el méotodo de Ward con la distáncia de Gower^2. Esto dado que en el k-means solo se puede trabajar con las variables numéricas y en la base de datos hay variables tanto numéricas como cualitativas.
+
+```{r}
 # es calcula la distància de gower:
-dissimMatrix <- daisy(dd, metric = "gower", stand = TRUE)
- 
+dissimMatrix <- daisy(mydata, metric = "gower")
+
 distMatrix <- dissimMatrix^2
- 
+dm <- as.matrix(distMatrix) 
+dm <- as.data.frame(dm)
 h1 <- hclust(distMatrix, method = "ward.D2")
- 
+
 plot(h1)
 ```
 
@@ -91,30 +159,21 @@ plot(avg_sil, type = "b", xlab = "Number of clusters", ylab = "Average silhouett
 Como se puede ver, según el criterio de Silhouette, el número de clusters óptimo es 2.
 
 De todas maneras, como existen muchos otros criterios
+
 2n mètode (només numèriques): Nbclust
 
 ```{r}
-NbClust(dd, method = "ward.D2", index = "all")
-nb <- NbClust(distMatrix, method = "ward.D2", index = "all")
-
+mydata2 <- PCAmix(mydata, graph = FALSE)
+nb <- NbClust(mydata, diss = dm ,distance=NULL, method = "ward.D2", index = "silhouette",min.nc = 2, max.nc = 10)
 ```
 
-```{r}
-Objectos <- sapply(dd, class)
-Numeriques <- names(Objectos)[which(Objectos%in%c("numeric"))]
-
-dd2 <- dd[,Numeriques]
-nb_clustering <- NbClust(dd2, distance = "euclidean", min.nc = 2, max.nc = 10, method = "ward.D2", index = "all")
- 
-nb_clustering$Best.nc
-```
 
 
 
 Es torna a fer el dendrograma.
 
 ```{r}
-hc <- hclust(daisy(dd, metric = "gower")^2, "ward.D2") # metrica euclidiana sin elevar al quadrado
+hc <- hclust(daisy(mydata, metric = "gower")^2, "ward.D2") # metrica euclidiana sin elevar al quadrado
 dd = res.PCA
 dend <- as.dendrogram(hc)
 plot(dend)
@@ -131,8 +190,17 @@ colors_dend <- color_branches(dend, labels = objecto, k = 6, col = colors)
 plot(colors_dend)
 ```
 
+
+```{r}
+objecto2 <- cutree(hc, 3)
+# s'apliquen els resultats a les dades no normalitzades
+mydata$cluster2 <- objecto2
+colors <- c("red", "green", "blue","purple","orange","black")
+colors_dend <- color_branches(dend, labels = objecto2, k = 3, col = colors)
+plot(colors_dend)
+```
 Es guarden les dades preprocessades amb els clústers fets.
 
 ```{r}
-# save(mydata, file = 'data_clust.Rdata')
+save(mydata, file = 'data_clust.Rdata')
 ```
