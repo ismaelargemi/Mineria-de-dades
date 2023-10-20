@@ -9,7 +9,6 @@ knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
 ```
 Comentaris:
 - posar més subtítols?
-- treure variable Target de l'analisi
 - canviar noms variables per a evitar solapaments
 - treure les variables numèriques de les suplementàries que s'hagin considerat no rellevants en l'ACP
 - CAL ACABAR TOT EL QUE ESTÀ EN MAJÚSCULES, I SI VOLEU AFEGIR MÉS ANÀLISI I CANVIAR COSES CAP PROBLEMA
@@ -46,11 +45,26 @@ En los gráficos obtenidos puede verse la variabilidad que expresan cada una de 
 
 
 Se representan gráficamente la inercia que explica cada una de las dimensiones generadas:
-```{r, out.width="90%"}
-barp <- barplot(res.mca$eig[,2], names.arg=1:nrow(res.mca$eig), ylim = c(0,21), 
-                cex.names = 0.7, las = 2, xlab = c("Dimensiones"), 
-                ylab = c("Percentatge de variància explicada"), 
-                main = "Inercia explicada per cada dimensión")
+
+```{r}
+library(ggplot2)
+
+# Crear un data frame con los datos
+data <- data.frame(Dimension = 1:nrow(res.mca$eig), 
+                   Percentatge = res.mca$eig[, 2])
+
+# Crear el gráfico de barras con ggplot2
+ggplot(data, aes(x = as.factor(Dimension), y = Percentatge)) +
+  geom_bar(stat = "identity", fill = "black") +
+  ylim(0, 25) +
+  labs(x = "Dimensiones",
+       y = "Porcentaje de varianza explicada",
+       title = "Inercia explicada por cada dimensión") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 10),
+        panel.grid.major = element_blank())  # Elimina la cuadrícula de fondo
+
+
 ```
 
 Si una dimensión tiene una inercia baja, significa que todas las modalidades están muy cercanas al centro de gravedad y, en consecuencia, son muy similares. A medida que aumenta la inercia, va aumentando la distancia al centro de gravedad y, por tanto, se reduce la similitud.
@@ -71,6 +85,7 @@ Si una categoría de variable está bien representada por dos dimensiones, la su
   - Las categorías de variables con valores bajos de cos2 se colorearán en "cian".
   - Las categorías de variables con valores medios de cos2 se colorearán en “amarillo”.
   - Las categorías de variables con valores altos de cos2 se colorearán en “rojo”.
+
 
 
 ````{r}
@@ -97,7 +112,7 @@ A continuación representamos los mismos individuos pero coloreandolos según la
 library(FactoMineR)
 
 fviz_mca_ind(res.mca, geom = "point", col.ind = df_preprocessed$TARGET, 
-             palette = c("blue", "red"))  # Reemplaza con los colores deseados
+             palette = c("orange", "purple"))  # Reemplaza con los colores deseados
 
 ```
 Observamos... ACABAR DE ANALIZAR
@@ -126,8 +141,8 @@ ggplot(data = mca1_vars_df, aes(x = Dim.1, y = Dim.2)) +
   
   ggtitle("MCA plot of variables using R package FactoMineR") +
   scale_colour_discrete(name = "Variable")+ 
-  xlim(-3,1.5) + 
-  ylim(-1.5,2)
+  xlim(-2,1.5) + 
+  ylim(-1,1.5)
 ```
 CAL ANALITZAR. Es veu poc, aixi que es passa a anlitzar per cada variable.
 
