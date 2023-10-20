@@ -23,8 +23,8 @@ editor_options:
   markdown: 
   wrap: sentence
 ---
-  
-```{r setup, include=FALSE} 
+
+```{r setup, include=FALSE}
 knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
 #setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 options(scipen=999)
@@ -94,7 +94,6 @@ Invierno 2023
 \end{center}
 \end{titlepage}
 ```
-
 \newpage
 
 ```{=latex}
@@ -103,7 +102,6 @@ Invierno 2023
 \tableofcontents
 \hypersetup{linkcolor=blue}
 ```
-
 \newpage
 
 ## Análisis de los valores missing en la base de datos usada
@@ -120,7 +118,6 @@ kable(x,caption = "Estudio de NAs por variable", align = "c",booktabs=T) %>%
                 latex_options = "HOLD_position",  font_size = 9)
 ```
 
-
 Como se puede observar, la mayoria de los NAs proceden de la variables own_car_age y Occupation_Type, siendo solo unos pocos proceden de Amt_goods_price.
 
 ```{r fig1,echo=F, fig.cap="Distribución de los NAs por variable",fig.show = 'hold'}
@@ -130,16 +127,16 @@ data |>
   theme(axis.title = element_text(color="grey10",face = "italic")) + 
   ylab("") + xlab("")  
 ```
+
 El análisis gráfico muestra que el número de datos missing es muy reducido en toda la base de datos: el peso de estos es casi insignificante en el análisis a realizar posteriormente.
 
 # ENTREGA D3
 
-## Análisis Univariante 
+## Análisis Univariante
 
 Con la intención de realizar un buen análisis descriptivo univariante de los datos previo al pre-procesamiento se ha decidido integrar conjuntamente gráficos y tablas con resultados numéricos para lograr el mejor entendimiento de estos.
 
 ### Análisis Univariante Numérico
-
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE, results='asis'}
 data[,c(1:7,14)] <- lapply(data[,c(1:7,14)],as.numeric)
@@ -156,13 +153,13 @@ kable(describe(select_if(data, is.numeric)),
 
 Para comenzar, hemos creado una tabla que muestra varios estadísticos de todas las variables numéricas que hemos analizado. Además de los estadísticos más comunes, como la media o la desviación estándar, también hemos incluido otros estadísticos menos conocidos relacionados con la dispersión y centralización de los datos:
 
-- 'Trimmed mean': Este es un estimador que calcula un estadístico para la variable al eliminar los valores más extremos de su distribución. En el caso de la 'Trimmed Mean', calcula la media de cada variable utilizando solo los datos que se encuentran en el intervalo [5%, 95%]. Al usar la 'Trimmed Mean', observamos que la variable "Amt credit" tiene una media similar a la mediana, lo que indica un alto grado de simetría.
+-   'Trimmed mean': Este es un estimador que calcula un estadístico para la variable al eliminar los valores más extremos de su distribución. En el caso de la 'Trimmed Mean', calcula la media de cada variable utilizando solo los datos que se encuentran en el intervalo [5%, 95%]. Al usar la 'Trimmed Mean', observamos que la variable "Amt credit" tiene una media similar a la mediana, lo que indica un alto grado de simetría.
 
-- Skew: Este estadístico mide el grado de asimetría de la distribución. Toma valores positivos si la asimetría está hacia la derecha y negativos si está hacia la izquierda (es decir, si la media es menor que la mediana). Un alto grado de asimetría puede indicar la presencia de valores atípicos. Las variables "Amt annuity" y "Amt goods price" muestran una asimetría positiva.
+-   Skew: Este estadístico mide el grado de asimetría de la distribución. Toma valores positivos si la asimetría está hacia la derecha y negativos si está hacia la izquierda (es decir, si la media es menor que la mediana). Un alto grado de asimetría puede indicar la presencia de valores atípicos. Las variables "Amt annuity" y "Amt goods price" muestran una asimetría positiva.
 
-- Kurtosis: La curtosis es una medida que determina cuán concentrados están los valores de una variable alrededor del centro de la distribución de frecuencias. Un valor de 3 es considerado como el nivel central de curtosis. Una distribución mesocúrtica tiene un cociente de asimetría igual a 3, leptocúrticas por encima de 3 y las platicúrticas por debajo de 3. Las variables "Amt annuity", "Own car age" y sobre todo "Amt income" tienen coeficientes de curtosis muy elevados, lo que indica distribuciones con colas muy pesadas.
+-   Kurtosis: La curtosis es una medida que determina cuán concentrados están los valores de una variable alrededor del centro de la distribución de frecuencias. Un valor de 3 es considerado como el nivel central de curtosis. Una distribución mesocúrtica tiene un cociente de asimetría igual a 3, leptocúrticas por encima de 3 y las platicúrticas por debajo de 3. Las variables "Amt annuity", "Own car age" y sobre todo "Amt income" tienen coeficientes de curtosis muy elevados, lo que indica distribuciones con colas muy pesadas.
 
-- SE: El error estándar es la desviación estándar de la distribución muestral de un estadístico muestral. Es decir, es la desviación típica dividida por la raíz cuadrada del tamaño de la muestra (n). Tanto las variables "Amt credit" como "amt goods price" muestran una variabilidad muy alta.
+-   SE: El error estándar es la desviación estándar de la distribución muestral de un estadístico muestral. Es decir, es la desviación típica dividida por la raíz cuadrada del tamaño de la muestra (n). Tanto las variables "Amt credit" como "amt goods price" muestran una variabilidad muy alta.
 
 ```{r, echo = F, message=F,warning=F,fig.show='hide'}
 data_n <- select_if(data, is.numeric)
@@ -216,7 +213,7 @@ grid.arrange(h[[5]],q[[5]],ncol = 2)
 
 En la variable 'Own car age', también se observa que no sigue una distribución normal, como lo demuestra el test de Shapiro-Wilk con un p-valor de `r s[[5]]`. Se puede notar una alta concentración de datos alrededor de los 10 años, lo que muestra una estructura similar a una distribución exponencial. Por otro lado, también se observa una fuerte concentración de datos en los 60 años.
 
-```{r, echo = F, fig.cap = "Análisis Gráfico Variable MntMeatProducts", fig.show='hold',out.height="75%",out.width="75%"}
+```{r, echo = F, fig.cap = "Análisis Gráfico Variable MntMeatProducts",           fig.show='hold',out.height="75%",out.width="75%"}
 grid.arrange(h[[6]],q[[6]],ncol = 2)
 ```
 
@@ -309,12 +306,11 @@ p[[4]]
 p[[5]]
 ```
 
-
 ```{r, echo = F, fig.cap= "Pie Chart Variable Education",fig.show='hold',out.width="75%",out.height="75%"}
 p[[6]]
 ```
 
-####### BORRAR #########
+####### BORRAR
 
 ```{r, echo = F, fig.cap= "Pie Chart Variable Education",fig.show='hold',out.width="75%",out.height="75%"}
 library(dplyr)
@@ -342,7 +338,7 @@ p <- ggplot(org_type, aes(x = organization_group, fill = organization_group)) +
 print(p)
 ```
 
-####### BORRAR #########
+####### BORRAR
 
 ### Análisis Bivariante Numérico
 
@@ -358,6 +354,7 @@ Tras analizar el gráfico, se destacan notables correlaciones entre las variable
 ```{r, echo=F,fig.cap = "Boxplot del Gasto Total en Carne vs Número de Compras en Catálogo", fig.show='hold',out.width="75%",out.height="75%"}
 boxplot(AMT_CREDIT~AMT_GOODS_PRICE,data,col=terrain.colors(14)) 
 ```
+
 En este gráfico se evidencia una fuerte correlación entre el valor del bien que el prestatario desea adquirir y la cantidad solicitada para el crédito. Es importante resaltar que los créditos de mayor cuantía muestran una correlación menor con el valor del bien, un aspecto que se explorará con mayor detalle en el transcurso del proyecto.
 
 ```{r, echo=F,fig.cap = "Gráfico de dispersión Gasto Total en Pescado vs Gasto Total en Fruta", fig.show='hold',out.width="75%",out.height="75%"}
@@ -373,7 +370,6 @@ De manera similar, la correlación entre el valor de los bienes y la anualidad t
 ### Análisis Bivariante Categórico-Descriptivo
 
 Para concluir el análisis descriptivo antes de proceder al procesamiento de los datos, es necesario examinar la relación entre las variables categóricas y las numéricas. Para este propósito, utilizaremos la creación de varios boxplots, lo que nos permitirá presentar nuestras conclusiones de manera precisa y concisa.
-
 
 ```{r}
 q <- list()
@@ -396,8 +392,7 @@ for (i in 1:length(currelas)){
 q[[7]]
 ```
 
-
-En el primer gráfico, se observa que la mayoría de los sujetos son mujeres, sin importar cuál fue el resultado. Sin embargo, existe una diferencia en las proporciones. Menos del 'r round(sum(data$TARGET == 1 & data$CODE_GENDER == 'F') * 100 / sum(data$TARGET == 1), 2)'% de los sujetos que tuvieron dificultades para pagar a tiempo son mujeres, en comparación con el 'r round(sum(data$TARGET == 0 & data$CODE_GENDER == 'F') * 100 / sum(data$TARGET == 1), 2)'% de los individuos que no tuvieron problemas con el pago de sus deudas.
+En el primer gráfico, se observa que la mayoría de los sujetos son mujeres, sin importar cuál fue el resultado. Sin embargo, existe una diferencia en las proporciones. Menos del 'r round(sum(data$TARGET == 1 & data$CODE_GENDER == 'F') \* 100 / sum(data$TARGET == 1), 2)'% de los sujetos que tuvieron dificultades para pagar a tiempo son mujeres, en comparación con el 'r round(sum(data$TARGET == 0 & data$CODE_GENDER == 'F') * 100 / sum(data$TARGET == 1), 2)'% de los individuos que no tuvieron problemas con el pago de sus deudas.
 
 A pesar de que hay más mujeres en la base de datos, un análisis inicial de los datos revela que los hombres han tenido más dificultades para cumplir con los pagos en comparación con las mujeres.
 
@@ -411,9 +406,9 @@ En este gráfico de barras apiladas, se compara la relación entre las variables
 q[[3]]
 ```
 
-En el tercer gráfico, se puede observar que la mayoría de las personas con estudios académicos son hombres, representando el 'r round(sum(data$CODE_GENDER == 'M' & data$NAME_EDUCATION_TYPE == 'Academic degree') * 100 / sum(data$CODE_GENDER == 'M'), 2)'% de esta categoría. En contraste, las categorías "Higher education," "Incomplete higher," "Lower secondary," y "Secondary/secondary special" están compuestas mayoritariamente por mujeres, con un porcentaje similar a la cantidad de datos de mujeres que hay en la base de datos.
+En el tercer gráfico, se puede observar que la mayoría de las personas con estudios académicos son hombres, representando el 'r round(sum(data$CODE_GENDER == 'M' & data$NAME_EDUCATION_TYPE == 'Academic degree') \* 100 / sum(data\$CODE_GENDER == 'M'), 2)'% de esta categoría. En contraste, las categorías "Higher education," "Incomplete higher," "Lower secondary," y "Secondary/secondary special" están compuestas mayoritariamente por mujeres, con un porcentaje similar a la cantidad de datos de mujeres que hay en la base de datos.
 
-Cabe señalar que la clase "Academic degree" solo cuenta con tres sujetos, mientras que las categorías "Higher education" y "Secondary/secondary special" concentran el 'round(sum(data$NAME_EDUCATION_TYPE == "Secondary / secondary special" | data$NAME_EDUCATION_TYPE == "Higher education") * 100 / length(data$CODE_GENDER), 2)'% de los datos. Estos porcentajes se mantienen aproximadamente constantes en las diferentes categorías, lo que sugiere que la variable "Name_education_type" no es visualmente relevante para poder entender mejor la estructura de los datos. 
+Cabe señalar que la clase "Academic degree" solo cuenta con tres sujetos, mientras que las categorías "Higher education" y "Secondary/secondary special" concentran el 'round(sum(data$NAME_EDUCATION_TYPE == "Secondary / secondary special" | data$NAME_EDUCATION_TYPE == "Higher education") \* 100 / length(data\$CODE_GENDER), 2)'% de los datos. Estos porcentajes se mantienen aproximadamente constantes en las diferentes categorías, lo que sugiere que la variable "Name_education_type" no es visualmente relevante para poder entender mejor la estructura de los datos.
 
 ```{r}
 q[[4]]
@@ -425,9 +420,7 @@ Este gráfico nos muestra la distribución del estatus civil con respecto al sex
 q[[5]]
 ```
 
-En este último gráfico respecto al género se observa la relación de esta categoría conjuntamente con el tipo de ocupación laboral. En un primer análisis visual se observa como las clases "Drivers", "IT staff", "Laborers" y "Security staff", mientras que las mujeres predominan en la mayoría del resto de variables.
-Teniendo en consideración la frecuencia de los datos podemos determinar que el 'r sum(data$OCCUPATION_TYPE %in% c("Laborers", "Drivers"))*100/sum(data$CODE_GENDER == "M")'% de los hombres son "Laborers" o "Drivers".
-Por último cabe destacar que hay el 'r sum(is.na(data$OCCUPATION_TYPE))*100 / length(data$CODE_GENDER)'% de los datos son missings, por lo que se imputarán en el preprocessing, ya que no suponen una gran cantidad respecto al total de datos de la variable "OCCUPATION_TYPE".
+En este último gráfico respecto al género se observa la relación de esta categoría conjuntamente con el tipo de ocupación laboral. En un primer análisis visual se observa como las clases "Drivers", "IT staff", "Laborers" y "Security staff", mientras que las mujeres predominan en la mayoría del resto de variables. Teniendo en consideración la frecuencia de los datos podemos determinar que el 'r sum(data$OCCUPATION_TYPE %in% c("Laborers", "Drivers"))*100/sum(data$CODE_GENDER == "M")'% de los hombres son "Laborers" o "Drivers". Por último cabe destacar que hay el 'r sum(is.na(data$OCCUPATION_TYPE))*100 / length(data$CODE_GENDER)'% de los datos son missings, por lo que se imputarán en el preprocessing, ya que no suponen una gran cantidad respecto al total de datos de la variable "OCCUPATION_TYPE".
 
 ```{r}
 n <- list()
@@ -447,8 +440,6 @@ n[[i]]<- ggplot(data, aes(x = .data[[currelas[i]]], fill = NAME_INCOME_TYPE)) +
 print(n)
 
 ```
-
-
 
 ```{r}
 n[[1]]
@@ -510,5 +501,61 @@ m[[i]]<- ggplot(data, aes(x = .data[[currelas[i]]], fill = NAME_FAMILY_STATUS)) 
 print(m)
 ```
 
+En este gráfico se analiza la relación entre la ocupación de los individuos y el estado civil de ellos mismos. Como se observa, la mayoría de los trabajadores de cualquier sector están casados, muchos por la iglesia y unos pocos civilmente. Vale la pena señalar que un porcentaje significativo de los cónyuges sobrevivientes trabajan en recursos humanos. Esto podría deberse al hecho de que estos trabajadores son de mayor edad y, en su momento, las oportunidades de acceder este tipo de empleos eran más altas.
 
+```{r}
+m <- list()
 
+currelas <- c("NAME_FAMILY_STATUS", "ORGANIZATION_TYPE", "TARGET")
+library(ggplot2)
+for (i in 1:length(currelas)){ 
+m[[i]]<- ggplot(data, aes(x = .data[[currelas[i]]], fill = OCCUPATION_TYPE)) +
+  geom_bar(position = "fill") +
+  labs(title = paste("Grouped Bar Chart:", currelas[i], "vs. OCCUPATION_TYPE"),
+         x = currelas[i], y = "Proportion") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  scale_fill_brewer(palette = "Set1")
+
+}
+print(m)
+```
+
+En el segundo gráfico nos muestra los oficios de las personas con respecto al target. Se aprecia claramente como la gran mayoría de trabajadores poco calificados tienen mas dificultades de pago respecto a los demás, mientras sorprende que los secretarios sean los que menos dificultades tengan en pagar proporcionalmente. Nos podemos basar hasta un cierto punto en este tipo de análisis ya que podria haber pocas personas dentro de un mismo grupo de trabajadores y muchas personas dentro de otro y esto dificultaria sacar conclusiones claras.
+
+```{r}
+m <- list()
+
+currelas <- c("NAME_FAMILY_STATUS", "OCCUPATION_TYPE", "TARGET")
+library(ggplot2)
+for (i in 1:length(currelas)){ 
+m[[i]]<- ggplot(data, aes(x = .data[[currelas[i]]], fill = ORGANIZATION_TYPE)) +
+  geom_bar(position = "fill") +
+  labs(title = paste("Grouped Bar Chart:", currelas[i], "vs. ORGANIZATION_TYPE"),
+         x = currelas[i], y = "Proportion") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  scale_fill_brewer(palette = "Set1")
+
+}
+```
+
+```{r}
+m <- list()
+
+currelas <- c("NAME_FAMILY_STATUS", "OCCUPATION_TYPE", "ORGANIZATION_TYPE")
+library(ggplot2)
+for (i in 1:length(currelas)){ 
+m[[i]]<- ggplot(data, aes(x = .data[[currelas[i]]], fill = TARGET)) +
+  geom_bar(position = "fill") +
+  labs(title = paste("Grouped Bar Chart:", currelas[i], "vs. TARGET"),
+         x = currelas[i], y = "Proportion") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  scale_fill_brewer(palette = "Set1")
+
+}
+print(m)
+```
+
+En el primer gráfico se confirma la idea de que dentro de los diferentes grupos de estados civiles no hay mucha diferencia con respecto al target. La única diferencia notable es que aquellas personas que san quedado viudas son quienes enfrentan menores dificultades para cumplir con sus pagos de manera consistente.
