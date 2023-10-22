@@ -12,6 +12,7 @@ Comentaris:
 - canviar noms variables per a evitar solapaments
 - treure les variables numèriques de les suplementàries que s'hagin considerat no rellevants en l'ACP
 - CAL ACABAR TOT EL QUE ESTÀ EN MAJÚSCULES, I SI VOLEU AFEGIR MÉS ANÀLISI I CANVIAR COSES CAP PROBLEMA
+- CONCLUSIONES
 
 # ACM
 
@@ -33,12 +34,29 @@ df2 <- df2[,-8] #eliminamos la variable TARGET del análisis
 El Multiple Correspondance Analysis, ACM en adelante, es un método de análisis factorial para variables categóricas que permite analizar relaciones entre variables, así como reducir la dimensionalidad de la base de datos seleccionando sólo aquellas variables relevantes. Para realizarlo se deben escoger unas variables activas y otras de complementarias. En este caso, como el número de variables es relativamente bajo y se consideran todas relevantes, no se considerará ninguna variable complementaria. Además, se añadirán al análisis las variables numéricas como variables suplementarias, aunque solamente aquellas que se han considerado relevantes en el ACP. 
 
 
+<!-- CAMBIAR EL NOMBRE DE LAS VARIABLES: -->
+```{r}
+# Define the new variable names
+new_variable_names <- c(
+  "GDR", "INC_TYPE", "EDU_TYPE", "FAM_STAT", "OCC_TYPE", 
+  "ORG_TYPE", "RR_CLIENT", "INC_AMT", "CREDIT_AMT", "ANNUITY_AMT", 
+  "BIRTH_DAYS", "CAR_AGE", "GOODS_PRICE", "FAM_MEMBERS"
+)
+
+
+# Change the variable names in your data frame
+colnames(df2) <- new_variable_names
+
+```
+
+
 ## Desarrollo del ACM
 
 ```{r, out.width="95%"}
 res.mca <- MCA(df2, quanti.sup = c(8:14), method = "Burt")
 res.mca
 ```
+
 En la primera figura se representan las relaciones entre las modalidades de todas las variables categóricas con las dos primeras dimensiones del MCA. Se observa que la dimensión 1 se asocia con las variables que tienen relación con la edad, como la modalidad de Pensionista y Viudo. Se aprecia que la dimensión 2 se asocia a las modalidades relacionadas con la cualificación del trabajo del individuo, con una asociación positiva entre la dimensión y la cualificación del trabajador. Por tanto, se llamará a la dimensión 1 Edad, y a la dimensión 2 como cualificiación del trabajador. 
 
 En los gráficos obtenidos puede verse la variabilidad que expresan cada una de las variables categóricas en función de las dimensiones 1 y 2. Aquellas variables que estén más cerca del origen de coordenadas aportan muy poca información respecto a la variabilidad de los datos y, por tanto, son poco importantes. En cambio, aquellas variables más alejadas del centro aportan información más relevante.
@@ -80,7 +98,7 @@ Por tanto, en total las dos primeras dimensiones ya explican un 29.99% de la var
 
 Aunque las primeras dos dimensiones expliquen cerca del 30% de la inercia, no todos los puntos se muestran igual de bien en las dos dimensiones. La calidad de la representación se llama coseno cuadrado (cos2), que mide el grado de asociación entre categorías de variables y un eje particular.
 
-Si una categoría de variable está bien representada por dos dimensiones, la suma de cos2 es cercana a uno. Para algunos de los elementos de la fila, se requieren más de dos dimensiones para representar perfectamente los datos. Se considera lo siguiente:
+A continuación, se representa la calidad de las categorias a partir de ajustar los colores para cada punto proyectado, tomando como criterio el valor del coseno cuadrático (cos2). Si una categoría de variable está bien representada por dos dimensiones, la suma de cos2 es cercana a uno. Para algunos de los elementos de la fila, se requieren más de dos dimensiones para representar perfectamente los datos. Se considera lo siguiente:
 
   - Las categorías de variables con valores bajos de cos2 se colorearán en "cian".
   - Las categorías de variables con valores medios de cos2 se colorearán en “amarillo”.
@@ -97,7 +115,7 @@ fviz_mca_var(res.mca, col.var = "cos2",
 ````
 Salen muchas categorías que no están muy bien representadas por las dos primeras dimensiones. Esto implica que la posición de los puntos correspondientes en el diagrama de dispersión debe interpretarse con cierta cautela. Probablemente sea necesaria una solución de mayor dimensión. Aún así, se ha decidido no realizar el MCA de mayores dimensiones debido a la dificultad de representación gráfica. Por tanto, los resultados del MCA se analizarán con cautela, especialmente las variables poco representadas en las dos primeras dimensiones.
 
-## Plot individuos
+## Gráfico de individuos
 
 Se representa gráficamente cómo se distribuyen los individuos en función de las dos primeras dimensiones que explican un 29.99% de la variabilidad:
 
@@ -106,24 +124,27 @@ fviz_mca_ind(res.mca, geom = "point", col.ind = "black")
 ```
 A simple vista, se aprecian varios grupos de individups pero resulta difícil distinguir cuántos. Sin embargo, sí podríamos decir que los individuos se dividen en como mínimo 2 grupos. Para distinguir mejor las agrupaciones de individuos y su asociación con algunas modalidades se pasa a estudiar cada variable para observar si existe algún tipo de asociación entre ellas.
 
-A continuación representamos los mismos individuos pero coloreandolos según la variable "target", es decir, nuestra varible output, donde 1 indica aquel cliente con dificultades de pago, y 0 altramente:
+### Gráfico de los individuos según variable TARGET
+
+A continuación representamos los mismos individuos pero coloreandolos según la variable "target", es decir, nuestra varible output, donde 1 indica aquel cliente con dificultades de pago, y 0 contrariamente:
 
 ```{r}
 library(FactoMineR)
 
 fviz_mca_ind(res.mca, geom = "point", col.ind = df_preprocessed$TARGET, 
-             palette = c("orange", "purple"))  # Reemplaza con los colores deseados
+             palette = c("orange", "purple")) 
 
 ```
-Observamos... ACABAR DE ANALIZAR
+Observamos como diferenciando a los individuos según si tienen dificultades o no con el pago, no hay diferencias entre grupos de individuos, por lo tanto, podemos decir que no se ve ninguna asociación entre la variable TARGET y las modalidades de las variables representadas en estas dos dimensiones. 
 
-HACER EL MISMO GRÁFICO Y PINTAR LOS PNTOS CON VAR TARGET. Si cuadra con los grupos de individuos, se podría hacer profiling a partir de este ACM. Segurament no, però ho podem fer i dir que no es veuen associacions clares entre la variable TARGET i les modalitats de les variables ben representades en aquest parell de dimensions.
 
-## Plot variables
+## Gráfico de variables
+
+Para tener una representación aún más clara sobre las variables y su asociación, a continuación se grafican estas variables con curvas de densidad para ver aquellas zonas donde hay una mayor concentración.
 
 ```{r}
 # Totes les variables actives
-newbd<- df[1:7]
+newbd<- df2[1:7]
 res.mca1<-MCA(newbd, method="Burt", graph=FALSE)
 cats = apply(newbd, 2, function(x) nlevels(as.factor(x)))
 
@@ -139,26 +160,171 @@ ggplot(data = mca1_vars_df, aes(x = Dim.1, y = Dim.2)) +
             aes(x = Dim.1, y = Dim.2, 
                 label = rownames(mca1_vars_df), colour = Variable), cex = 3) +
   
-  ggtitle("MCA plot of variables using R package FactoMineR") +
+  ggtitle("Gráfico MCA de variables") +
   scale_colour_discrete(name = "Variable")+ 
   xlim(-2,1.5) + 
   ylim(-1,1.5)
 ```
-CAL ANALITZAR. Es veu poc, aixi que es passa a anlitzar per cada variable.
+
+
+<!-- CAL ANALITZAR. Es veu poc, aixi que es passa a anlitzar per cada variable. -->
+
+
+### Gráficos de dispersión agrupado por cada variable
+
+Con el objetivo de ver si las categorías son significativamente diferentes entre sí, se grafican gráficos de elipses alrededor de las categorías de cada una de las variables.
+
+Se considererá que las categorías con elipses no superpuestas, es decir, separadas entre sí, son significativament diferente entre sí. Por el contrario, cuando las elipses se superponen, nos indica que hay una somilitud o asociación entre categorías, así mismo, no són significativamente diferentes entre ellas.
 
 ````{r}
 plotellipses(res.mca,keepvar = "all", axes = c(1, 2))
-plotellipses(res.mca,keepvar = "all", axes = c(1, 2))[1] #GENDER. COMO SE INTERPRETA ESTE GRÁFICO
 
-for(i in 1:5) {   # 1a dimension
+for(i in 1:7){
+    graf <- plotellipses(res.mca,keepvar = "all", axes = c(1, 2))[i] 
+    plot(graf)
+}
+```
+<!-- HACER UN PEQUEÑO ANÁLISIS DE LO QUE SE VE EN ESTAS DOS DIMENSIONES. OBSERVAMOS COMO HAY CATEGORÍAS SEPARADAS DE LAS OTRAS, PERO HAY ALGUNAS QUE NO MUESTRAN DIFERENCIAS ENTRE ELLAS AL ESTAR SUPERPUESTAS. -->
+
+Como se ha observado que en las dos primeras dimensiones únicamente se muestra aproximadamente el 30% de la varibabilidad, para poder estudiar las categorías y su asociación más a fondo, a continuación se representan estas categorías a través de las cinco primeras dimensiones:
+
+<!-- ES NECESARIO REALMENTE?????
+TARDA UN POCO EN EJECUTARSE-->
+
+````{r}
+for (k in 1:7){ #para cada variable
+  for(i in 1:5) {   # 1a dimension
   for (j in 1:5) {  # 2a dimension
     if (i != j) {
-      grafico <- plotellipses(res.mca,keepvar = "all", axes = c(i, j))[8] #GENDER. COMO SE INTERPRETA ESTE GRÁFICO
+      grafico <- plotellipses(res.mca,keepvar = "all", axes = c(i, j))[k] #GENDER. COMO SE INTERPRETA ESTE GRÁFICO
       plot(grafico)
     }
   }
+}  
 }
 
 
 ````
-CAL ANALITZAR. agrupar variables que tienen alta asociación, en 2 o 3 grupos. 
+<!-- CAL ANALITZAR. agrupar variables que tienen alta asociación, en 2 o 3 grupos.  -->
+
+## Conclusiones
+
+
+
+### Valores propios, vecotres propios y contribuciones de los individuos
+
+**VAPs**
+```{r}
+res.mca0$eig
+barplot(res.mca0$eig[,1],main="Valors propis",names.arg=1:nrow(res.mca0$eig), col="yellow")
+```
+Taula de VAPS
+```{r}
+summary(data_conimputacion)
+round(res.mca0$eig,2)
+```
+
+**Contribución de los individuos**
+
+```{r}
+attributes(res.mca0)
+datos_mca<-res.mca0$ind$contrib
+
+setwd(file.path(params$path))
+save(datos_mca, file="datos_para_clust_MCA.RData")
+
+```
+
+Gráficos de los individuos.
+```{r}
+plot(res.mca0,invisible=c("var","quali.sup"),cex=0.7)
+```
+
+La primera componente se puede definir como el estado de salud del paciente porque la variable diabetesMed se proyecta bien y nos indicaria que los pacientes que esten mas a la derecha no recibieron medicamentos de diabetes y los que estan a la izquierda si.
+
+La segunda componente la nombramos como aportación al pago de la visita. En ella se establece la relación entre el método de pago y la raza del paciente. Más arriba tendríamos los pacientes de raza hispanica que pagan la visita mientras que más abajo se situan métodos de pago con aseguradoras con pacientes de raza afroamericana.
+
+
+## Analisis de correspondencia múltiple con el método de Burt
+
+```{r}
+res.mca.burt<-MCA(data_conimputacion, quanti.sup=(1:7), method="Burt")
+
+plot(res.mca.burt,invisible=c("ind","quali.sup"), cex=0.5)
+
+```
+### Análisis de los individuos y de las modalidades: valore propios, vectores propios y contribuciones
+
+**Grafico de las modalidades**
+
+```{r, echo}
+plot(res.mca.burt,invisible="quali.sup")
+```
+
+
+```{r}
+plot(res.mca.burt,invisible="quali.sup", cex=0.5)
+```
+
+**Vaps**
+
+```{r}
+res.mca0$eig
+round(res.mca0$eig,2)
+
+barplot(res.mca0$eig[,1],main="Valors propis",names.arg=1:nrow(res.mca0$eig))
+
+totalIner<- sum(res.mca0$eig[,1])
+pinerEix<- 100*res.mca0$eig[,1]/totalIner
+
+```
+
+
+Contribucions
+
+```{r}
+res.mca0$ind$contrib
+res.mca.burt$ind$contrib
+res.mca.burt$var$contrib
+```
+
+Contribucions a cada eix i test-values significatius
+
+```{r}
+dimdesc(res.mca.burt)
+```
+
+
+
+Arrodonim a 4 decimals
+
+```{r}
+
+#lapply(dimdesc(res.mca0),lapply,round,4)
+a<-dimdesc(res.mca0) 
+a
+
+
+#lapply(dimdesc(res.mca.burt),lapply,signif,3)
+b<-dimdesc(res.mca.burt) 
+b
+
+a[1]
+a[2]
+
+a[[1]]$quali
+b[[1]]$quali
+
+#see what is important in the axes
+b
+```
+
+```{r}
+#el.lipses de confiança
+plotellipses(res.mca0,keepvar=c("race","payer_code","insulin","diabetesMed"), cex=0.4)
+
+plotellipses(res.mca0,keepvar=c("quali")) #nomes hauria de sortir insulin i diabetesmed no? pq son les que més afecten
+#plotellipses(res.mca0,keepvar=c("quali.sup"))  qualisup no funciona pq no hi ha variables categoriques suplementaries, totes es considera que afecten a les dimensions i per tant son actives, no sé com ho podem canviar
+
+```
+
