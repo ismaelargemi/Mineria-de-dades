@@ -8,11 +8,12 @@ output: html_document
 knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
 ```
 Comentaris:
-- posar més subtítols?
-- canviar noms variables per a evitar solapaments
+- posar més subtítols? 
+- canviar noms variables per a evitar solapaments. HECHO
 - treure les variables numèriques de les suplementàries que s'hagin considerat no rellevants en l'ACP
 - CAL ACABAR TOT EL QUE ESTÀ EN MAJÚSCULES, I SI VOLEU AFEGIR MÉS ANÀLISI I CANVIAR COSES CAP PROBLEMA
 - CONCLUSIONES
+- HE AÑADIDO UNA NUEVA LINEA DONDE SE PUEDE VER LA CONTRIBUCIÓNDE CADA VARIABLE EN CADA EJE Y SUS P-VALORES, DISCUTIR SI ES IMPORTANTE O NO
 
 # ACM
 
@@ -55,7 +56,12 @@ colnames(df2) <- new_variable_names
 ```{r, out.width="95%"}
 res.mca <- MCA(df2, quanti.sup = c(8:14), method = "Burt")
 res.mca
+
+#Con este gráfico se ve mejor, OBSERVAMOS COMO LA CATEGORIA SEPARATED APARECE, ANALIZAMOS??????
+plot(res.mca,invisible=c("ind","quali.sup"), cex=0.5)
 ```
+
+
 
 En la primera figura se representan las relaciones entre las modalidades de todas las variables categóricas con las dos primeras dimensiones del MCA. Se observa que la dimensión 1 se asocia con las variables que tienen relación con la edad, como la modalidad de Pensionista y Viudo. Se aprecia que la dimensión 2 se asocia a las modalidades relacionadas con la cualificación del trabajo del individuo, con una asociación positiva entre la dimensión y la cualificación del trabajador. Por tanto, se llamará a la dimensión 1 Edad, y a la dimensión 2 como cualificiación del trabajador. 
 
@@ -114,6 +120,15 @@ fviz_mca_var(res.mca, col.var = "cos2",
              ggtheme = theme_minimal())
 ````
 Salen muchas categorías que no están muy bien representadas por las dos primeras dimensiones. Esto implica que la posición de los puntos correspondientes en el diagrama de dispersión debe interpretarse con cierta cautela. Probablemente sea necesaria una solución de mayor dimensión. Aún así, se ha decidido no realizar el MCA de mayores dimensiones debido a la dificultad de representación gráfica. Por tanto, los resultados del MCA se analizarán con cautela, especialmente las variables poco representadas en las dos primeras dimensiones.
+
+
+<!-- ESTO ES IMPORTANTE?????? -->
+Contribucions a cada eix i test-values significatius
+
+```{r}
+dimdesc(res.mca)
+```
+<!-- MIRARSE ESTE CODIGO -->
 
 ## Gráfico de individuos
 
@@ -211,120 +226,5 @@ for (k in 1:7){ #para cada variable
 
 
 
-### Valores propios, vecotres propios y contribuciones de los individuos
 
-**VAPs**
-```{r}
-res.mca0$eig
-barplot(res.mca0$eig[,1],main="Valors propis",names.arg=1:nrow(res.mca0$eig), col="yellow")
-```
-Taula de VAPS
-```{r}
-summary(data_conimputacion)
-round(res.mca0$eig,2)
-```
-
-**Contribución de los individuos**
-
-```{r}
-attributes(res.mca0)
-datos_mca<-res.mca0$ind$contrib
-
-setwd(file.path(params$path))
-save(datos_mca, file="datos_para_clust_MCA.RData")
-
-```
-
-Gráficos de los individuos.
-```{r}
-plot(res.mca0,invisible=c("var","quali.sup"),cex=0.7)
-```
-
-La primera componente se puede definir como el estado de salud del paciente porque la variable diabetesMed se proyecta bien y nos indicaria que los pacientes que esten mas a la derecha no recibieron medicamentos de diabetes y los que estan a la izquierda si.
-
-La segunda componente la nombramos como aportación al pago de la visita. En ella se establece la relación entre el método de pago y la raza del paciente. Más arriba tendríamos los pacientes de raza hispanica que pagan la visita mientras que más abajo se situan métodos de pago con aseguradoras con pacientes de raza afroamericana.
-
-
-## Analisis de correspondencia múltiple con el método de Burt
-
-```{r}
-res.mca.burt<-MCA(data_conimputacion, quanti.sup=(1:7), method="Burt")
-
-plot(res.mca.burt,invisible=c("ind","quali.sup"), cex=0.5)
-
-```
-### Análisis de los individuos y de las modalidades: valore propios, vectores propios y contribuciones
-
-**Grafico de las modalidades**
-
-```{r, echo}
-plot(res.mca.burt,invisible="quali.sup")
-```
-
-
-```{r}
-plot(res.mca.burt,invisible="quali.sup", cex=0.5)
-```
-
-**Vaps**
-
-```{r}
-res.mca0$eig
-round(res.mca0$eig,2)
-
-barplot(res.mca0$eig[,1],main="Valors propis",names.arg=1:nrow(res.mca0$eig))
-
-totalIner<- sum(res.mca0$eig[,1])
-pinerEix<- 100*res.mca0$eig[,1]/totalIner
-
-```
-
-
-Contribucions
-
-```{r}
-res.mca0$ind$contrib
-res.mca.burt$ind$contrib
-res.mca.burt$var$contrib
-```
-
-Contribucions a cada eix i test-values significatius
-
-```{r}
-dimdesc(res.mca.burt)
-```
-
-
-
-Arrodonim a 4 decimals
-
-```{r}
-
-#lapply(dimdesc(res.mca0),lapply,round,4)
-a<-dimdesc(res.mca0) 
-a
-
-
-#lapply(dimdesc(res.mca.burt),lapply,signif,3)
-b<-dimdesc(res.mca.burt) 
-b
-
-a[1]
-a[2]
-
-a[[1]]$quali
-b[[1]]$quali
-
-#see what is important in the axes
-b
-```
-
-```{r}
-#el.lipses de confiança
-plotellipses(res.mca0,keepvar=c("race","payer_code","insulin","diabetesMed"), cex=0.4)
-
-plotellipses(res.mca0,keepvar=c("quali")) #nomes hauria de sortir insulin i diabetesmed no? pq son les que més afecten
-#plotellipses(res.mca0,keepvar=c("quali.sup"))  qualisup no funciona pq no hi ha variables categoriques suplementaries, totes es considera que afecten a les dimensions i per tant son actives, no sé com ho podem canviar
-
-```
 
