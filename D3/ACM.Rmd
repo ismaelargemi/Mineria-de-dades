@@ -34,18 +34,17 @@ df2 <- df2[,-8] #eliminamos la variable TARGET del análisis
 
 El Multiple Correspondance Analysis, ACM en adelante, es un método de análisis factorial para variables categóricas que permite analizar relaciones entre variables, así como reducir la dimensionalidad de la base de datos seleccionando sólo aquellas variables relevantes. Para realizarlo se deben escoger unas variables activas y otras de complementarias. En este caso, como el número de variables es relativamente bajo y se consideran todas relevantes, no se considerará ninguna variable complementaria. Además, se añadirán al análisis las variables numéricas como variables suplementarias, aunque solamente aquellas que se han considerado relevantes en el ACP. 
 
+Consideramos hacer una nueva codificación de las variables, reduciendo su longitud, de tal manera que los resultados obtenidos para el análisis se observen más claramente:
 
 <!-- CAMBIAR EL NOMBRE DE LAS VARIABLES: -->
 ```{r}
-# Define the new variable names
+# Definimos el nombre de las nuevas variables
 new_variable_names <- c(
   "GDR", "INC_TYPE", "EDU_TYPE", "FAM_STAT", "OCC_TYPE", 
   "ORG_TYPE", "RR_CLIENT", "INC_AMT", "CREDIT_AMT", "ANNUITY_AMT", 
   "BIRTH_DAYS", "CAR_AGE", "GOODS_PRICE", "FAM_MEMBERS"
 )
 
-
-# Change the variable names in your data frame
 colnames(df2) <- new_variable_names
 
 ```
@@ -122,13 +121,18 @@ fviz_mca_var(res.mca, col.var = "cos2",
 Salen muchas categorías que no están muy bien representadas por las dos primeras dimensiones. Esto implica que la posición de los puntos correspondientes en el diagrama de dispersión debe interpretarse con cierta cautela. Probablemente sea necesaria una solución de mayor dimensión. Aún así, se ha decidido no realizar el MCA de mayores dimensiones debido a la dificultad de representación gráfica. Por tanto, los resultados del MCA se analizarán con cautela, especialmente las variables poco representadas en las dos primeras dimensiones.
 
 
-<!-- ESTO ES IMPORTANTE?????? -->
-Contribucions a cada eix i test-values significatius
+**Contribuciones de las variables a cada eje y test-values significativos**
+
+Con tal de observar en más profundidad cuales són las variables que más contribuyen a cada eje, se plantea la siguiente función que nos muestra la contribución de cada dimensión a las variables continuas y categóricas:
 
 ```{r}
 dimdesc(res.mca)
 ```
-<!-- MIRARSE ESTE CODIGO -->
+
+Las correlaciones y los p-valores bajos indican la fuerza de estas relaciones. Así mismo, a partir de estos resultados, podemos corroborar las interpretaciones anteriores: no hay apenas variables explicativas que esten explicadas por las primeras tres dimensiones; de la misma manera en la que tampoco hay un gran número de categorías específicas que influyan significativamente en estas dimensiones.
+
+De esta manera, confirmamos que se requiere una solución con más dimensiones para capturar con precisión la estructura de los datos. Por lo tanto, se abordarán los resultados del MCA con prudencia, especialmente en lo que respecta a las variables que tienen una baja representación en las dos primeras dimensiones.
+
 
 ## Gráfico de individuos
 
@@ -189,7 +193,7 @@ ggplot(data = mca1_vars_df, aes(x = Dim.1, y = Dim.2)) +
 
 Con el objetivo de ver si las categorías son significativamente diferentes entre sí, se grafican gráficos de elipses alrededor de las categorías de cada una de las variables.
 
-Se considererá que las categorías con elipses no superpuestas, es decir, separadas entre sí, son significativament diferente entre sí. Por el contrario, cuando las elipses se superponen, nos indica que hay una somilitud o asociación entre categorías, así mismo, no són significativamente diferentes entre ellas.
+Se considererá que las categorías con elipses no superpuestas, es decir, separadas entre sí, son significativament diferente entre sí. Por el contrario, cuando las elipses se superponen, nos indica que hay una similitud o asociación entre categorías, es decir, no són significativamente diferentes entre ellas.
 
 ````{r}
 plotellipses(res.mca,keepvar = "all", axes = c(1, 2))
@@ -221,6 +225,7 @@ for (k in 1:7){ #para cada variable
 
 ````
 <!-- CAL ANALITZAR. agrupar variables que tienen alta asociación, en 2 o 3 grupos.  -->
+
 
 ## Conclusiones
 
