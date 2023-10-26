@@ -12,100 +12,109 @@ knitr::opts_chunk$set(echo = TRUE)
 
 Cargamos los datos
 ```{r}
-load(data_clust.Rdata)
+load("data_clust.Rdata")
 ```
 
-Estudio de la significación de las variables en los clústers
 ```{r}
-
-#### FUNCIONES PARA CALC P VALORES ####
-
-ValorTestXnum <- function(Xnum,P){
-  #freq dis of fac
-  nk <- as.vector(table(P));
-  n <- sum(nk);
-  #mitjanes x grups
-  xk <- tapply(Xnum,P,mean);
-  #valors test
-  txk <- (xk-mean(Xnum))/(sd(Xnum)*sqrt((n-nk)/(n*nk)));
-  #p-values
-  pxk <- pt(txk,n-1,lower.tail=F);
-  for(c in 1:length(levels(as.factor(P)))){if (pxk[c]>0.5){pxk[c]<-1-pxk[c]}}
-  return (pxk)
-}
-
-
-ValorTestXquali <- function(P,Xquali){
-  taula <- table(P,Xquali);
-  n <- sum(taula);
-  pk <- apply(taula,1,sum)/n;
-  pj <- apply(taula,2,sum)/n;
-  pf <- taula/(n*pk);
-  pjm <- matrix(data=pj,nrow=dim(pf)[1],ncol=dim(pf)[2], byrow=TRUE);
-  dpf <- pf - pjm;
-  dvt <- sqrt(((1-pk)/(n*pk))%*%t(pj*(1-pj)));
-  zkj <- dpf
-  zkj[dpf!=0]<-dpf[dpf!=0]/dvt[dpf!=0];
-  pzkj <- pnorm(zkj,lower.tail=F);
-  for(c in 1:length(levels(as.factor(P)))){for (s in 1:length(levels(Xquali))){if (pzkj[c,s]> 0.5){pzkj[c,s]<-1- pzkj[c,s]}}}
-  return (list(rowpf=pf,vtest=zkj,pval=pzkj))
-}
+cluster6 <- mydata$cluster
+cluster3 <- mydata$cluster2
+mydata$cluster2 <- mydata$cluster <- NULL
+dades <- mydata
 ```
+
+CATEGORICAS
 ```{r}
-#### ACONDICIONAMOS LOS DATOS PARA LAS FUNCIONES Y GRAFS ####
-#datos sin columna de clústers
-dades <- mydata[,-mydata$cluster]
+cluster <- cluster6
+indices_categoricas <- sapply(dades, is.factor)
+p_values <- numeric(length(dades))
 
-#número de variables
-K <- ncol(dades)
+# Realiza pruebas de chi-cuadrado para las variables categóricas
+for (i in which(indices_categoricas)) {
+  variable_categorica <- dades[, i]
+  cross_table <- table(variable_categorica, cluster)
+  chi_square_result <- chisq.test(cross_table)
+  p_values[i] <- chi_square_result$p.value
+}
 
-#grupos de los clústers
-P <- mydata[,"cluster"]
-# P <- mydata$cluster
-nameP <- "classe"
 
-#número de clústers
-nc <- length(levels(factor(P)))
+# Muestra los resultados
+p_values_categoricas <- data.frame(
+  Variable = names(dades)[indices_categoricas],
+  P_Value = p_values[indices_categoricas]
+)
+print(p_values_categoricas)
 
-#matriz y vector donde añadiremos los p-valores de cada variable
-pvalk <- matrix(data=0,nrow=nc,ncol=K, dimnames=list(levels(as.factor(P)),names(dades)))
-chis <- c()
-
-#número de observaciones
-n <- dim(dades)[1]
 ```
+NUMERICAS
 ```{r}
+library(car)
+# Identifica las variables categóricas (factores)
+variables_categoricas <- sapply(dades, is.factor)
 
-#### GENERACION DE LAS TABLAS ####
+# Filtra las variables numéricas
+variables_numericas <- dades[!variables_categoricas]
+# Inicializa un objeto para almacenar los p valores de la ANOVA
+p_values_numericas <- list()
 
-# Generamos dos tablas, una para las categóricas y otra para las numéricas
-for(k in 1:K){
-  if (is.numeric(dades[,k])){
-    for(s in levels(as.factor(P)))
-    pvalk[,k]<-ValorTestXnum(dades[,k], P)
-  }else{
-    tab <- table(dades[,k],as.factor(P))
-    chis[k]<-(chisq.test(tab)$p.value)
-  }
+# Realiza un ANOVA para cada variable numérica en función de cluster6 y cluster3
+for (i in 1:ncol(variables_numericas)) {
+  variable_name <- names(variables_numericas)[i]
+  
+  formula_cluster <- as.formula(paste(variable_name, " ~ cluster"))
+  anova_result_cluster <- Anova(lm(formula_cluster, data = variables_numericas))
+  
+  # Almacena los p-valores de la ANOVA en p_values_anova
+  p_values_numericas[[variable_name]] <- c(Cluster = anova_result_cluster[["Pr(>F)"]][1])
 }
 
-#Añadimos los nombres de variable a las tablas
-names(chis) <- colnames(pvalk)
-# Juntamos las tablas
-pvalorsvars <- colMeans(pvalk)
-pvalorsvars[c(1:9,18)]<- chis[c(1:9,18)]
-
-#Creamos una tabla que nos indica si es significativa o no
-significativa <- pvalorsvars
-for(i in 1:length(pvalorsvars)){
-  if(pvalorsvars[i]<0.05){significativa[i]<-1}else{significativa[i] <- 0}
-}
+# Muestra el objeto con los p-valores de la ANOVA
+print(p_values_numericas)
 ```
+SIGNIFICATIVAS
+```{r}
+# Función para evaluar significancia de p-valores
+evaluate_p_values <- function(p_values, alpha = 0.05) {
+  significance <- ifelse(p_values <= alpha, 1, 0)
+  return(significance)
+}
+
+# Evalúa significancia de p-valores para variables numéricas y categóricas
+significance_numericas <- evaluate_p_values(p_values_numericas)
+significance_categoricas <- evaluate_p_values(p_values_categoricas)
+
+print("Significancia de p-valores para variables numéricas:")
+print(significance_numericas)
+
+print("Significancia de p-valores para variables categóricas:")
+print(significance_categoricas)
+```
+
+```{r}
+# install.packages("FactoMineR")
+library(FactoMineR)
+dadesc <- cbind(dades,factor(cluster))
+resul <- catdes(dadesc,num.var=21,proba=0.05)
+resul$test.chi2
+resul$quanti
+resul$category
+```
+
 
 GENERADOR DE GRAFS PARA VER CUAL NOS QUEDAMOS
 ```{r}
+#número de variables
+K <- ncol(dades)
+#grupos de los clústers
+P <- cluster
+nameP <- "classe"
+#número de clústers
+nc <- length(levels(factor(P)))
+#número de observaciones
+n <- dim(dades)[1]
+
+
 for(k in 1:K){
-  if (is.numeric(dades[,k]) && significativa[k]==1){
+  if (is.numeric(dades[,k])){ # && significativa[k]==1
     print(paste("Anàlisi per classes de la Variable:", names(dades)[k]))
     barplot(tapply(dades[[k]], P, mean),main=paste("Means of", names(dades)[k], "by", nameP ))
     abline(h=mean(dades[[k]]))
@@ -118,7 +127,7 @@ for(k in 1:K){
     print(paste("p-value Kruskal-Wallis:", kw$p.value))
     print("p-values ValorsTest: ")
     print(pvalk[,k])
-  }else if(!is.numeric(dades[,k]) && significativa[k]==1){
+  }else if(!is.numeric(dades[,k])){ #&& significativa[k]==1
       #qualitatives
 
       print(paste("Variable", names(dades)[k]))
@@ -187,51 +196,48 @@ for(k in 1:K){
       print("Test Chi quadrat: ")
       print(chisq.test(dades[,k], as.factor(P)))
 
-      print("valorsTest:")
-      print( ValorTestXquali(P,dades[,k]))
+     
 
       # g[k] <- ValorTestXquali(P,dades[,k])
       #calcular els pvalues de les quali
     }
   }#endfor
 ```
-
+DONDE PONGA num_var o cat_var es donde se pone la variable que quieres graficar
 ```{r}
 # VARIABLE NUM AGRUPANDO POR CLUSTER P
 library(ggplot2)
 
 # GRAF DE LA PROPORCION POSITIVA YNEGATIvA DE VALORESP POR CATEGORIA
-ggplot(data = dades, aes(x = P, y = num_var)) +
+ggplot(data = dades, aes(x = P, y = dades$log_AMT_ANNUITY)) +
   geom_line(stat = "summary", fun.y = "mean") +
-  geom_hline(yintercept = mean(dades$num_var)) +
+  geom_hline(yintercept = mean(dades$log_AMT_ANNUITY)) +
   labs(title = paste("Means of", names(dades)[k], "by", nameP), y = "Mean")
 
 #bARPLOT
-ggplot(data = dades, aes(x = P, y = num_var)) +
+ggplot(data = dades, aes(x = P, y = dades$log_AMT_ANNUITY)) +
   geom_bar(stat = "summary", fun = "mean") +
-  geom_hline(yintercept = mean(dades$num_var)) +
+  geom_hline(yintercept = mean(dades$log_AMT_ANNUITY)) +
   labs(title = paste("Means of", names(dades)[k], "by", nameP), y = "Mean")
 
 ```
-
+este da error idk
 ```{r}
 # CATEGORICA AGRUPANDO POR P
 library(ggplot2)
 
 # pORPORCION POSITIVA Y NEGATIVA DE VALORES POR CATEGORIA, CONDICIONADO EN LAS FILAS
-ggplot(data = dades, aes(x = P, y = prop.table(table(P, cat_var))[,"positive"])) +
+ggplot(data = dades, aes(x = P, y = prop.table(table(P, dades$CODE_GENDER))[,"positive"])) +
   geom_line() +
   labs(title = paste("Prop. of pos & neg by", names(dades)[k]), y = "Proportion") +
   theme(legend.position = "top")
 
-```
 
-```{r}
 # CATEGORICA AGRUPANDO POR P
 library(ggplot2)
 
 # pORPORCION POSITIVA Y NEGATIVA DE VALORES POR CATEGORIA, CONDICIONADO EN LAS COLUMNAS
-ggplot(data = dades, aes(x = P, y = prop.table(table(cat_var, P))["positive",])) +
+ggplot(data = dades, aes(x = P, y = prop.table(table(dades$CODE_GENDER, P))["positive",])) +
   geom_line() +
   labs(title = paste("Prop. of pos & neg by", names(dades)[k]), y = "Proportion") +
   theme(legend.position = "top")
@@ -243,13 +249,13 @@ ggplot(data = dades, aes(x = P, y = prop.table(table(cat_var, P))["positive",]))
 library(ggplot2)
 
 # GRAFICO DE LA PROPORCION DE VALORES POR CATEGORIA CON LA VARIABLE NE EL EJE X
-ggplot(data = dades, aes(x = cat_var)) +
+ggplot(data = dades, aes(x = dades$CODE_GENDER)) +
   geom_bar(aes(fill = P), position = "fill") +
   labs(title = paste("Prop. of pos & neg by", names(dades)[k]), y = "Proportion", x = "Categories") +
   theme(legend.position = "top")
 
 #Barplot
-ggplot(data = dades, aes(x = P, fill = cat_var)) +
+ggplot(data = dades, aes(x = P, fill = dades$CODE_GENDER)) +
   geom_bar(position = "dodge") +
   labs(title = paste("Prop. of pos & neg by", names(dades)[k]), y = "Proportion") +
   theme(legend.position = "top")
