@@ -1,0 +1,72 @@
+---
+title: "Untitled"
+author: "Ismael Argemí Fernández, Iván Martínez Yates"
+date: "`r Sys.Date()`"
+output: html_document
+---
+```{r}
+#install.packages("fclust")
+library(fclust)
+library(cluster)
+library(ggplot2)
+```
+
+```{r,include=FALSE}
+#Lectura de los datos
+load("Dades preprocessades.Rdata")
+
+#mydata contiene toda la base de datos
+mydata <- df_preprocessed
+mydata$AMT_INCOME_TOTAL <- NULL
+mydata$AMT_CREDIT <- NULL
+mydata$AMT_ANNUITY <- NULL
+mydata$AMT_GOODS_PRICE <- NULL
+rm(df_preprocessed)
+
+Objectos <- sapply(mydata, class)
+Numeriques <- names(Objectos)[which(Objectos%in%c("numeric"))]
+
+#dd solo contiene las varibales numericas
+dd <- mydata[,Numeriques]
+```
+
+# Fuzzy Clustering
+
+La principal diferencia del Fuzzy Clustering al resto de algoritmos, es que es permite que una obzervación pertenezca a más de una agrupación. Es decir, permite que los elementos (individuos) tengan grados de pertenencia  a varios grupos simultáneamente.
+
+
+```{r}
+fclust2 <- FKM(dd,k=2:10)
+round(fclust2$U,2)
+
+fclust2$stand
+```
+
+```{r}
+silf <- fclust2$criterion
+silf <- as.data.frame(silf)
+silf$x <- 2:10
+
+ggplot(silf, aes(x, silf)) +
+  geom_point() +
+  geom_line() +
+  geom_point(data = silf[3,], color="red", size=2) +
+  geom_vline(xintercept = 4, color = "red", lty="dashed")+
+  labs(title= "Índice de Silhouette Fuzzy",x = "k", y= "Silhouette Fuzzy") +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+```{r}
+plot(mydata, col=fclust2$clus[,1])
+
+plot(dd$DIFF_CREDIT_GOODS,dd$RATIO_CREDIT_INCOME, col=fclust2$clus[,1])
+```
+
+ejemplo con las 4 probabilidades
+
+profiling
+grafic dels 4 clusters per separat 
+
+grafic de les confoses amb les elipses
+
+standaritzar

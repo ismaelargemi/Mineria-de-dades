@@ -21,11 +21,8 @@ header-includes:
 \setcounter{page}{5}
 ```
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
-```
-
 ```{r, include=FALSE}
+#Llibreries
 library(NbClust)
 library(dendextend)
 library(scales)
@@ -39,31 +36,28 @@ library(ggplot2)
 En este apartado se aplican diversos algoritmos de clasificación, en concreto el K-means y el Jerárquico. Esto con el objetivo de determinar a que grupo pertenece cada observación, para después realizar un Profiling en el que se terminará etiquetando a cada uno de estos grupos con sus características más relevantes.
 
 ## K-means
-```{r}
+```{r, include=FALSE}
+#Lectura de los datos
 load("Dades preprocessades.Rdata")
 
-
+#mydata contiene toda la base de datos
 mydata <- df_preprocessed
 mydata$AMT_INCOME_TOTAL <- NULL
 mydata$AMT_CREDIT <- NULL
 mydata$AMT_ANNUITY <- NULL
 mydata$AMT_GOODS_PRICE <- NULL
-
-
-
 rm(df_preprocessed)
 
 Objectos <- sapply(mydata, class)
 Numeriques <- names(Objectos)[which(Objectos%in%c("numeric"))]
 
+#dd solo contiene las varibales numericas
 dd <- mydata[,Numeriques]
 ```
 
-Primero se aplicará el algoritmo K-means, lo que solamente nos permitirá utilizar las variables numéricas.
+Primero se aplicará el algoritmo K-means, lo que solamente nos permitirá utilizar las variables numéricas.Antes de aplicar el propio algoritmo, se necesita seleccionar el número óptimo de clústers. 
 
-Antes de aplicar el propio algoritmo, se necesita seleccionar el número óptimo de clústers. Para realizar esto, existen diversos métodos.
-
-Uno de ellos es el método del codo, que consiste en calcular el K-means para un rango de valores k y luego graficar la suma de los cuadrados de las distancias intraclúster en función de k. Para encontrar el óptimo con este método, sencillamente hace falta encontrar el codo del gráfico.
+Para realizar esto, existen diversos métodos. Uno de ellos es el método del codo, que consiste en aplicar el K-means para un rango de valores k y luego graficar la suma de los cuadrados de las distancias intraclúster en función de k. Para encontrar el óptimo con este método, sencillamente hace falta encontrar el "codo" del gráfico.
 
 
 ```{r}
@@ -72,6 +66,7 @@ wss <- (nrow(dd)-1)*sum(apply(dd,2,var))
                                        centers=i)$withinss)
 plot(1:15, wss, type="b", xlab="Number of Clusters",
      ylab="Within groups sum of squares", main = "Método del codo")
+points(2, wss[2], col="red",pch = 1)
 ```
 
 Como se puede apreciar en el gráfico, el número óptimo de clústers para el K-means de nuestra base de datos según el método del codo, seria k=2.
@@ -79,8 +74,9 @@ Como se puede apreciar en el gráfico, el número óptimo de clústers para el K
 Como existen muchos otros criterios para la selección de el k óptimo, se usará la función NbClust, que permite aplicar una cantidad de 26 criterios para la selección de k, de esta manera se sabrá con mayor seguridad cual es el óptimo real.
 
 
+
 ```{r}
-nb_clustering <- NbClust(dd, distance = "euclidean", min.nc = 2, max.nc = 10, method = "ward.D2", index = "all")
+nb_clustering <- NbClust(dd, distance = "euclidean", min.nc = 2, max.nc = 10, method = "kmeans", index = "all")
 
 t <- table(nb_clustering$Best.nc[1,])
 t <- as.data.frame(t)
@@ -90,11 +86,14 @@ ggplot(t, aes(x = Var1, y = Freq)) +
   theme(plot.title = element_text(hjust = 0.5))
 ```
 
-Como se puede apreciar en el histograma, tras haber utilizado todos los criterios, el número óptimo de clústers que más métodos han escogido es k=3.
+Como se puede apreciar en el histograma, tras haber utilizado todos los criterios, el número óptimo de clústers que más métodos han escogido es k=2.
 
+Como el óptimo se encuentra en k=2, el siguiente paso es realizar el K-means con esa k.
+
+A continuación se muestra el gráfico de los individuos pintados según su clase en el plano factorial de las dimensiones 1 y 2 del PCA, acompañado de cada una de las elipses de las clases.
 
 ```{r}
-k <- 3
+k <- 2
 resultado <- kmeans(x = dd,centers = k,iter.max = 10)
 clusters <- resultado$cluster
 
@@ -113,16 +112,19 @@ ggplot(numer,
            y = PC2, 
            color = clusters)) +
   geom_point() +
+  labs(title = "Representación de las clases en PC1-PC2", ) +
+  theme(plot.title = element_text(hjust = 0.5)) +
   stat_ellipse() +
   geom_hline(yintercept = 0, colour = "red") +
   geom_vline(xintercept = 0, colour = "red")
 
-for(i in )
 ```
+
+Como se puede ver, no se distinguen muy bien las 3 clases ya estan unas encima de otras. Esto puede estar debido a que la clasificación se ha hecho considerando solamente las variables numéricas, es por eso que es necesario realizar un clustering jerárquico.
 
 ## Clustering jerárquico
 
-Lo primero que se realiza en el clustering jerárquico es un primer dendograma con el méotodo de Ward con la distáncia de Gower^2. Esto dado que en el k-means solo se puede trabajar con las variables numéricas y en la base de datos hay variables tanto numéricas como cualitativas.
+Lo primero que se realiza en el clustering jerárquico es un primer dendograma con el méotodo de Ward con la distáncia de $$Gower^2$$. Esto dado que en el k-means solo se puede trabajar con las variables numéricas y en la base de datos hay variables tanto numéricas como cualitativas. La distáncia de $$Gower^2$$ nos permitirá calcular las distancias tanto de las variables numéricas como de las categóricas.
 
 ```{r}
 # es calcula la distància de gower:
@@ -133,10 +135,12 @@ dm <- as.matrix(distMatrix)
 dm <- as.data.frame(dm)
 h1 <- hclust(distMatrix, method = "ward.D2")
 
+h1 <- as.dendrogram(h1)
+
 plot(h1)
 ```
 
-A primera vista se puede apreciar que el corte óptimo parece ser 2 clústers. Esta cantidad de clústers parece quedarse pequeña para los objetivos, por lo que trataremos de tomar la decisión analíticamente, usando coeficientes que ayudan a decidir cual es la mejor cantidad de clusters.
+A primera vista se puede apreciar que el corte óptimo parece ser 2 clústers. Esta cantidad de clústers parece quedarse pequeña para los objetivos del trabajo, por lo que trataremos de tomar la decisión analíticamente, usando coeficientes que ayudan a decidir cual es la mejor cantidad de clusters.
 
 Uno de ellos es el Coeficiente de Silhouette:
 
@@ -158,9 +162,7 @@ plot(avg_sil, type = "b", xlab = "Number of clusters", ylab = "Average silhouett
 
 Como se puede ver, según el criterio de Silhouette, el número de clusters óptimo es 2.
 
-De todas maneras, como existen muchos otros criterios
-
-2n mètode (només numèriques): Nbclust
+De todas maneras, como existen muchos otros criterios, se usará al igual que en el K-means, la función NbClust, pero esta vez con la distancia de $$Gower^2$$, de manera que se considerarán todas las variables.
 
 ```{r}
 mydata2 <- PCAmix(mydata, graph = FALSE)
@@ -168,15 +170,13 @@ nb <- NbClust(mydata, diss = dm ,distance=NULL, method = "ward.D2", index = "sil
 ```
 
 
-
-
 Es torna a fer el dendrograma.
 
 ```{r}
-hc <- hclust(daisy(mydata, metric = "gower")^2, "ward.D2") # metrica euclidiana sin elevar al quadrado
-dd = res.PCA
+hc <- hclust(daisy(mydata, metric = "gower")^2, "ward.D2") 
 dend <- as.dendrogram(hc)
 plot(dend)
+#abline(h = )
 ```
 
 Amb el dendrograma es confirma que el millor tall (després de k = 2) és k = 3.
@@ -204,3 +204,16 @@ Es guarden les dades preprocessades amb els clústers fets.
 ```{r}
 save(mydata, file = 'data_clust.Rdata')
 ```
+
+
+
+
+
+
+
+
+
+revisar nbclust
+a malas con las numericas que si que funciona
+
+standaritzar
