@@ -28,6 +28,11 @@ Numeriques <- names(Objectos)[which(Objectos%in%c("numeric"))]
 
 #dd solo contiene las varibales numericas
 dd <- mydata[,Numeriques]
+
+dd$DAYS_BIRTH <- NULL
+
+dd <- scale(dd)
+dd <- as.data.frame(dd)
 ```
 
 # Fuzzy Clustering
@@ -36,10 +41,10 @@ La principal diferencia del Fuzzy Clustering al resto de algoritmos, es que es p
 
 
 ```{r}
-fclust2 <- FKM(dd,k=2:10)
-round(fclust2$U,2)
+fclust2 <- FKM(dd,k=2:10,stand = 1)
+head(round(fclust2$U,2))
 
-fclust2$stand
+fclust2$criterion
 ```
 
 ```{r}
@@ -50,19 +55,52 @@ silf$x <- 2:10
 ggplot(silf, aes(x, silf)) +
   geom_point() +
   geom_line() +
-  geom_point(data = silf[3,], color="red", size=2) +
-  geom_vline(xintercept = 4, color = "red", lty="dashed")+
+  geom_point(data = silf[1,], color="red", size=2) +
+  geom_vline(xintercept = 2, color = "red", lty="dashed")+
   labs(title= "Índice de Silhouette Fuzzy",x = "k", y= "Silhouette Fuzzy") +
   theme(plot.title = element_text(hjust = 0.5))
 ```
 
 ```{r}
+q <-ncol(dd)
+par(mfrow=c(4,4))
+for(i in 1:(q-1)){
+  for (j in (i+1):q) {
+    plot(x = dd[,i],y=dd[,j], col=fclust2$clus[,1], type="p", xlab = names(dd)[i],ylab = names(dd)[j])
+  }
+}
+
+
 plot(mydata, col=fclust2$clus[,1])
 
-plot(dd$DIFF_CREDIT_GOODS,dd$RATIO_CREDIT_INCOME, col=fclust2$clus[,1])
+#plot(dd$DIFF_CREDIT_GOODS,dd$RATIO_CREDIT_INCOME, col=fclust2$clus[,1])
 ```
 
-ejemplo con las 4 probabilidades
+
+```{r}
+pc1 <- prcomp(dd, scale = TRUE)
+PC1 <- pc1$x[,1]
+PC2 <- pc1$x[,2]
+```
+
+```{r}
+
+clusters <- fclust2$clus[1,]
+dd$clusters <- clusters
+
+ggplot(dd, 
+       aes(x = PC1, 
+           y = PC2, 
+           color = clusters)) +
+  geom_point() +
+  labs(title = "Representación de las clases en PC1-PC2", ) +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  stat_ellipse() +
+  geom_hline(yintercept = 0, colour = "red") +
+  geom_vline(xintercept = 0, colour = "red")
+```
+
+predict(obj ejemplo con las 4 probabilidades
 
 profiling
 grafic dels 4 clusters per separat 
