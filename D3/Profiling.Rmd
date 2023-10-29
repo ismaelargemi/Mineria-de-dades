@@ -125,8 +125,8 @@ for(k in 1:K){
     print(paste("p-valueANOVA:", o$p.value))
     kw<-kruskal.test(dades[,k]~P)
     print(paste("p-value Kruskal-Wallis:", kw$p.value))
-    print("p-values ValorsTest: ")
-    print(pvalk[,k])
+    # print("p-values ValorsTest: ")
+    # print(pvalk[,k])
   }else if(!is.numeric(dades[,k])){ #&& significativa[k]==1
       #qualitatives
 
@@ -203,6 +203,28 @@ for(k in 1:K){
     }
   }#endfor
 ```
+```{r}
+library(ggplot2)
+ggplot(dades, aes(x = P, y = dades$log_AMT_ANNUITY)) +
+  geom_bar(stat = "summary", fun = "mean", fill = "blue") +
+  labs(title = paste("Means of", names(dades)[3], "by", nameP),
+       x = names(dades)[1],
+       y = "Mean Value") +
+  geom_hline(yintercept = mean(dades$log_AMT_ANNUITY), color = "red", linetype = "dashed") +
+  theme_minimal()
+```
+
+```{r}
+
+```
+
+
+
+
+
+
+
+
 DONDE PONGA num_var o cat_var es donde se pone la variable que quieres graficar
 ```{r}
 # VARIABLE NUM AGRUPANDO POR CLUSTER P
