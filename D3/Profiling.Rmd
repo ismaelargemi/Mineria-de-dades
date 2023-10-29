@@ -203,29 +203,10 @@ for(k in 1:K){
     }
   }#endfor
 ```
-```{r}
-library(ggplot2)
-ggplot(dades, aes(x = P, y = dades$log_AMT_ANNUITY)) +
-  geom_bar(stat = "summary", fun = "mean", fill = "blue") +
-  labs(title = paste("Means of", names(dades)[3], "by", nameP),
-       x = names(dades)[1],
-       y = "Mean Value") +
-  geom_hline(yintercept = mean(dades$log_AMT_ANNUITY), color = "red", linetype = "dashed") +
-  theme_minimal()
-```
-
-```{r}
-
-```
 
 
 
 
-
-
-
-
-DONDE PONGA num_var o cat_var es donde se pone la variable que quieres graficar
 ```{r}
 # VARIABLE NUM AGRUPANDO POR CLUSTER P
 library(ggplot2)
@@ -242,40 +223,21 @@ ggplot(data = dades, aes(x = P, y = dades$log_AMT_ANNUITY)) +
   geom_hline(yintercept = mean(dades$log_AMT_ANNUITY)) +
   labs(title = paste("Means of", names(dades)[k], "by", nameP), y = "Mean")
 
-```
-este da error idk
-```{r}
-# CATEGORICA AGRUPANDO POR P
-library(ggplot2)
 
-# pORPORCION POSITIVA Y NEGATIVA DE VALORES POR CATEGORIA, CONDICIONADO EN LAS FILAS
-ggplot(data = dades, aes(x = P, y = prop.table(table(P, dades$CODE_GENDER))[,"positive"])) +
-  geom_line() +
-  labs(title = paste("Prop. of pos & neg by", names(dades)[k]), y = "Proportion") +
-  theme(legend.position = "top")
-
-
-# CATEGORICA AGRUPANDO POR P
-library(ggplot2)
-
-# pORPORCION POSITIVA Y NEGATIVA DE VALORES POR CATEGORIA, CONDICIONADO EN LAS COLUMNAS
-ggplot(data = dades, aes(x = P, y = prop.table(table(dades$CODE_GENDER, P))["positive",])) +
-  geom_line() +
-  labs(title = paste("Prop. of pos & neg by", names(dades)[k]), y = "Proportion") +
-  theme(legend.position = "top")
-
+# library(ggplot2)
+# ggplot(dades, aes(x = P, y = dades$log_AMT_ANNUITY)) +
+#   geom_bar(stat = "summary", fun = "mean", fill = "blue") +
+#   labs(title = paste("Means of", names(dades)[3], "by", nameP),
+#        x = names(dades)[1],
+#        y = "Mean Value") +
+#   geom_hline(yintercept = mean(dades$log_AMT_ANNUITY), color = "red", linetype = "dashed") +
+#   theme_minimal()
+# El mismo graf pero con pijadas
 ```
 
 ```{r}
-# CATEGORICA AGRUPANDO POR P
+# CATEGORICA AGRUPANDO POR P CLÚster
 library(ggplot2)
-
-# GRAFICO DE LA PROPORCION DE VALORES POR CATEGORIA CON LA VARIABLE NE EL EJE X
-ggplot(data = dades, aes(x = dades$CODE_GENDER)) +
-  geom_bar(aes(fill = P), position = "fill") +
-  labs(title = paste("Prop. of pos & neg by", names(dades)[k]), y = "Proportion", x = "Categories") +
-  theme(legend.position = "top")
-
 #Barplot
 ggplot(data = dades, aes(x = P, fill = dades$CODE_GENDER)) +
   geom_bar(position = "dodge") +
