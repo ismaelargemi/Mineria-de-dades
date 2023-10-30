@@ -49,7 +49,7 @@ for(i in libraries){
 ```
 
 ```{r echo=FALSE, results = 'hide'}
-data <- load("Dades_seleccionades.Rdata")
+#data <- load("Dades_seleccionades.Rdata")
 data<- df_preprocessed
 ```
 
@@ -419,6 +419,16 @@ for (numeric_var in numeric_vars) {
 }
 
 ```
+En el primer gráfico vemos como no hay mucha diferencia entre hombres y mujeres por lo que se refiere al ratio entre el crédito concedido y el ingreso. 
+En el tercer gráfico podemos observar que hay una diferencia sustancial entre las personas que han acabado bachillerato que tardan más en devolver el dinero del crédito y los que han ido más allá que tardan menos en devolver el crédito prestado. 
+
+El gráfico 17 que compara el 'RATIO_CREDIT_INCOME' con el 'RATIO_ANNUITY_CREDIT', vemos que la relación entre estas dos variables parece una exponencial negativa debido a que el 'RATIO_CREDIT_INCOME' es el número de años que se tarda en devolver el crédito y el 'RATIO_ANNUITY_CREDIT' es en quantos pagos anuales se divide el total de crédito  solicitado. Entonces, a mayor número de divisiones anuales para devolver el crédito, más años tardarán los clientes en devolver el total de crédito  solicitado.
+
+En el gráfico 19 vemos como el hecho de ser mujer puede dificultar la capacidad del cliente para pagar la annuity de su préstamo en relación con sus ingresos. Esto  puede deberse al hecho que las mujeres aún cobran menos en relación con los hombres por los mismos puestos de trabajo.
+
+En el gráfico 25 se analiza el debt-to-income (DTI) ratio en relación con las dificultades del cliente en pagar las cuotas del préstamo. Podemos observar que a partir de un 45% la mayoría de clientes tienen dificultades en pagar, esto se debe a que el DTI lo calculamos dividiendo la deuda mensual por sus igresos mensuales, se considera comúnmente buena idea que el DTI no supere el 43%, por eso la mayoría que están por encima tienen más dificultades en pagar.
+
+CODI QUE NO FUNCIONA: BORRAR?
 
 ```{r}
 library(ggplot2)
