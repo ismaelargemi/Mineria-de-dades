@@ -11,40 +11,33 @@ library(cluster)
 library(ggplot2)
 ```
 
-```{r,include=FALSE}
+```{r, include=FALSE}
 #Lectura de los datos
 load("Dades preprocessades.Rdata")
 
 #mydata contiene toda la base de datos
 mydata <- df_preprocessed
-mydata$AMT_INCOME_TOTAL <- NULL
-mydata$AMT_CREDIT <- NULL
-mydata$AMT_ANNUITY <- NULL
-mydata$AMT_GOODS_PRICE <- NULL
-rm(df_preprocessed)
+mydata[,c("AMT_INCOME_TOTAL","AMT_CREDIT","AMT_ANNUITY","AMT_GOODS_PRICE",
+          "DAYS_BIRTH","TARGET","log_AMT_GOODS_PRICE","log_AMT_ANNUITY",
+          "DIFF_CREDIT_GOODS")] <- NULL
 
 Objectos <- sapply(mydata, class)
 Numeriques <- names(Objectos)[which(Objectos%in%c("numeric"))]
+mydata[,Numeriques] <- scale(mydata[,Numeriques])
+
 
 #dd solo contiene las varibales numericas
 dd <- mydata[,Numeriques]
-
-dd$DAYS_BIRTH <- NULL
-
-dd <- scale(dd)
-dd <- as.data.frame(dd)
 ```
 
 # Fuzzy Clustering
 
 La principal diferencia del Fuzzy Clustering al resto de algoritmos, es que es permite que una obzervación pertenezca a más de una agrupación. Es decir, permite que los elementos (individuos) tengan grados de pertenencia  a varios grupos simultáneamente.
 
-
+En esta parte 
 ```{r}
 fclust2 <- FKM(dd,k=2:10,stand = 1)
 head(round(fclust2$U,2))
-
-fclust2$criterion
 ```
 
 ```{r}
@@ -62,15 +55,18 @@ ggplot(silf, aes(x, silf)) +
 ```
 
 ```{r}
-q <-ncol(dd)
-par(mfrow=c(4,4))
+clusters <- fclust2$clus[,1]
+dd$clusters <- clusters
+
+q <-ncol(dd)-1
+
 for(i in 1:(q-1)){
   for (j in (i+1):q) {
-    plot(x = dd[,i],y=dd[,j], col=fclust2$clus[,1], type="p", xlab = names(dd)[i],ylab = names(dd)[j])
+    plot(x = dd[,i],y=dd[,j], col=fclust2$clus[,1], type="p", xlab = names(dd)[i],ylab = names(dd)[j],pch=16,cex=0.7)
   }
 }
 
-
+par(mfrow=c(4,4))
 plot(mydata, col=fclust2$clus[,1])
 
 #plot(dd$DIFF_CREDIT_GOODS,dd$RATIO_CREDIT_INCOME, col=fclust2$clus[,1])
@@ -83,11 +79,7 @@ PC1 <- pc1$x[,1]
 PC2 <- pc1$x[,2]
 ```
 
-```{r}
-
-clusters <- fclust2$clus[1,]
-dd$clusters <- clusters
-
+```{r,warning=FALSE}
 ggplot(dd, 
        aes(x = PC1, 
            y = PC2, 
