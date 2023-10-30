@@ -16,15 +16,13 @@ load("data_clust.Rdata")
 ```
 
 ```{r}
-cluster6 <- mydata$cluster
-cluster3 <- mydata$cluster2
-mydata$cluster2 <- mydata$cluster <- NULL
+cluster <- mydata$cluster2
+mydata$cluster2 <- NULL
 dades <- mydata
 ```
 
 CATEGORICAS
 ```{r}
-cluster <- cluster6
 indices_categoricas <- sapply(dades, is.factor)
 p_values <- numeric(length(dades))
 
@@ -94,7 +92,7 @@ print(significance_categoricas)
 # install.packages("FactoMineR")
 library(FactoMineR)
 dadesc <- cbind(dades,factor(cluster))
-resul <- catdes(dadesc,num.var=21,proba=0.05)
+resul <- catdes(dadesc,num.var=16,proba=0.05)
 resul$test.chi2 # Da el mismo resultado que lo anterior
 # resul$quanti # Sign de la var num por cada clúster. Todos Signif 
 # resul$category #Solo util para saber si el nivel explica el cluster
@@ -206,27 +204,129 @@ for(k in 1:K){
 ```
 
 
+```{r}
+ggplot(data = dades, aes(x = P, y = dades$OWN_CAR_AGE)) + 
+  geom_bar(stat = "summary", fun = "mean") +
+  geom_hline(yintercept = mean(dades$OWN_CAR_AGE)) +
+  labs(title = paste("Means of", names(dades)[8], "by", nameP), y = "Mean")
+```
+```{r}
+#SALE NO SIGN PERO PARECE EXPLICAR LOS ClÚSTERS
+ggplot(data = dades, aes(x = P, y = dades$CNT_FAM_MEMBERS)) +
+  geom_bar(stat = "summary", fun = "mean") +
+  geom_hline(yintercept = mean(dades$CNT_FAM_MEMBERS)) +
+  labs(title = paste("Means of", names(dades)[9], "by", nameP), y = "Mean")
+```
+```{r}
+ggplot(data = dades, aes(x = P, y = dades$log_AMT_INCOME_TOTAL)) +
+  geom_bar(stat = "summary", fun = "mean") +
+  geom_hline(yintercept = mean(dades$log_AMT_INCOME_TOTAL)) +
+  labs(title = paste("Means of", names(dades)[10], "by", nameP), y = "Mean")
+
+```
+
+```{r}
+ggplot(data = dades, aes(x = P, y = dades$log_AMT_CREDIT)) +
+  geom_bar(stat = "summary", fun = "mean") +
+  geom_hline(yintercept = mean(dades$log_AMT_CREDIT)) +
+  labs(title = paste("Means of", names(dades)[11], "by", nameP), y = "Mean")
+
+```
+```{r}
+ggplot(data = dades, aes(x = P, y = dades$AGE_YEARS)) +
+  geom_bar(stat = "summary", fun = "mean") +
+  geom_hline(yintercept = mean(dades$AGE_YEARS)) +
+  labs(title = paste("Means of", names(dades)[12], "by", nameP), y = "Mean")
+
+```
+```{r}
+ggplot(data = dades, aes(x = P, y = dades$RATIO_CREDIT_INCOME)) +
+  geom_bar(stat = "summary", fun = "mean") +
+  geom_hline(yintercept = mean(dades$RATIO_CREDIT_INCOME)) +
+  labs(title = paste("Means of", names(dades)[13], "by", nameP), y = "Mean")
+```
+```{r}
+ggplot(data = dades, aes(x = P, y = dades$RATIO_ANNUITY_CREDIT)) +
+  geom_bar(stat = "summary", fun = "mean") +
+  geom_hline(yintercept = mean(dades$RATIO_ANNUITY_CREDIT)) +
+  labs(title = paste("Means of", names(dades)[14], "by", nameP), y = "Mean")
+
+```
+```{r}
+ggplot(data = dades, aes(x = P, y = dades$DTI_RATIO)) +
+  geom_bar(stat = "summary", fun = "mean") +
+  geom_hline(yintercept = mean(dades$DTI_RATIO)) +
+  labs(title = paste("Means of", names(dades)[15], "by", nameP), y = "Mean")
+
+```
+
+CATEGORICAS
+```{r}
+ggplot(data = dades, aes(x = P, fill = dades$CODE_GENDER)) +
+  geom_bar(position = "dodge") +
+  labs(title = paste("Prop. of pos & neg by", names(dades)[1]), y = "Proportion") +
+  theme(legend.position = "top")
+```
+
+```{r}
+ggplot(data = dades, aes(x = P, fill = dades$NAME_INCOME_TYPE)) +
+  geom_bar(position = "dodge") +
+  labs(title = paste("Prop. of pos & neg by", names(dades)[2]), y = "Proportion") +
+  theme(legend.position = "top")
+```
+
+```{r}
+ggplot(data = dades, aes(x = P, fill = dades$NAME_INCOME_TYPE)) +
+  geom_bar(position = "dodge") +
+  labs(title = paste("Prop. of pos & neg by", names(dades)[3]), y = "Proportion") +
+  theme(legend.position = "top")
+```
+```{r}
+ggplot(data = dades, aes(x = P, fill = dades$NAME_EDUCATION_TYPE)) +
+  geom_bar(position = "dodge") +
+  labs(title = paste("Prop. of pos & neg by", names(dades)[4]), y = "Proportion") +
+  theme(legend.position = "top")
+```
+```{r}
+ggplot(data = dades, aes(x = P, fill = dades$NAME_FAMILY_STATUS)) +
+  geom_bar(position = "dodge") +
+  labs(title = paste("Prop. of pos & neg by", names(dades)[5]), y = "Proportion") +
+  theme(legend.position = "top")
+```
+```{r}
+ggplot(data = dades, aes(x = P, fill = dades$OCCUPATION_TYPE)) +
+  geom_bar(position = "dodge") +
+  labs(title = paste("Prop. of pos & neg by", names(dades)[6]), y = "Proportion",x = "Cluster") +
+  theme(legend.position = "top")
+```
+
+```{r}
+ggplot(data = dades, aes(x = P, fill = dades$ORGANIZATION_TYPE)) +
+  geom_bar(position = "dodge") +
+  labs(title = paste("Prop. of pos & neg by", names(dades)[7]), y = "Proportion") +
+  theme(legend.position = "top")
+```
+
+```{r}
+ggplot(data = dades, aes(x = P, fill = dades$REGION_RATING_CLIENT)) +
+  geom_bar(position = "dodge") +
+  labs(title = paste("Prop. of pos & neg by", names(dades)[8]), y = "Proportion") +
+  theme(legend.position = "top")
+```
 
 
 ```{r}
 # VARIABLE NUM AGRUPANDO POR CLUSTER P
-library(ggplot2)
+# library(ggplot2)
 
 # GRAF DE LA PROPORCION POSITIVA YNEGATIvA DE VALORESP POR CATEGORIA 
 # No acaba se salir
-ggplot(data = dades, aes(x = P, y = dades$log_AMT_ANNUITY)) +
-  geom_line(stat = "summary", fun.y = "mean") +
-  geom_hline(yintercept = mean(dades$log_AMT_ANNUITY)) +
-  labs(title = paste("Means of", names(dades)[k], "by", nameP), y = "Mean")
-
-#bARPLOT
-ggplot(data = dades, aes(x = P, y = dades$log_AMT_ANNUITY)) +
-  geom_bar(stat = "summary", fun = "mean") +
-  geom_hline(yintercept = mean(dades$log_AMT_ANNUITY)) +
-  labs(title = paste("Means of", names(dades)[k], "by", nameP), y = "Mean")
-
-
+# ggplot(data = dades, aes(x = P, y = dades$log_AMT_ANNUITY)) +
+#   geom_line(stat = "summary", fun.y = "mean") +
+#   geom_hline(yintercept = mean(dades$log_AMT_ANNUITY)) +
+#   labs(title = paste("Means of", names(dades)[k], "by", nameP), y = "Mean")
 # library(ggplot2)
+# El mismo graf pero con pijadas
 # ggplot(dades, aes(x = P, y = dades$log_AMT_ANNUITY)) +
 #   geom_bar(stat = "summary", fun = "mean", fill = "blue") +
 #   labs(title = paste("Means of", names(dades)[3], "by", nameP),
@@ -234,17 +334,14 @@ ggplot(data = dades, aes(x = P, y = dades$log_AMT_ANNUITY)) +
 #        y = "Mean Value") +
 #   geom_hline(yintercept = mean(dades$log_AMT_ANNUITY), color = "red", linetype = "dashed") +
 #   theme_minimal()
-# El mismo graf pero con pijadas
-```
 
-```{r}
 # CATEGORICA AGRUPANDO POR P CLÚster
-library(ggplot2)
-#Barplot
-ggplot(data = dades, aes(x = P, fill = dades$CODE_GENDER)) +
-  geom_bar(position = "dodge") +
-  labs(title = paste("Prop. of pos & neg by", names(dades)[k]), y = "Proportion") +
-  theme(legend.position = "top")
+# library(ggplot2)
+# #Barplot
+# ggplot(data = dades, aes(x = P, fill = dades$CODE_GENDER)) +
+#   geom_bar(position = "dodge") +
+#   labs(title = paste("Prop. of pos & neg by", names(dades)[k]), y = "Proportion") +
+#   theme(legend.position = "top")
 
 ```
 
