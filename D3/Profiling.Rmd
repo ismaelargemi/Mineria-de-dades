@@ -80,11 +80,12 @@ evaluate_p_values <- function(p_values, alpha = 0.05) {
 
 # Evalúa significancia de p-valores para variables numéricas y categóricas
 significance_numericas <- evaluate_p_values(p_values_numericas)
-significance_categoricas <- evaluate_p_values(p_values_categoricas)
+significance_categoricas <- evaluate_p_values(p_values_categoricas[,2])
 
 print("Significancia de p-valores para variables numéricas:")
 print(significance_numericas)
 
+names(significance_categoricas) <- p_values_categoricas[,1]
 print("Significancia de p-valores para variables categóricas:")
 print(significance_categoricas)
 ```
@@ -94,9 +95,9 @@ print(significance_categoricas)
 library(FactoMineR)
 dadesc <- cbind(dades,factor(cluster))
 resul <- catdes(dadesc,num.var=21,proba=0.05)
-resul$test.chi2
-resul$quanti
-resul$category
+resul$test.chi2 # Da el mismo resultado que lo anterior
+# resul$quanti # Sign de la var num por cada clúster. Todos Signif 
+# resul$category #Solo util para saber si el nivel explica el cluster
 ```
 
 
@@ -211,7 +212,8 @@ for(k in 1:K){
 # VARIABLE NUM AGRUPANDO POR CLUSTER P
 library(ggplot2)
 
-# GRAF DE LA PROPORCION POSITIVA YNEGATIvA DE VALORESP POR CATEGORIA
+# GRAF DE LA PROPORCION POSITIVA YNEGATIvA DE VALORESP POR CATEGORIA 
+# No acaba se salir
 ggplot(data = dades, aes(x = P, y = dades$log_AMT_ANNUITY)) +
   geom_line(stat = "summary", fun.y = "mean") +
   geom_hline(yintercept = mean(dades$log_AMT_ANNUITY)) +
