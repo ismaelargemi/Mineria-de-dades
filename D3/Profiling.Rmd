@@ -111,117 +111,127 @@ nc <- length(levels(factor(P)))
 #número de observaciones
 n <- dim(dades)[1]
 
-
-for(k in 1:K){
-  if (is.numeric(dades[,k])){ # && significativa[k]==1
-    print(paste("Anàlisi per classes de la Variable:", names(dades)[k]))
-    barplot(tapply(dades[[k]], P, mean),main=paste("Means of", names(dades)[k], "by", nameP ))
-    abline(h=mean(dades[[k]]))
-    legend(0,mean(dades[[k]]),"global mean",bty="n")
-    print("Estadístics per groups:")
-    for(s in levels(as.factor(P))) {print(summary(dades[P==s,k]))}
-    o<-oneway.test(dades[,k]~P)
-    print(paste("p-valueANOVA:", o$p.value))
-    kw<-kruskal.test(dades[,k]~P)
-    print(paste("p-value Kruskal-Wallis:", kw$p.value))
-    # print("p-values ValorsTest: ")
-    # print(pvalk[,k])
-  }else if(!is.numeric(dades[,k])){ #&& significativa[k]==1
-      #qualitatives
-
-      print(paste("Variable", names(dades)[k]))
-      table<-table(P,dades[,k])
-      #   print("Cross-table")
-      #   print(table)
-      rowperc<-prop.table(table,1)
-
-      colperc<-prop.table(table,2)
-      #  print("Distribucions condicionades a files")
-      # print(rowperc)
-
-      #ojo porque si la variable es true o false la identifica con el tipo Logical i
-
-      dades[,k]<-as.factor(dades[,k])
-
-
-      marg <- table(as.factor(P))/n
-      print(append("Categories=",levels(as.factor(dades[,k]))))
-
-      #from next plots, select one of them according to your practical case
-
-      par(mar=c(5, 4, 4, 8), xpd=TRUE)
-      plot(marg,type="l",ylim=c(0,1),main=paste("Prop. of pos & neg by",names(dades)[k]))
-      paleta<-rainbow(length(levels(dades[,k])))
-      for(c in 1:length(levels(dades[,k]))){lines(colperc[,c],col=paleta[c]) }
-      legend("topright", levels(dades[,k]), col=paleta, lty=2, cex=0.6)
-
-      #condicionades a classes
-      print(append("Categories=",levels(dades[,k])))
-      par(mar=c(5, 4, 4, 8), xpd=TRUE)
-      plot(marg,type="n",ylim=c(0,1),main=paste("Prop. of pos & neg by",names(dades)[k]))
-      paleta<-rainbow(length(levels(dades[,k])))
-      for(c in 1:length(levels(dades[,k]))){lines(rowperc[,c],col=paleta[c]) }
-      legend("topright", levels(dades[,k]), col=paleta, lty=2, cex=0.6)
-
-      #amb variable en eix d'abcisses
-      marg <-table(dades[,k])/n
-      print(append("Categories=",levels(dades[,k])))
-      par(mar=c(5, 4, 4, 8), xpd=TRUE)
-      plot(marg,type="l",ylim=c(0,1),main=paste("Prop. of pos & neg by",names(dades)[k]), las=3)
-      #x<-plot(marg,type="l",ylim=c(0,1),main=paste("Prop. of pos & neg by",names(dades)[k]), xaxt="n")
-      #text(x=x+.25, y=-1, adj=1, levels(CountryName), xpd=TRUE, srt=25, cex=0.7)
-      paleta<-rainbow(length(levels(as.factor(P))))
-      for(c in 1:length(levels(as.factor(P)))){lines(rowperc[c,],col=paleta[c]) }
-      legend("topright", levels(as.factor(P)), col=paleta, lty=2, cex=0.6)
-
-      #condicionades a columna
-      par(mar=c(5, 4, 4, 8), xpd=TRUE)
-      plot(marg,type="n",ylim=c(0,1),main=paste("Prop. of pos & neg by",names(dades)[k]), las=3)
-      paleta<-rainbow(length(levels(as.factor(P))))
-      for(c in 1:length(levels(as.factor(P)))){lines(colperc[c,],col=paleta[c]) }
-      legend("topright", levels(as.factor(P)), col=paleta, lty=2, cex=0.6)
-
-      table<-table(dades[,k],P)
-      print("Cross Table:")
-      print(table)
-      print("Distribucions condicionades a columnes:")
-      print(colperc)
-
-      #diagrames de barres adosades
-      par(mar=c(5, 4, 4, 8), xpd=TRUE)
-      barplot(table(dades[,k], as.factor(P)), beside=TRUE,col=paleta)
-      legend("topright",levels(as.factor(dades[,k])),pch=1,cex=0.5, col=paleta)
-
-      print("Test Chi quadrat: ")
-      print(chisq.test(dades[,k], as.factor(P)))
-
-     
-
-      # g[k] <- ValorTestXquali(P,dades[,k])
-      #calcular els pvalues de les quali
-    }
-  }#endfor
 ```
 
 
 ```{r}
+# 
+# for(k in 1:K){
+#   if (is.numeric(dades[,k])){ # && significativa[k]==1
+#     print(paste("Anàlisi per classes de la Variable:", names(dades)[k]))
+#     barplot(tapply(dades[[k]], P, mean),main=paste("Means of", names(dades)[k], "by", nameP ))
+#     abline(h=mean(dades[[k]]))
+#     legend(0,mean(dades[[k]]),"global mean",bty="n")
+#     print("Estadístics per groups:")
+#     for(s in levels(as.factor(P))) {print(summary(dades[P==s,k]))}
+#     o<-oneway.test(dades[,k]~P)
+#     print(paste("p-valueANOVA:", o$p.value))
+#     kw<-kruskal.test(dades[,k]~P)
+#     print(paste("p-value Kruskal-Wallis:", kw$p.value))
+#     # print("p-values ValorsTest: ")
+#     # print(pvalk[,k])
+#   }else if(!is.numeric(dades[,k])){ #&& significativa[k]==1
+#       #qualitatives
+# 
+#       print(paste("Variable", names(dades)[k]))
+#       table<-table(P,dades[,k])
+#       #   print("Cross-table")
+#       #   print(table)
+#       rowperc<-prop.table(table,1)
+# 
+#       colperc<-prop.table(table,2)
+#       #  print("Distribucions condicionades a files")
+#       # print(rowperc)
+# 
+#       #ojo porque si la variable es true o false la identifica con el tipo Logical i
+# 
+#       dades[,k]<-as.factor(dades[,k])
+# 
+# 
+#       marg <- table(as.factor(P))/n
+#       print(append("Categories=",levels(as.factor(dades[,k]))))
+# 
+#       #from next plots, select one of them according to your practical case
+# 
+#       par(mar=c(5, 4, 4, 8), xpd=TRUE)
+#       plot(marg,type="l",ylim=c(0,1),main=paste("Prop. of pos & neg by",names(dades)[k]))
+#       paleta<-rainbow(length(levels(dades[,k])))
+#       for(c in 1:length(levels(dades[,k]))){lines(colperc[,c],col=paleta[c]) }
+#       legend("topright", levels(dades[,k]), col=paleta, lty=2, cex=0.6)
+# 
+#       #condicionades a classes
+#       print(append("Categories=",levels(dades[,k])))
+#       par(mar=c(5, 4, 4, 8), xpd=TRUE)
+#       plot(marg,type="n",ylim=c(0,1),main=paste("Prop. of pos & neg by",names(dades)[k]))
+#       paleta<-rainbow(length(levels(dades[,k])))
+#       for(c in 1:length(levels(dades[,k]))){lines(rowperc[,c],col=paleta[c]) }
+#       legend("topright", levels(dades[,k]), col=paleta, lty=2, cex=0.6)
+# 
+#       #amb variable en eix d'abcisses
+#       marg <-table(dades[,k])/n
+#       print(append("Categories=",levels(dades[,k])))
+#       par(mar=c(5, 4, 4, 8), xpd=TRUE)
+#       plot(marg,type="l",ylim=c(0,1),main=paste("Prop. of pos & neg by",names(dades)[k]), las=3)
+#       #x<-plot(marg,type="l",ylim=c(0,1),main=paste("Prop. of pos & neg by",names(dades)[k]), xaxt="n")
+#       #text(x=x+.25, y=-1, adj=1, levels(CountryName), xpd=TRUE, srt=25, cex=0.7)
+#       paleta<-rainbow(length(levels(as.factor(P))))
+#       for(c in 1:length(levels(as.factor(P)))){lines(rowperc[c,],col=paleta[c]) }
+#       legend("topright", levels(as.factor(P)), col=paleta, lty=2, cex=0.6)
+# 
+#       #condicionades a columna
+#       par(mar=c(5, 4, 4, 8), xpd=TRUE)
+#       plot(marg,type="n",ylim=c(0,1),main=paste("Prop. of pos & neg by",names(dades)[k]), las=3)
+#       paleta<-rainbow(length(levels(as.factor(P))))
+#       for(c in 1:length(levels(as.factor(P)))){lines(colperc[c,],col=paleta[c]) }
+#       legend("topright", levels(as.factor(P)), col=paleta, lty=2, cex=0.6)
+# 
+#       table<-table(dades[,k],P)
+#       print("Cross Table:")
+#       print(table)
+#       print("Distribucions condicionades a columnes:")
+#       print(colperc)
+# 
+#       #diagrames de barres adosades
+#       par(mar=c(5, 4, 4, 8), xpd=TRUE)
+#       barplot(table(dades[,k], as.factor(P)), beside=TRUE,col=paleta)
+#       legend("topright",levels(as.factor(dades[,k])),pch=1,cex=0.5, col=paleta)
+# 
+#       print("Test Chi quadrat: ")
+#       print(chisq.test(dades[,k], as.factor(P)))
+# 
+#      
+# 
+#       # g[k] <- ValorTestXquali(P,dades[,k])
+#       #calcular els pvalues de les quali
+#     }
+#   }#endfor
+```
+
+```{r}
+library(ggplot2)
+colores <- scales::brewer_pal(palette = "Set1")(length(unique(dades$Cluster)))
+
+```
+
+```{r}
+library(ggplot2)
 ggplot(data = dades, aes(x = P, y = dades$OWN_CAR_AGE)) + 
   geom_bar(stat = "summary", fun = "mean") +
   geom_hline(yintercept = mean(dades$OWN_CAR_AGE)) +
-  labs(title = paste("Means of", names(dades)[8], "by", nameP), y = "Mean")
+  labs(title = "Medias de la Edad en años del coche del cliente por clúster respecto la media global" , y = "Media", x = "Clúster") 
 ```
 ```{r}
 #SALE NO SIGN PERO PARECE EXPLICAR LOS ClÚSTERS
 ggplot(data = dades, aes(x = P, y = dades$CNT_FAM_MEMBERS)) +
   geom_bar(stat = "summary", fun = "mean") +
   geom_hline(yintercept = mean(dades$CNT_FAM_MEMBERS)) +
-  labs(title = paste("Means of", names(dades)[9], "by", nameP), y = "Mean")
+  labs(title = "Medias del Número de familiares del cliente por clúster respecto la media global" , y = "Media", x = "Clúster")
 ```
 ```{r}
 ggplot(data = dades, aes(x = P, y = dades$log_AMT_INCOME_TOTAL)) +
   geom_bar(stat = "summary", fun = "mean") +
   geom_hline(yintercept = mean(dades$log_AMT_INCOME_TOTAL)) +
-  labs(title = paste("Means of", names(dades)[10], "by", nameP), y = "Mean")
+  labs(title = "Medias del logaritmo de los Ingresos totales del cliente por clúster respecto la media global" , y = "Media", x = "Clúster")
 
 ```
 
@@ -229,34 +239,38 @@ ggplot(data = dades, aes(x = P, y = dades$log_AMT_INCOME_TOTAL)) +
 ggplot(data = dades, aes(x = P, y = dades$log_AMT_CREDIT)) +
   geom_bar(stat = "summary", fun = "mean") +
   geom_hline(yintercept = mean(dades$log_AMT_CREDIT)) +
-  labs(title = paste("Means of", names(dades)[11], "by", nameP), y = "Mean")
+  labs(title = "Medias del Importe de crédito del préstamo por clúster respecto la media global" , y = "Media", x = "Clúster")
 
 ```
 ```{r}
+#????
 ggplot(data = dades, aes(x = P, y = dades$AGE_YEARS)) +
   geom_bar(stat = "summary", fun = "mean") +
   geom_hline(yintercept = mean(dades$AGE_YEARS)) +
-  labs(title = paste("Means of", names(dades)[12], "by", nameP), y = "Mean")
+  labs(title = "Medias de la Edad por clúster respecto la media global" , y = "Media", x = "Clúster")
 
 ```
 ```{r}
+#??
 ggplot(data = dades, aes(x = P, y = dades$RATIO_CREDIT_INCOME)) +
   geom_bar(stat = "summary", fun = "mean") +
   geom_hline(yintercept = mean(dades$RATIO_CREDIT_INCOME)) +
-  labs(title = paste("Means of", names(dades)[13], "by", nameP), y = "Mean")
+  labs(title = "Medias del Ratio del Importe del préstamo por clúster respecto la media global" , y = "Media", x = "Clúster")
 ```
 ```{r}
+#???
 ggplot(data = dades, aes(x = P, y = dades$RATIO_ANNUITY_CREDIT)) +
   geom_bar(stat = "summary", fun = "mean") +
   geom_hline(yintercept = mean(dades$RATIO_ANNUITY_CREDIT)) +
-  labs(title = paste("Means of", names(dades)[14], "by", nameP), y = "Mean")
+  labs(title = "Medias del Ratio de la Anualidad del préstamo por clúster respecto la media global" , y = "Media", x = "Clúster")
 
 ```
 ```{r}
+#???
 ggplot(data = dades, aes(x = P, y = dades$DTI_RATIO)) +
   geom_bar(stat = "summary", fun = "mean") +
   geom_hline(yintercept = mean(dades$DTI_RATIO)) +
-  labs(title = paste("Means of", names(dades)[15], "by", nameP), y = "Mean")
+  labs(title = "Medias de x  por clúster respecto la media global" , y = "Media", x = "Clúster")
 
 ```
 
@@ -264,54 +278,48 @@ CATEGORICAS
 ```{r}
 ggplot(data = dades, aes(x = P, fill = dades$CODE_GENDER)) +
   geom_bar(position = "dodge") +
-  labs(title = paste("Prop. of pos & neg by", names(dades)[1]), y = "Proportion") +
-  theme(legend.position = "top")
+  labs(title = "Gráfico de la distribución del Género respecto el Clúster", y = "Freq", x = "Clúster") +
+  theme(legend.position = "top") + guides(fill = guide_legend(title = NULL))
 ```
 
 ```{r}
 ggplot(data = dades, aes(x = P, fill = dades$NAME_INCOME_TYPE)) +
   geom_bar(position = "dodge") +
-  labs(title = paste("Prop. of pos & neg by", names(dades)[2]), y = "Proportion") +
-  theme(legend.position = "top")
+  labs(title = "Gráfico de la distribución del Tipo de ingresos respecto el Clúster", y = "Freq", x = "Clúster") +
+  theme(legend.position = "top") + guides(fill = guide_legend(title = NULL))
 ```
 
-```{r}
-ggplot(data = dades, aes(x = P, fill = dades$NAME_INCOME_TYPE)) +
-  geom_bar(position = "dodge") +
-  labs(title = paste("Prop. of pos & neg by", names(dades)[3]), y = "Proportion") +
-  theme(legend.position = "top")
-```
 ```{r}
 ggplot(data = dades, aes(x = P, fill = dades$NAME_EDUCATION_TYPE)) +
   geom_bar(position = "dodge") +
-  labs(title = paste("Prop. of pos & neg by", names(dades)[4]), y = "Proportion") +
-  theme(legend.position = "top")
+  labs(title = "Gráfico de la distribución del Nivel de estudios del cliente respecto el Clúster", y = "Freq", x = "Clúster") +
+  theme(legend.position = "top") + guides(fill = guide_legend(title = NULL))
 ```
 ```{r}
 ggplot(data = dades, aes(x = P, fill = dades$NAME_FAMILY_STATUS)) +
   geom_bar(position = "dodge") +
-  labs(title = paste("Prop. of pos & neg by", names(dades)[5]), y = "Proportion") +
-  theme(legend.position = "top")
+  labs(title = "Gráfico de la distribución del Estado civil respecto el Clúster", y = "Freq", x = "Clúster") +
+  theme(legend.position = "top") + guides(fill = guide_legend(title = NULL))
 ```
 ```{r}
 ggplot(data = dades, aes(x = P, fill = dades$OCCUPATION_TYPE)) +
   geom_bar(position = "dodge") +
-  labs(title = paste("Prop. of pos & neg by", names(dades)[6]), y = "Proportion",x = "Cluster") +
-  theme(legend.position = "top")
+  labs(title = "Gráfico de la distribución de la Actividad laboral respecto el Clúster", y = "Freq", x = "Clúster") +
+  theme(legend.position = "top") + guides(fill = guide_legend(title = NULL))
 ```
 
 ```{r}
 ggplot(data = dades, aes(x = P, fill = dades$ORGANIZATION_TYPE)) +
   geom_bar(position = "dodge") +
-  labs(title = paste("Prop. of pos & neg by", names(dades)[7]), y = "Proportion") +
-  theme(legend.position = "top")
+  labs(title = "Gráfico de la distribución del Tipo de organización donde trabaja el cliente respecto el Clúster", y = "Freq", x = "Clúster") +
+  theme(legend.position = "top") + guides(fill = guide_legend(title = NULL))
 ```
 
 ```{r}
 ggplot(data = dades, aes(x = P, fill = dades$REGION_RATING_CLIENT)) +
   geom_bar(position = "dodge") +
-  labs(title = paste("Prop. of pos & neg by", names(dades)[8]), y = "Proportion") +
-  theme(legend.position = "top")
+  labs(title = "Gráfico de la distribución de la Calificación de la región donde vive el cliente respecto el Clúster", y = "Freq", x = "Clúster") +
+  theme(legend.position = "top") + guides(fill = guide_legend(title = NULL))
 ```
 
 
