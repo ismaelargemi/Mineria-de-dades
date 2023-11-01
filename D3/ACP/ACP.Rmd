@@ -1,0 +1,365 @@
+---
+title: "ACP"
+date: "`r Sys.Date()`"
+output: 
+    pdf_document : default
+    html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
+
+```
+
+```{r, warning=FALSE, echo=FALSE}
+setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
+data <- get (load('prepro_dades.Rdata'))
+rm(df_preprocessed)
+library("factoextra")
+library("kableExtra")
+summary(data)
+```
+
+Se observa que la base de datos tiene un total de 11 columnas numéricas. Por tanto, el análisis de componentes principales tendrá como máximo 11 componentes.
+
+## Selección de variables numéricas
+
+```{r, echo=F, include=FALSE}
+# Eliminamos las variables a las que se les ha realizado la transformación log
+
+data <- data[ , -which(names(data) %in% c("AMT_INCOME_TOTAL","AMT_CREDIT","AMT_ANNUITY","AMT_GOODS_PRICE","DAYS_BIRTH"))]
+#Eliminamos DAYS_BIRTH, ya que contamos con la variable AGE_YEARS
+
+# Nos quedamos sólo con los datos numéricos
+numeric <- which(sapply(data, is.numeric))
+data_numeric <- data[, numeric]
+# sapply(data_numeric, class)
+```
+
+
+## PCA
+
+A partir de aquí, se procede con el análisis de componentes principales:
+
+```{r}
+pc1 <- prcomp(data_numeric, scale=TRUE)
+inerProj<- pc1$sdev^2 
+totalIner<- sum(inerProj)
+pinerEix<- 100*inerProj/totalIner
+percInerAccum<-100*cumsum(pc1$sdev[1:dim(data_numeric)[2]]^2)/dim(data_numeric)[2]
+df <- data.frame(x=1:length(percInerAccum),
+                 y=(100*cumsum(pc1$sdev[1:dim(data_numeric)[2]]^2)/dim(data_numeric)[2])/(100/40))
+```
+
+```{r, echo=F, include = F}
+p <- fviz_eig(pc1, addlabels = TRUE,ylim=c(0,40),barcolor = "#53868B", barfill = "#DCF0F8")
+p <- p + 
+     geom_point(data=df, aes(x,y), size=2, color="#8B3E2F") +
+     geom_line(data=df, aes(x,y), color="#8B3E2F") +
+     scale_y_continuous(sec.axis = sec_axis(~ . * (100/40), 
+                                   name = "Cumulative proportion of variance explained (%)")) +
+    geom_text(data = df, aes(x,y-1.5,label=paste(round((y*100/40),1),"%"))) +
+  ggtitle("Explained inertia by each dimension") +
+  theme_minimal()
+```
+
+```{r, echo = F, fig.cap = "Inercia explicada por cada PF", out.height="75%",out.width="75%"}
+p
+```
+
+Teniendo en cuenta que la inercia equivale a la proporción de la variabilidad de los datos, se sabe que con un 80% de inercia se puede obtener casi toda la información o variabilidad de la base de datos original. Con ello, vemos que el 80% de la inercia acumulada se logra con 5 planos factoriales, pero aún se pueden eliminar algunas variables.
+
+```{r, echo=F, include = F}
+nd <- which(percInerAccum >= 80)[1]
+Psi <- pc1$x[,1:nd]
+iden <- row.names(data_numeric) # Etiquetas de los individuos
+etiq <- names(data_numeric) # Etiquetas de variables numéricas
+ze <- rep(0,length(etiq)) # Vector necesario para realizar gráficos posteriores
+# dim(Psi)
+```
+
+```{r, echo = F, include = F}
+# En el objeto "combn" se guardan todos los pares de dimensiones a graficar
+combn <- as.data.frame(t(combn(1:nd,2))) 
+grafic = c()
+for(i in 1:nrow(combn)){
+  grafic[[i]] = fviz_pca_var(pc1,axes = c(combn[i,1],combn[i,2]),col.var = "contrib",
+                             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
+                             repel = TRUE) + theme_minimal()
+}
+```
+
+```{r, echo = F, fig.cap = "Gráfico de PF", out.height="75%",out.width="75%"}
+grafic[[1]]
+```
+
+```{r, out.width="90%", include=FALSE}
+# COMENTADO PORQUE DA EL MISMO GRAFICO ANTERIOR
+
+# eje1 <- 1
+# eje2 <- 2
+# Phi = cor(data_numeric, Psi)
+# X <- Phi[, eje1]
+# Y <- Phi[, eje2]
+# plot(Psi[,eje1],Psi[,eje2],type="n",xlim=c(min(X,0),max(X,0)), ylim=c(-1,1), 
+#      xlab = "CP1", ylab = "CP2") 
+# axis(side=1, pos= 0, labels = F)
+# axis(side=3, pos= 0, labels = F)
+# axis(side=2, pos= 0, labels = F)
+# axis(side=4, pos= 0, labels = F)
+# arrows(ze, ze, X, Y, length = 0.07,col="blue")
+# text(X,Y,labels=etiq,col="darkblue", cex=0.7)
+```
+
+Observamos la tabla de rotaciones:
+
+```{r, echo=FALSE,}
+kbl(pc1$rotation[,1:5],
+    caption = "Correlación de cada variable con cada plano factorial"
+    , booktabs=T)%>% 
+  kable_styling(position = "center", 
+                latex_options = c("HOLD_position"))
+```
+
+En el grafico vemos que las flechas de **log_AMT_GOODS_PRICE** y **log_AMT_CREDIT** se solapan entre ellas, eso queire decir que las dos variables explican el mismo plano factorial. Vemos en la tabla de rotaciones que **log_AMT_CREDIT** contribuye más a explicar el primer plano factorial, y además las correlaciones entra cada una de las variables y cada dimensión son muy similares. Por esta razón eliminamos **log_AMT_GOODS_PRICE**.
+
+```{r}
+data_numeric <- data_numeric[ , -which(names(data_numeric) %in% c("log_AMT_GOODS_PRICE"))]
+pc1 <- prcomp(data_numeric, scale = TRUE)
+```
+
+Nos quedamos con una variable menos, por tanto tenemos `r ncol(data_numeric)` variables numéricas. 
+
+De vuelta, verificamos el porcentaje de inercia por cada componente principal y la acumulada:
+
+```{r, echo=F, include = F}
+inerProj<- pc1$sdev^2 
+totalIner<- sum(inerProj)
+pinerEix<- 100*inerProj/totalIner
+percInerAccum<-100*cumsum(pc1$sdev[1:dim(data_numeric)[2]]^2)/dim(data_numeric)[2]
+df <- data.frame(x=1:length(percInerAccum), y=(100*cumsum(pc1$sdev[1:dim(data_numeric)[2]]^2)/dim(data_numeric)[2])/(100/percInerAccum[1]))
+```
+
+```{r, echo=F, include = F}
+p <- fviz_eig(pc1, addlabels = TRUE,ylim=c(0,percInerAccum[1]),barcolor = "#53868B", barfill = "#DCF0F8")
+p <- p + 
+     geom_point(data=df, aes(x,y), size=2, color="#8B3E2F") +
+     geom_line(data=df, aes(x,y), color="#8B3E2F") +
+     scale_y_continuous(sec.axis = sec_axis(~ . * (100/percInerAccum[1]), 
+                                   name = "Cumulative proportion of variance explained (%)")) +
+    geom_text(data = df, aes(x,y-1.5,label=paste(round((y*100/percInerAccum[1]),1),"%"))) +
+  ggtitle("Explained inertia by each dimension") + theme_minimal()
+```
+
+```{r, echo = F, fig.cap = "Inercia explicada por cada PF corregido", out.height="75%",out.width="75%"}
+p
+```
+
+Como se puede ver, seguimos teniendo 5 dimensiones que acumulan el 80% de la varianza.
+
+```{r, echo=F, include = F}
+nd <- which(percInerAccum >= 80)[1]
+Psi <- pc1$x[,1:nd]
+iden <- row.names(data_numeric)
+etiq <- names(data_numeric)
+ze <- rep(0,length(etiq))
+Phi <- cor(data_numeric,Psi)
+```
+
+```{r, echo = F}
+combn <- as.data.frame(t(combn(1:nd,2))) 
+grafic = c()
+for(i in 1:nrow(combn)){
+  grafic[[i]] = fviz_pca_var(pc1,axes = c(combn[i,1],combn[i,2]),col.var = "contrib",
+                             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
+                             repel = TRUE) + theme_minimal()
+}
+```
+
+```{r,echo = F, fig.cap="Gráfico de PF corregido", out.height="75%",out.width="75%"}
+grafic[[1]]
+```
+
+Vemos que las variables **CNT_FAM_MEMBERS**, **AGE_YEARS** y **OWN CAR AGE** no explican las dos primeras componentes pero si nos fijamos en la tabla de rotaciones vemos que sí tienen importancia a la hora de explicar las otras tres dimensiones:
+
+```{r, echo=FALSE}
+kbl(pc1$rotation[,1:5],
+    caption = "Correlación de cada variable con cada plano factorial"
+    , booktabs=T)%>% 
+  kable_styling(position = "center", 
+                latex_options = c("HOLD_position"))
+```
+Por ejemplo, en el caso de **OWN CAR AGE** se puede ver en la tabla anterior que, se podría decir que no es la que mejor explica las primeras componentes, pero vemos que explica casi toda la componente 5.
+
+Otra observación se podria hacer de las variables **log_AMT_CREDIT** y **log_AMT_ANNUITY**, donde se puede apreciar que tienen correlaciones similares con la primera y segunda dimensión. Teniendo en cuenta que esas dos primeras dimensiones (PC1 y PC2) són las más importantes, ya que acumulan la mayoría de la inercia (en total un 52.2%), parece una decisión sensata eliminar una de ellas, en este caso **log_AMT_ANNUITY**.
+
+```{r}
+data_numeric <- data_numeric[ , -which(names(data_numeric) %in% c("log_AMT_ANNUITY"))]
+pc1 <- prcomp(data_numeric, scale = TRUE)
+```
+
+Ahora conservamos `r ncol(data_numeric)` variables numéricas.
+
+De forma igual que anteriormente, comprobamos el porcentaje de inercia para cada componente principal y la acumulada:
+
+```{r, echo=F, include = F}
+inerProj<- pc1$sdev^2 
+totalIner<- sum(inerProj)
+pinerEix<- 100*inerProj/totalIner
+percInerAccum<-100*cumsum(pc1$sdev[1:dim(data_numeric)[2]]^2)/dim(data_numeric)[2]
+df <- data.frame(x=1:length(percInerAccum), y=(100*cumsum(pc1$sdev[1:dim(data_numeric)[2]]^2)/dim(data_numeric)[2])/(100/percInerAccum[1]))
+```
+
+```{r, echo=F, include = F}
+p <- fviz_eig(pc1, addlabels = TRUE,ylim=c(0,percInerAccum[1]),barcolor = "#53868B", barfill = "#DCF0F8")
+p <- p + 
+     geom_point(data=df, aes(x,y), size=2, color="#8B3E2F") +
+     geom_line(data=df, aes(x,y), color="#8B3E2F") +
+     scale_y_continuous(sec.axis = sec_axis(~ . * (100/percInerAccum[1]), 
+                                   name = "Cumulative proportion of variance explained (%)")) +
+    geom_text(data = df, aes(x,y-1.5,label=paste(round((y*100/percInerAccum[1]),1),"%"))) +
+  ggtitle("Explained inertia by each dimension") + theme_minimal()
+```
+
+```{r, echo = F, fig.cap = "Inercia explicada por cada PF corregido", out.height="75%",out.width="75%"}
+p
+```
+
+Como se puede comprobar, las 5 dimensiones siguen siendo las necesarias para acumular el 80% de la varianza.
+
+```{r, echo=F, include = F}
+nd <- which(percInerAccum >= 80)[1]
+Psi <- pc1$x[,1:nd]
+iden <- row.names(data_numeric)
+etiq <- names(data_numeric)
+ze <- rep(0,length(etiq))
+Phi <- cor(data_numeric,Psi)
+```
+
+```{r, echo = F}
+combn <- as.data.frame(t(combn(1:nd,2))) 
+grafic = c()
+for(i in 1:nrow(combn)){
+  grafic[[i]] = fviz_pca_var(pc1,axes = c(combn[i,1],combn[i,2]),col.var = "contrib",
+                             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
+                             repel = TRUE) + theme_minimal()
+}
+```
+
+```{r,echo = F, fig.cap="Gráfico de PF corregido", out.height="75%",out.width="75%"}
+grafic[[1]]
+```
+
+Observamos tambien la tabla de rotaciones para verificar si se puede eliminar alguna variable más:
+
+```{r, echo=FALSE}
+kbl(pc1$rotation[,1:5],
+    caption = "Correlación de cada variable con cada plano factorial"
+    , booktabs=T)%>% 
+  kable_styling(position = "center", 
+                latex_options = c("HOLD_position"))
+```
+
+Si nos fijamos en el gráfico que incluye los dos primeros planos factoriales (PC1 y PC2), resulta fácil ver que **log_AMT_CREDIT** y **DIFF_CREDIT_GOODS** se solapan en su proyección, teniendo **log_AMT_CREDIT** más contribución dado que el vector es más largo. De aquí se entiende que las correlaciones de ambas variables en los dos primeros planos factoriales son muy similares, motivo por el cual solapan. En la tabla de correlaciones anterior se puede comprobar como efectivamente, estas correlaciones son similares. Incluso la correlación en ambas variables con la tercera dimensión (PC3) es baja, de forma parecida. Por tanto, se procede a eliminar aquella con menos contribución en PC1 y PC2, esta siendo **DIFF_CREDIT_GOODS**.
+
+```{r}
+data_numeric <- data_numeric[ , -which(names(data_numeric) %in% c("DIFF_CREDIT_GOODS"))]
+pc1 <- prcomp(data_numeric, scale = TRUE)
+```
+
+Ahora se conservan `r ncol(data_numeric)` variables numéricas.
+
+Se vuelven a ejecutar todos los pasos anteriores para volver a verificar si hace falta eliminar más variables:
+
+```{r, echo=F, include = F}
+inerProj<- pc1$sdev^2 
+totalIner<- sum(inerProj)
+pinerEix<- 100*inerProj/totalIner
+percInerAccum<-100*cumsum(pc1$sdev[1:dim(data_numeric)[2]]^2)/dim(data_numeric)[2]
+df <- data.frame(x=1:length(percInerAccum), y=(100*cumsum(pc1$sdev[1:dim(data_numeric)[2]]^2)/dim(data_numeric)[2])/(100/percInerAccum[1]))
+```
+
+```{r, echo=F, include = F}
+p <- fviz_eig(pc1, addlabels = TRUE,ylim=c(0,percInerAccum[1]),barcolor = "#53868B", barfill = "#DCF0F8")
+p <- p + 
+     geom_point(data=df, aes(x,y), size=2, color="#8B3E2F") +
+     geom_line(data=df, aes(x,y), color="#8B3E2F") +
+     scale_y_continuous(sec.axis = sec_axis(~ . * (100/percInerAccum[1]), 
+                                   name = "Cumulative proportion of variance explained (%)")) +
+    geom_text(data = df, aes(x,y-1.5,label=paste(round((y*100/percInerAccum[1]),1),"%"))) +
+  ggtitle("Explained inertia by each dimension") + theme_minimal()
+```
+
+```{r, echo = F, fig.cap = "Inercia explicada por cada PF corregido", out.height="75%",out.width="75%"}
+p
+```
+
+Se aprecia como la eliminación de **DIFF_CREDIT_GOODS** ha modificado el número de dimensiones necesarias para alcanzar el 80% de inercia acumulada, pasando de 5 a 4 dimensiones.
+
+```{r, echo=F, include = F}
+nd <- which(percInerAccum >= 80)[1]
+Psi <- pc1$x[,1:nd]
+iden <- row.names(data_numeric)
+etiq <- names(data_numeric)
+ze <- rep(0,length(etiq))
+Phi <- cor(data_numeric,Psi)
+```
+
+```{r, echo = F}
+combn <- as.data.frame(t(combn(1:nd,2))) 
+grafic = c()
+for(i in 1:nrow(combn)){
+  grafic[[i]] = fviz_pca_var(pc1,axes = c(combn[i,1],combn[i,2]),col.var = "contrib",
+                             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
+                             repel = TRUE) + theme_minimal()
+}
+```
+
+```{r,echo = F, fig.cap="Gráfico de PF corregido", out.height="75%",out.width="75%"}
+grafic[[1]]
+```
+
+```{r, echo=FALSE}
+kbl(pc1$rotation[,1:4],
+    caption = "Correlación de cada variable con cada plano factorial"
+    , booktabs=T)%>% 
+  kable_styling(position = "center", 
+                latex_options = c("HOLD_position"))
+```
+
+Comprobando el gráfico de las dos primeras dimensiones, y analizando las correlaciones, parece ser que ya no hace falta eliminar más variables. Por tanto, conservamos `r ncol(data_numeric)` variables numéricas.
+
+Las variables eliminadas han sido:
+- **AMT_INCOME_TOTAL**, **AMT_CREDIT**, **AMT_ANNUITY**, **AMT_GOODS_PRICE**, todas ellas con motivo de que ya se habia creado otra variable a partir de su transformación logarítmica.
+- **DAYS_BIRTH**, ya que la variable **AGE_YEARS** es una transformación de ella.
+- **log_AMT_GOODS_PRICE**
+- **log_AMT_ANNUITY**
+- **DIFF_CREDIT_GOODS**
+
+## Interpretación de planos factoriales
+
+Para ayudar a dar nombre a las diferentes dimensiones, aparte de utilizar las herramientas gráficas, también podemos fijarnos en las correlaciones entre las variables y los componentes principales. 
+
+```{r, echo=F}
+# kable(Phi)
+# Aixo pendent perque en teoria les dues formes son correctes perque mostren les correlacions entre variables originals i PCs, pero donen numeros diferents. S'ha de preguntar pero fem servir la segona forma per ara.
+
+grafic[[1]]
+
+kbl(pc1$rotation[,1:4],
+    caption = "Correlación de cada variable con cada plano factorial"
+    , booktabs=T)%>% 
+  kable_styling(position = "center", 
+                latex_options = c("HOLD_position"))
+```
+
+- **PC1**: Las variables más fuertemente correlacionadas con esta dimensión son **RATIO_CREDIT_INCOME**, **log_AMT_CREDIT** y **DTI_RATIO**, todas correlacionadas de forma negativa y en este respectivo orden. Con ello, podemos pensar que el primer plano factorial (**PC1**) tiene relación con "**Nivel monetario según prestamos**". Puede entenderse que valores más elevados en la proyección sobre el primer plano factorial (**PC1**) indican individuos con unas diferencias entre lo que pagan anualmente y lo que ingresan menor y con préstamos más bajos a nivel monetario.
+
+- **PC2**: Las variables con mayor correlación con la segunda dimensión, en orden decreciente, son **log_AMT_INCOME_TOTAL** con correlación negativa, y **log_AMT_CREDIT** con correlación negativa y **DTI_RATIO** con correlación positiva. Se puede intuir que los individuos con valores más altos en la proyección del **PC2** serán aquellos con unos ingresos totales menores y creditos concedidos menores. Por lo tanto, el segundo plano factorial (**PC2**)  podría quedar definido por "**Nivel de ingresos según créditos**"
+
+- **PC3**: Para este tercer plano factorial, las variables más significativas son **CNT_FAM_MEMBERS** de forma negativa y **AGE_YEARS** de forma positiva. Así pues, aquellos individuos que cumplen estas características son clientes con familias poco numerosas y mayores (si su año de nacimiento es un valor alto, significa que son más mayores, dado a la correlación positiva con la variable de edad). Podría decirse que el tercer plano factorial (**PC3**) representa la "**Edad y grandaria familiar**".
+
+- **PC4**: Para el cuarto plano factorial, se puede ver que la variable con mayor contribución en gran diferencia a las demás es **OWN_CAR_AGE**, correlacionada de forma negativa. Es decir, los clientes con valores de proyección en PC4 más grandes seran aquellos con coches más nuevos. Por lo tanto, el cuarto plano factorial (**PC4**) podría recibir el nombre de "**Edad vehículo **".
+
+
+
