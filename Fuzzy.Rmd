@@ -1,0 +1,173 @@
+---
+title: "Untitled"
+author: "Ismael Argemí Fernández, Iván Martínez Yates"
+date: "`r Sys.Date()`"
+output: html_document
+---
+```{r}
+#install.packages("fclust")
+library(fclust)
+library(cluster)
+library(ggplot2)
+```
+
+```{r, include=FALSE}
+#Lectura de los datos
+load("Dades preprocessades.Rdata")
+
+#mydata contiene toda la base de datos
+mydata <- df_preprocessed
+mydata[,c("AMT_INCOME_TOTAL","AMT_CREDIT","AMT_ANNUITY","AMT_GOODS_PRICE",
+          "DAYS_BIRTH","TARGET","log_AMT_GOODS_PRICE","log_AMT_ANNUITY",
+          "DIFF_CREDIT_GOODS")] <- NULL
+
+Objectos <- sapply(mydata, class)
+Numeriques <- names(Objectos)[which(Objectos%in%c("numeric"))]
+mydata[,Numeriques] <- scale(mydata[,Numeriques])
+
+
+#dd solo contiene las varibales numericas
+dd <- mydata[,Numeriques]
+```
+
+# Fuzzy Clustering
+
+La principal diferencia del Fuzzy Clustering al resto de algoritmos, es que es permite que una obzervación pertenezca a más de una agrupación. Es decir, permite que los elementos (individuos) tengan grados de pertenencia  a varios grupos simultáneamente.
+
+En esta parte 
+
+FKM nos ejecuta el Fuzzy para las K especificadas y automaticamente escoge la k optima
+```{r, include=FALSE}
+fclust2 <- FKM(dd,k=2:10,stand = 1)
+#head(round(fclust2$U,2))
+```
+
+
+La propia función FKM guarda los valores Silhouette fuzzy para cada k. Es un indice especifico del Fuzzy.
+Cuanto mayor sea este indice mejor
+
+Hacemos el grafico de los valores SIL.F para cada k
+```{r}
+silf <- fclust2$criterion
+silf <- as.data.frame(silf)
+silf$x <- 2:10
+
+ggplot(silf, aes(x, silf)) +
+  geom_point() +
+  geom_line() +
+  geom_point(data = silf[1,], color="red", size=2) +
+  geom_vline(xintercept = 2, color = "red", lty="dashed")+
+  labs(title= "Índice de Silhouette Fuzzy",x = "k", y= "Silhouette Fuzzy") +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+Como se puede ver en el gráfico, k=2 es la k optima para nuestro fuzzy.
+
+Visualizamos los clusters en el grafico factorial de las dos primeras dimensiones.
+
+
+```{r, include=FALSE}
+pc1 <- prcomp(dd, scale = TRUE)
+PC1 <- pc1$x[,1]
+PC2 <- pc1$x[,2]
+
+clusters <- fclust2$clus[,1]
+dd$clusters <- clusters
+
+dd$clusters <- as.factor(dd$clusters)
+```
+
+```{r,warning=FALSE}
+ggplot(dd, 
+       aes(x = PC1, 
+           y = PC2, 
+           color = clusters)) +
+  geom_point() +
+  labs(title = "Representación de las clases en PC1-PC2", ) +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  stat_ellipse(aes(fill = clusters), color = "black", alpha = 0.3, size=1) +
+  geom_hline(yintercept = 0, colour = "red") +
+  geom_vline(xintercept = 0, colour = "red")
+```
+
+
+
+
+
+## Predicción de un individuo inventado en el fuzzy (pots canviar el titol)
+
+En este apartado se genera un posible individuo y aplicamos el Fuzzy C-means con el objetivo de conocer a que cluster seria asignado y con que probabilidad.
+
+A continuación 
+
+Señor de 56
+ingresos: 100k
+cnt fam: 4
+car: 7 añitos
+amt credit: 12000
+ratio_credit:0,12
+ratio annuity: 0.05
+dti ratio: 0.15
+```{r,include=FALSE}
+df_preprocessed[,c("AMT_INCOME_TOTAL","AMT_CREDIT","AMT_ANNUITY","AMT_GOODS_PRICE",
+          "DAYS_BIRTH","TARGET","log_AMT_GOODS_PRICE","log_AMT_ANNUITY",
+          "DIFF_CREDIT_GOODS")] <- NULL
+Objectos <- sapply(df_preprocessed, class)
+Numeriques <- names(Objectos)[which(Objectos%in%c("numeric"))]
+dd2 <- df_preprocessed[,Numeriques]
+obj <- c(7, 4, log(100000), log(12000), 56, 0.12, 0.05, 0.15)
+
+dd2 <- rbind(dd2, obj)
+```
+
+```{r}
+library(kableExtra)
+kable(dd2[nrow(dd2),])
+```
+
+Aplicamos Fuzzy C-Means a la base de datos con el nuevo individuo
+
+```{r,inlcude}
+dd2 <- scale(dd2)
+dd2 <- as.data.frame(dd2)
+fobj <- FKM(dd2,k=2,stand = 1)
+```
+
+```{r, include=FALSE}
+pca <- prcomp(dd2, scale = TRUE)
+CP1 <- pca$x[,1]
+CP2 <- pca$x[,2]
+
+CP1obj <- CP1[5001]
+CP2obj <- CP2[5001]
+x <- c(CP1obj,CP2obj)
+clusters <- fobj$clus[,1]
+dd2$clusters <- clusters
+
+dd2$clusters <- as.factor(dd2$clusters)
+```
+
+```{r,warning=FALSE}
+ggplot(dd2, 
+       aes(x = CP1, 
+           y = CP2, 
+           color = clusters)) +
+  geom_point() +
+  labs(title = "Representación de las clases en PC1-PC2", ) +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  stat_ellipse(aes(fill = clusters), color = "black", alpha = 0.3, size=1) +
+  geom_hline(yintercept = 0, colour = "red") +
+  geom_vline(xintercept = 0, colour = "red") +
+  geom_point(data = data.frame(x = CP1obj, y = CP2obj), aes(x, y), color = "blue", size = 3)
+```
+
+
+En azul se resaltan las coordenadas del individuo en el plano factorial del PCA
+
+
+```{r,include=FALSE}
+fobj$U[5001,]  #Probabilitats de pertanyer al cluster 1
+```
+
+
+Como se puede ver a pesar de ser un punto alejado de los puntos identificados como Cluster 1, tiene una alta probabilidad de ser identificado como parte de ese cluster.
