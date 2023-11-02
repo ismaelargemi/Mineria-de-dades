@@ -103,16 +103,20 @@ best_params
 ```
 Como vemos, después del proceso iterativo, la combinación de resultados más óptima ha sido un radio (`eps`) de 0.5 con un mínimo de 5 puntos (`minPts`). 
 
-Así mismo, a continuación creamos el modelo OPTICS con los parámetros óptimos encontrados:
+Así mismo, a continuación creamos el modelo OPTICS con los parámetros óptimos encontrados y observamos su reachability plot:
 
 ```{r}
 ### generamos el optics maximizado
 optics <- dbscan::optics(dd, eps = best_params$eps, minPts = best_params$minPts)
 
 plot(optics, reachability=TRUE)
-## Aqui debeis rescatar los resultados del cluster pero debias decidir donde cortar el reachability plot
 ```
-<!-- no se ve na -->
+
+El gráfico de reachability (alcance) que acabamos de generar, es una herramienta para visualizar la estructura de clusters identificados.
+
+En los gráficos de reachability, cada punto representa un objeto de datos y la altura de la curva indica la distancia a la que se encuentra el objeto más cercano dentro del mismo clúster. Los valles en la curva indican la presencia de clusters, ya que los puntos dentro de un mismo clúster tienden a estar más cerca entre sí que con puntos de otros clústers. 
+
+Así pues, como se puede observar, no podemos ser capaces de interpretar el reachability plot resultante. Esto se debe a que nuestra base de datos puede no ser apropiada para utilizar técnicas de clustering basadas en densidad. 
 
 **MÉTODO DE LA SILUETA**
 Otra de las maneras para encontrar los valores óptimos de los parámetros necesarios es a partir del método de la silueta.
@@ -143,33 +147,36 @@ abline(v = opt_eps, lty = 2, col = "red")
 
 Como se puede apreciar, al agregar una línea vertical en el valor óptimo de epsilon, vemos que se aconseja cortar en 1, valor que maximiza la silhouette.
 
+Por último, entramos en la etapa posterior al cálculo de la estructura de clusters utilizando OPTICS, que consiste en extraer y visualizar los resultados del clustering, donde a partir de la variable `opt_eps` se determinará como se corta la curva de alcance para identificar los clusters. 
 
 ```{r}
-# -----------------------------------------------------------------------------------
-### extract a DBSCAN clustering by cutting the reachability plot at eps_cl
-### La elección del eps_cl puede obtenerse segun lo explicado anteriormente
-### o podeis "jugar con el obtener diferentes configuraciones de cluster como
-### se hace con los dendogramas de clustering jerarquico.
-opt_eps
+opt_eps #en este caso igual a uno
 res <- dbscan::extractDBSCAN(optics, eps_cl = opt_eps)
 
-### black is noise
-plot(res)  
+### el negro es ruido
+plot(res)
+```
+Con `plot(res)` se genera un gráfico que visualiza los clusters obtenidos. Los puntos de datos se colorean de acuerdo con los clusters a los que pertenecen, y los puntos que se consideran ruido se muestran en negro.
 
-### Visualizamos el gráfico con los grupos creados
+De igual manera que pasaba en el reachability plot anterior, no somos capaces de identificar ningún resultado. 
+
+Finalmente, visualizamos el gráfico con los grupos creados en forma de polígonos convexos. Estos polígonos nos ayudan a delimitar visualmente la extensión de cada clúster.
+```{r}
 dbscan::hullplot(dd, res)
-res$cluster
+#res$cluster
 table(res$cluster)
-## No olvideis guardar los resultados del clustering como se hizo con DBSCAN
-### Aqui se han formado 3 clusters, uno de ellos es NOISE o posibles OUTLIERS.
-### Conviene cortar el reachability plot con otros valores diferentes de 0.10
-### para obtener más clustering. Queda de EJERCICIO para CASA.
-# ==============================================================================
+#Una vez tenemos los resultados del clústering, guardarlos en un objeto para su posterior análisis o referencia, 
 
 ```
+Por un lado, los resultados obtenidos a partir del gráfico no nos permiten extraer resultados. 
+
+Por otro lado, la tabla obtenida nos resume el número de puntos en cada cluster. Así pues, observamos como aunque nos divide los datos en tres clusters, el grupo 0 es el dominante, con 4992 puntos de datos, dejando 5 puntos para el clúster 1 y 3 para el clúster 2, siendo esta una mala agrupación para nuestros datos.  
 
 
-## IMPORTANTE: BUSCAR
-# fuzzy clustering. Cuando queremos conocer cuales son las prob de pertenecer a 
-#cada uno de ellos, asi vemos si hay un individuo que pertenece a dos clusterings 
-# diferentes, etc
+### Conclusión
+
+En conclusión, aunque las técnicas utilizadas nos hayan ayudado a encontrar unos buenos parámetros para poder agrupar nuestros datos de la manera más óptima, vemos como estos resultados nos ayudan a respaldar aún más el hecho de que nuestra base de datos no es válida para técnicas de clustering basados en densidad, posiblemente por no tener una distribución de densidad variable. 
+
+Las técnicas de clustering basadas en densidad asumen que los clústers se forman en regiones de alta densidad de datos. Por lo tanto, si nuestros datos no tienen una distribución de densidad variable (puntos uniformemente distribuidos o clusters sin una densidad significativamente mayor que el fondo), las téncicas de clustering basadas en densidad pueden no ser efectivas.
+
+Así pues, ni DBSCAN ni OPTICS nos permiten extraer un buen análisis de nuestra base de datos. 
