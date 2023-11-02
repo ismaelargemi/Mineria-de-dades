@@ -1,0 +1,41 @@
+---
+title: "K-MODE Algorithm"
+output: html_document
+date: "2023-11-01"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Instalamos los paquetes necesarios:
+
+```{r}
+install.packages("klaR") #instalamos el paquete
+library(klaR) #cargamos el paquete
+```
+
+Cargamos los datos:
+
+```{r}
+df <- df_preprocessed
+head(df)
+```
+
+Ejecutamos el algoritmo de clustering K-Modes
+
+```{r}
+cldf <- klaR::kmodes(df, 3) # 3 hace referencia al número de clusters
+```
+
+Verificamos los resultados
+
+```{r}
+print(cldf)
+```
+
+Visualizamos los clusters obtenidos 
+
+```{r}
+plot(jitter(df$AMT_CREDIT, df$AMT_INCOME_TOTAL), col = cldf$cluster, ylim = c(-100000000, 100000000))
+```
