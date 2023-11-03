@@ -185,13 +185,11 @@ ggplot(data = dades, aes(x = cluster, y = dades$RATIO_ANNUITY_CREDIT)) +
 El que se diferencia es el 4 con una Ratio entre la anuidad del préstamo y el crédito total solicitado
 
 ```{r}
-
 ggplot(data = dades, aes(x = cluster, y = dades$DTI_RATIO)) +
   geom_bar(stat = "summary", fun = "mean", fill= colores) +
   coord_cartesian(ylim=c(0.1,0.25))+
   geom_hline(yintercept = mean(dades$DTI_RATIO)) +
   labs(title = "Medias de la Capacidad de cliente para pagar la annuity con sus ingresos por clúster respecto la media global" , y = "Media", x = "Clúster")
-
 ```
 La ratio mide la capacidad del cliente para pagar la annuity de su préstamo en relación con sus ingresos, los menos capaces son el cluster 2 
 
