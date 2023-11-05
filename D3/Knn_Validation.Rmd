@@ -1,0 +1,101 @@
+---
+title: "Knn_Validation"
+author: "Oscar"
+date: "2023-11-05"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, include=FALSE}
+#Llibreries
+library(class)
+library(caret)
+```
+
+```{r, include=FALSE}
+load("Dades preprocessades.Rdata")
+
+
+mydata <- df_preprocessed
+y <- mydata$TARGET
+mydata[,c("AMT_INCOME_TOTAL","AMT_CREDIT","AMT_ANNUITY","AMT_GOODS_PRICE",
+          "DAYS_BIRTH","TARGET","log_AMT_GOODS_PRICE","log_AMT_ANNUITY",
+          "DIFF_CREDIT_GOODS")] <- NULL
+
+Objectos <- sapply(mydata, class)
+Numeriques <- names(Objectos)[which(Objectos%in%c("numeric"))]
+mydata[,Numeriques] <- scale(mydata[,Numeriques])
+
+dd <- mydata[,Numeriques]
+```
+
+En el proceso de preparación de los datos, se dividen los datos en dos conjuntos: un conjunto de entrenamiento y un conjunto de prueba. El conjunto de entrenamiento se utiliza para entrenar el modelo KNN, mientras que el conjunto de prueba se emplea para evaluar su rendimiento.
+
+```{r}
+set.seed(12345)
+Index <- createDataPartition(y, p = 0.8, list = F)
+# Index <- sample(1:nrow(mydata),0.8*nrow(mydata))
+Train <- cbind(mydata[Index,],y[Index])
+Test <- cbind(mydata[-Index,],y[-Index])
+
+# De mom usamos solo las numericas, usamos la dist para meter las categoricas ??
+Train <- cbind(dd[Index,],y[Index])
+Test <- cbind(dd[-Index,],y[-Index])
+```
+
+La selección de un valor de K se considera un paso crucial, ya que K es un hiperparámetro en KNN que representa el número de vecinos más cercanos a considerar. Se recomienda realizar pruebas con diferentes valores de K y utilizar la validación cruzada para determinar el valor óptimo.
+
+Crosvalidación para obtener el mejor valor de k
+
+```{r}
+k <- c(2:30) # las k que queremos probar
+f <- 5 # Numero de capas que queremos en el  CRVAl
+media_acc <-rep(0,length(k)) # Preparamos vect para las medias del accuracy
+d <- 1
+
+for(i in k){
+  set.seed(12345)
+  folds <- createFolds(Train$y, k=f,list=TRUE) # hay la funcion createfolds que te crea las capas del crossval
+  accuracy <- rep(0,length(f))# Preparamos el vect para guardar los valores de accuracy
+  
+  for(j in 1:f){
+    train_ind <- unlist(folds[-j]) # Preparamos los indices de las capas del CV 
+    test_ind <- unlist(folds[j])
+    
+    Train_cross <- Train[train_ind,] # A partir del conjunto Train hacemos la crossval
+    Test_cross <- Train[test_ind,]
+    
+    model_cv <- knn(train=Train_cross[,-9], test=Test_cross[,-9], cl = Train_cross$y, k=i) 
+    # Usamos knn para entrenar el modelo
+    # CAMBIAR -9 si añades las categoricas 
+    
+    conff_cv <- table(Real = Test_cross$y, Predicted = model_cv) # Creamos la matriz de confusion y calculamos el accuracy
+    accuracy[j] <- sum(diag(conff_cv))/sum(conff_cv)
+  }
+  
+  media_acc[d] <- mean(accuracy) # Sacamos la media del accuracy por cada k
+  d <- d + 1
+}
+
+(k_opt <- k[which.max(media_acc)]) # Seleccionamos la mejor k
+```
+
+El siguiente paso implica el entrenamiento del modelo KNN utilizando el conjunto de entrenamiento, donde el modelo almacena los datos de entrenamiento y calcula las distancias entre puntos.
+
+```{r}
+model <- knn(train = Train[,-9], test=Test[,-9], cl=Train$y, k=k_opt)
+```
+
+Evaluación del modelo
+
+```{r}
+conff <- table(Real=Test$y, Predicted=model)
+(acc <- sum(diag(conff))/sum(conff))
+```
+
+
+
+
