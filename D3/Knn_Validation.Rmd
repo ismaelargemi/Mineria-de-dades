@@ -13,6 +13,7 @@ knitr::opts_chunk$set(echo = TRUE)
 #Llibreries
 library(class)
 library(caret)
+library(cluster)
 ```
 
 ```{r, include=FALSE}
@@ -38,12 +39,14 @@ En el proceso de preparación de los datos, se dividen los datos en dos conjunto
 set.seed(12345)
 Index <- createDataPartition(y, p = 0.8, list = F)
 # Index <- sample(1:nrow(mydata),0.8*nrow(mydata))
-Train <- cbind(mydata[Index,],y[Index])
-Test <- cbind(mydata[-Index,],y[-Index])
+dist <- daisy(mydata, metric = "gower")^2
+dist <- as.data.frame(dist)
+Train <- cbind(dist[Index,],y[Index])
+Test <- cbind(dist[-Index,],y[-Index])
 
-# De mom usamos solo las numericas, usamos la dist para meter las categoricas ??
-Train <- cbind(dd[Index,],y[Index])
-Test <- cbind(dd[-Index,],y[-Index])
+#Para usar solo numericas
+# Train <- cbind(dd[Index,],y[Index])
+# Test <- cbind(dd[-Index,],y[-Index])
 ```
 
 La selección de un valor de K se considera un paso crucial, ya que K es un hiperparámetro en KNN que representa el número de vecinos más cercanos a considerar. Se recomienda realizar pruebas con diferentes valores de K y utilizar la validación cruzada para determinar el valor óptimo.
@@ -57,8 +60,8 @@ media_acc <-rep(0,length(k)) # Preparamos vect para las medias del accuracy
 d <- 1
 
 for(i in k){
-  set.seed(12345)
-  folds <- createFolds(Train$y, k=f,list=TRUE) # hay la funcion createfolds que te crea las capas del crossval
+  set.seed(123)
+  folds <- createFolds(Train[,ncol(Train)], k=f,list=TRUE) # hay la funcion createfolds que te crea las capas del crossval
   accuracy <- rep(0,length(f))# Preparamos el vect para guardar los valores de accuracy
   
   for(j in 1:f){
@@ -68,11 +71,11 @@ for(i in k){
     Train_cross <- Train[train_ind,] # A partir del conjunto Train hacemos la crossval
     Test_cross <- Train[test_ind,]
     
-    model_cv <- knn(train=Train_cross[,-9], test=Test_cross[,-9], cl = Train_cross$y, k=i) 
+    model_cv <- knn(train=Train_cross[,-9], test=Test_cross[,-9], cl = Train_cross[,ncol(Train_cross)], k=i) 
     # Usamos knn para entrenar el modelo
     # CAMBIAR -9 si añades las categoricas 
     
-    conff_cv <- table(Real = Test_cross$y, Predicted = model_cv) # Creamos la matriz de confusion y calculamos el accuracy
+    conff_cv <- table(Real = Test_cross[,ncol(Test_cross)], Predicted = model_cv) # Creamos la matriz de confusion y calculamos el accuracy
     accuracy[j] <- sum(diag(conff_cv))/sum(conff_cv)
   }
   
@@ -86,13 +89,13 @@ for(i in k){
 El siguiente paso implica el entrenamiento del modelo KNN utilizando el conjunto de entrenamiento, donde el modelo almacena los datos de entrenamiento y calcula las distancias entre puntos.
 
 ```{r}
-model <- knn(train = Train[,-9], test=Test[,-9], cl=Train$y, k=k_opt)
+model <- knn(train = Train[,-9], test=Test[,-9], cl=Train[,ncol(Train)], k=k_opt)
 ```
 
 Evaluación del modelo
 
 ```{r}
-conff <- table(Real=Test$y, Predicted=model)
+conff <- table(Real=Test[,ncol(Test)], Predicted=model)
 (acc <- sum(diag(conff))/sum(conff))
 ```
 
