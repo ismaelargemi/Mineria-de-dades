@@ -14,6 +14,7 @@ knitr::opts_chunk$set(echo = TRUE)
 library(class)
 library(caret)
 library(cluster)
+library(VIM)
 ```
 
 ```{r, include=FALSE}
@@ -39,10 +40,10 @@ En el proceso de preparación de los datos, se dividen los datos en dos conjunto
 set.seed(12345)
 Index <- createDataPartition(y, p = 0.8, list = F)
 # Index <- sample(1:nrow(mydata),0.8*nrow(mydata))
-dist <- daisy(mydata, metric = "gower")^2
-dist <- as.matrix(dist)
-Train <- cbind(dist[Index,],y[Index])
-Test <- cbind(dist[-Index,],y[-Index])
+# dist <- daisy(mydata, metric = "gower")^2
+# dist <- as.matrix(dist)
+Train <- cbind(mydata[Index,],y[Index])
+Test <- cbind(mydata[-Index,],y[-Index])
 
 #Para usar solo numericas
 # Train <- cbind(dd[Index,],y[Index])
@@ -59,31 +60,26 @@ f <- 5 # Numero de capas que queremos en el  CRVAl
 media_acc <-rep(0,length(k)) # Preparamos vect para las medias del accuracy
 d <- 1
 
+
 for(i in k){
   set.seed(123)
-  folds <- createFolds(Train[,ncol(Train)], k=f,list=TRUE) # hay la funcion createfolds que te crea las capas del crossval
-  accuracy <- rep(0,length(f))# Preparamos el vect para guardar los valores de accuracy
-  
+  folds <- createFolds(Train$y, k=f,list=TRUE) 
+  accuracy <- rep(0,length(f))
   for(j in 1:f){
-    train_ind <- unlist(folds[-j]) # Preparamos los indices de las capas del CV 
-    test_ind <- unlist(folds[j])
-    
-    Train_cross <- Train[train_ind,] # A partir del conjunto Train hacemos la crossval
-    Test_cross <- Train[test_ind,]
-    
-    model_cv <- knn(train=Train_cross[,-ncol(Train_cross)], test=Test_cross[,-ncol(Test_cross)], cl = Train_cross[,ncol(Train_cross)], k=i) 
-    # Usamos knn para entrenar el modelo
-    # CAMBIAR -9 si añades las categoricas 
-    
-    conff_cv <- table(Real = Test_cross[,ncol(Test_cross)], Predicted = model_cv) # Creamos la matriz de confusion y calculamos el accuracy
-    accuracy[j] <- sum(diag(conff_cv))/sum(conff_cv)
+    train_ind <- unlist(folds[-j])
+    data_cv <- Train 
+    data_cv[-train_ind, 16] <- NA
+    model_cv <- kNN(data_cv, variable=data_cv$y, metric="gower")
+    # model_cv <- knn(train=Train_cross[,-ncol(Train_cross)], test=Test_cross[,-ncol(Test_cross)], cl = n Train_cross[,ncol(Train_cross)], k=i) 
+    # conff_cv <- table(Real = Test_cross[,ncol(Test_cross)], Predicted = model_cv) 
+    accuracy[j] <- sum(diag(model_cv))/sum(model_cv)
   }
   
-  media_acc[d] <- mean(accuracy) # Sacamos la media del accuracy por cada k
+  media_acc[d] <- mean(accuracy) 
   d <- d + 1
 }
 
-(k_opt <- k[which.max(media_acc)]) # Seleccionamos la mejor k
+(k_opt <- k[which.max(media_acc)])
 ```
 
 El siguiente paso implica el entrenamiento del modelo KNN utilizando el conjunto de entrenamiento, donde el modelo almacena los datos de entrenamiento y calcula las distancias entre puntos.
@@ -98,7 +94,3 @@ Evaluación del modelo
 conff <- table(Real=Test[,ncol(Test)], Predicted=model)
 (acc <- sum(diag(conff))/sum(conff))
 ```
-
-
-
-
