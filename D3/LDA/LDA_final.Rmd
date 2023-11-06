@@ -54,33 +54,44 @@ ind = createDataPartition(df_prep_num$TARGET, times=1, p=.8, list=FALSE)
 train = df_prep_num[ind,]
 validation = df_prep_num[-ind,]
 
-# lda_cv = function(df_train, k){
-# 
-#   s = matrix(nrow = k, ncol = 7)
-# 
-#   for(i in 1:k){
-#     ind = c(1+((i-1)*(nrow(df_train)/k)),(df_train/k)*i)
-#     test = train[c(ind[1]:ind[2]),]
-#     train_cv = train[-c(ind[1]:ind[2]),]
-#     lda_cv = lda(reformulate(x,y), data = train_cv)
-#   
-#     s[i,] = lda_cv$scaling
-#   }
-# 
-#   discriminante_res = colMeans(s)
-# 
-# }
+lda_cv = function(df_train, k){
 
-ctrl = trainControl(method = "cv", number = 5)
-lda = caret::train(reformulate(x,y), 
-            data = train, 
-            method = "lda", 
-            trControl = ctrl, 
-            metric = "Accuracy")
+  s = matrix(nrow = k, ncol = 7)
 
-predicciones = factor(predict(lda, validation))
+  for(i in 1:k){
+    
+    ind = c(1+((i-1)*(nrow(df_train)/k)),(nrow(df_train)/k)*i)
+    test = df_train[c(ind[1]:ind[2]),]
+    train_cv = df_train[-c(ind[1]:ind[2]),]
+    lda_cv = lda(reformulate(x,y), data = train_cv)
 
-MC = confusionMatrix(validation$TARGET, predicciones)
+    s[i,] = lda_cv$scaling
+  }
+
+  discriminante_res = colMeans(s)
+  
+  resultado = matrix(nrow = ncol(df_train)-1, ncol = 1)
+  
+  resultado[,1] = discriminante_res
+  rownames(resultado) = colnames(df_train)[1:(ncol(df_train)-1)]
+  colnames(resultado) = "LDA"
+  
+  return(resultado)
+}
+
+a = lda(reformulate(x,y), data = train)
+
+
+a$scaling = lda_cv(train, 5)
+
+valores = predict(a, validation)
+
+
+prob = valores$posterior[,2]
+
+predicciones = factor(ifelse(prob>0.5, 1,0))
+
+MC = confusionMatrix(predicciones, validation$TARGET) 
 
 tabla_lda = MC$table
 
@@ -96,79 +107,7 @@ kbl(tabla_lda,
    pack_rows(index=c("Predicción"=2))
 ```
 
-Apreciando los resultados obtenidos, se puede ver que la precisión obtenida por el modelo ha sido del `r round(MC$overall["Accuracy"]*100,4)`%, algo baja en comparación con ejemplos en otras áreas. Si desglosamos por sensibilidad y especificidad, vemos que los resultados en estos dos indicadores han sido de `r round(MC$byClass["Sensitivity"]*100,4)`% (mejor que en LDA), pero una especificidad del `r round(MC$byClass["Specificity"]*100,4)`%, respectivamente. Este hecho indica que los resultados están relativamente balanceados en cuanto a la hora de predecir se refiere. Sin embargo, a la hora de descubrir los valores predecidos positivos y los valores predecidos negativos, los resultados son de `r round(MC$byClass["Pos Pred Value"]*100,4)`% y `r round(MC$byClass["Neg Pred Value"]*100,4)`%. Este hecho nos dice que cuando el modelo predice que un cliente no es moroso, generalmente acierta pero, cuando el modelo predice que un cliente lo es, éste tiene problemas en la detección, resultando en problemas graves en la identificación de morosos. 
-
-
-```{r, include = F, message = F, warning = F}
-library(scales)
-library(tidyverse)
-library(ggplot2)
-library(caret)
-
-decisionplot <- function(model, x, cl = NULL, predict_type = "class",
-                         resolution = 100) {
-  if(!is.null(cl)) {
-    x_data <- x %>% dplyr::select(-all_of(cl))
-    cl <- x %>% pull(cl)
-  } else cl <- 1
-  k <- length(unique(cl))
-  
-  # resubstitution accuracy
-  prediction <- predict(model, x_data, type = predict_type)
-  if(is.list(prediction)) prediction <- prediction$class
-  if(is.numeric(prediction))
-    prediction <-  factor(prediction, labels = levels(cl))
-  else
-    prediction <- factor(prediction, levels = levels(cl))
-  
-  cm <- confusionMatrix(data = prediction, reference = cl)
-  acc <- cm$overall["Accuracy"]
-  
-  # evaluate model on a grid
-  r <- sapply(x[, 1:2], range, na.rm = TRUE)
-  xs <- seq(r[1,1], r[2,1], length.out = resolution)
-  ys <- seq(r[1,2], r[2,2], length.out = resolution)
-  g <- cbind(rep(xs, each = resolution), rep(ys, time = resolution))
-  colnames(g) <- colnames(r)
-  g <- as_tibble(g)
-  
-  ### guess how to get class labels from predict
-  ### (unfortunately not very consistent between models)
-  prediction <- predict(model, g, type = predict_type)
-  if(is.list(prediction)) prediction <- prediction$class
-  if(is.numeric(prediction))
-    prediction <-  factor(prediction, labels = levels(cl))
-  else
-    prediction <- factor(prediction, levels = levels(cl))
-  
-  g <- g %>% add_column(prediction)
-  
-  ggplot(g, mapping = aes_string(
-    x = colnames(g)[1],
-    y = colnames(g)[2])) +
-    geom_tile(mapping = aes(fill = prediction)) + 	scale_fill_brewer(palette="Pastel1")+
-    geom_point(data = x, mapping =  aes_string(
-      x = colnames(x)[1],
-      y = colnames(x)[2],
-      shape = colnames(x)[3], 
-	  colour = colnames(x)[3]), alpha = 10, size = 4) +
-	geom_point(data = x, mapping =  aes_string(
-      x = colnames(x)[1],
-      y = colnames(x)[2],
-      shape = colnames(x)[3]), colour = "grey90", size = 1.5) + 
-    labs(subtitle = paste("Training accuracy:", round(acc, 2)))
-}
-
-pca = fviz_pca_ind(prcomp(train[,x], scale = TRUE),  label = "none")
-
-hola = pca$data[,2:3]
-hola$pred = factor(predict(lda, train))
-hola = as.tibble(hola)
-
-lda = lda(reformulate(x,y), data = train)
-decisionplot(lda, train, cl = "TARGET") + labs(title = "LDA")
-
-```
+Apreciando los resultados obtenidos, se puede ver que la precisión obtenida por el modelo ha sido del `r round(MC$overall["Accuracy"]*100,2)`%, algo baja en comparación con ejemplos en otras áreas. Si desglosamos por sensibilidad y especificidad, vemos que los resultados en estos dos indicadores han sido de `r round(MC$byClass["Sensitivity"]*100,2)`% , pero una especificidad del `r round(MC$byClass["Specificity"]*100,2)`%. Esta gran diferencia entre las dos métricas indica que el algoritmo tiene problemas para detectar la clase minoritaria, en este caso, los clientes morosos. Así pues, será necesario balancear nuestros datos para así conseguir resultados aceptables. Será necesario mejorar el dato de especificidad para así poder aceptar este algoritmo como válido. Adicionalmente, el valor del F-score es de `r round(2/((1/MC$overall["Accuracy"]) + (1/MC$byClass["Sensitivity"])), 4)`. Como otras métricas interesantes, se puede apreciar que el valor predictivo positivo es de `r round(MC$byClass["Pos Pred Value"]*100,2)`% y el valor predictivo negativo es de `r round(MC$byClass["Neg Pred Value"]*100,2)`%.
 
 Sin embargo, se sabe que el LDA puede presentar problemas en el momento en el que las variables no presentan normalidad o cuando las matrices de covarianzas son diferentes para cada grupo. Como ya se apreció en la descriptiva post-preprocessing, muchas de nuestras variables no presentaban normalidad, de forma que esto podría ser un problema de cara al uso del LDA. Es por eso por lo que se ha decidido realizar un QDA (Quadratic Discriminant Analysis) con el objetivo de corregir dichos problemas y mejorar la performance del LDA.
 
@@ -195,33 +134,52 @@ ind = createDataPartition(df_prep_num$TARGET, times=1, p=.8, list=FALSE)
 train = df_prep_num[ind,]
 validation = df_prep_num[-ind,]
 
-# lda_cv = function(df_train, k){
-# 
-#   s = matrix(nrow = k, ncol = 7)
-# 
-#   for(i in 1:k){
-#     ind = c(1+((i-1)*(nrow(df_train)/k)),(df_train/k)*i)
-#     test = train[c(ind[1]:ind[2]),]
-#     train_cv = train[-c(ind[1]:ind[2]),]
-#     lda_cv = lda(reformulate(x,y), data = train_cv)
-#   
-#     s[i,] = lda_cv$scaling
-#   }
-# 
-#   discriminante_res = colMeans(s)
-# 
-# }
+qda_cv = function(df_train, k){
+  
+  resultado = array(dim = c((ncol(df_train)-1), (ncol(df_train)-1), 2))
+  
+  
+  ind = c(1,nrow(df_train)/k)
+  test = df_train[c(ind[1]:ind[2]),]
+  train_cv = df_train[-c(ind[1]:ind[2]),]
+  qda_inicial = qda(reformulate(x,y), data = train_cv)
 
-ctrl = trainControl(method = "cv", number = 5)
-qda = train(reformulate(x,y), 
-            data = train, 
-            method = "qda", 
-            trControl = ctrl, 
-            metric = "Accuracy")
+  resultado_final = qda_inicial$scaling
+  
+  for(i in 2:k){
+    
+    ind = c(1+((i-1)*(nrow(df_train)/k)),(nrow(df_train)/k)*i)
+    test = df_train[c(ind[1]:ind[2]),]
+    train_cv = df_train[-c(ind[1]:ind[2]),]
+    qda_cv = qda(reformulate(x,y), data = train_cv)
 
-predicciones = factor(predict(qda, validation))
+    resultado_loop = qda_cv$scaling
+    
+    for(j in 1:(ncol(df_train)-1)){
+      for(k in 1:(ncol(df_train)-1)){
+        resultado_final[j,k,1] = resultado_final[j,k,1]*((i-1)/i) + resultado_loop[j,k,1]*(1/i)
+        resultado_final[j,k,2] = resultado_final[j,k,2]*((i-1)/i) + resultado_loop[j,k,2]*(1/i)
 
-MC = confusionMatrix(validation$TARGET, predicciones)
+      }
+    }
+  }
+
+  rownames(resultado_final[,,1]) = colnames(df_train)[1:(ncol(df_train)-1)]
+  rownames(resultado_final[,,2]) = colnames(df_train)[1:(ncol(df_train)-1)]
+  
+  return(resultado_final)
+}
+
+qda = qda(reformulate(x,y), data = train)
+qda$scaling = qda_cv(train, 5)
+
+valores = predict(qda, validation)
+
+prob = valores$posterior[,2]
+
+predicciones = factor(ifelse(prob>0.5, 1, 0))
+
+MC = confusionMatrix(predicciones, validation$TARGET) 
 
 tabla_qda = MC$table
 
@@ -235,9 +193,11 @@ kbl(tabla_qda,
                 latex_options = c("HOLD_position")) %>%
     add_header_above(c("","Realidad" = 2)) %>%
    pack_rows(index=c("Predicción"=2))
+
 ```
 
-Como se puede apreciar, los resultados obtenidos son bastante similares a los presentados en el discriminante lineal. De hecho, en este caso, la precisión ha sido del `r round(MC$overall["Accuracy"]*100,4)`%, algo peor que la del LDA. Si observamos sensibilidad y especificidad, apreciaremos que se ha obtenido una sensibilidad del `r round(MC$byClass["Sensitivity"]*100,4)`% (mejor que en LDA), pero una especificidad del `r round(MC$byClass["Specificity"]*100,4)`% (muchísimo peor comparado con el resultado del LDA). Si observamos otras métricas disponibles, apreciaremos nuevamente valores altos en la tasa de valores positivos predecidos (`r round(MC$byClass["Pos Pred Value"]*100,4)`%) y valores bajos en la tasa de valores negativos predecidos (`r round(MC$byClass["Neg Pred Value"]*100,4)`%). Sin embargo, la diferencia entre estos no es tan extrema como en LDA. Por último, podemos apreciar que el valor del F-score es de `r 2/((1/MC$overall["Accuracy"]) + (1/MC$byClass["Sensitivity"]))`.
+
+Como se puede apreciar, los resultados obtenidos son bastante similares a los presentados en el discriminante lineal. De hecho, en este caso, la precisión ha sido del `r round(MC$overall["Accuracy"]*100,4)`%, algo peor que la del LDA. Si observamos sensibilidad y especificidad, apreciaremos que se ha obtenido una sensibilidad del `r round(MC$byClass["Sensitivity"]*100,4)`%, pero una especificidad del `r round(MC$byClass["Specificity"]*100,4)`%. Si observamos otras métricas disponibles, apreciaremos nuevamente valores altos en la tasa de valores positivos predecidos (`r round(MC$byClass["Pos Pred Value"]*100,4)`%) y valores bajos en la tasa de valores negativos predecidos (`r round(MC$byClass["Neg Pred Value"]*100,4)`%). Sin embargo, la diferencia entre estos no es tan extrema como en LDA. Por último, podemos apreciar que el valor del F-score es de `r 2/((1/MC$overall["Accuracy"]) + (1/MC$byClass["Sensitivity"]))`. Como se puede apreciar, las conclusiones que se extraen son las mismas que en LDA: es necesario balancear los datos.
 
 
 Tras haber estudiado los resultados, se ha concluido que, si bien es cierto que los resultados obtenidos son mejorables, los datos presentan un ligero desbalanceo. Este hecho hace que las esimaciones proporcionadas puedan no ser del todo fiables, ya que es posible que los algoritmos tengan problemas en la detección de la clase minoritaria. Para ello, realizaremos un procedimiento undersampling con el objetivo de balancear nuestros datos evitando una mala calibración de los algoritmos. Así pues, repetimos el mismo proceso que el realizado anteriormente con los datos ahora balanceados.
@@ -281,33 +241,20 @@ ind = createDataPartition(data_balanced$TARGET, times=1, p=.8, list=FALSE)
 train = data_balanced[ind,]
 validation = data_balanced[-ind,]
 
-# lda_cv = function(df_train, k){
-# 
-#   s = matrix(nrow = k, ncol = 7)
-# 
-#   for(i in 1:k){
-#     ind = c(1+((i-1)*(nrow(df_train)/k)),(df_train/k)*i)
-#     test = train[c(ind[1]:ind[2]),]
-#     train_cv = train[-c(ind[1]:ind[2]),]
-#     lda_cv = lda(reformulate(x,y), data = train_cv)
-#   
-#     s[i,] = lda_cv$scaling
-#   }
-# 
-#   discriminante_res = colMeans(s)
-# 
-# }
 
-ctrl = trainControl(method = "cv", number = 5)
-lda = caret::train(reformulate(x,y), 
-            data = train, 
-            method = "lda", 
-            trControl = ctrl, 
-            metric = "Accuracy")
+a = lda(reformulate(x,y), data = train)
 
-predicciones = factor(predict(lda, validation))
 
-MC = confusionMatrix(validation$TARGET, predicciones)
+a$scaling = lda_cv(train, 5)
+
+valores = predict(a, validation)
+
+
+prob = valores$posterior[,2]
+
+predicciones = factor(ifelse(prob>0.5, 2,1))
+
+MC = confusionMatrix(predicciones, validation$TARGET) 
 
 tabla_lda = MC$table
 
@@ -324,7 +271,7 @@ kbl(tabla_lda,
 ```
 
 
-Esta vez, los resultados son más consistentes: los resultados obtenidos son similares a cuando los datos estaban desbalanceados, pero hay cambios en cuanto a los valores positivos y negativos se refiere. En este caso, la precisión obtenida ha sido del `r round(MC$overall["Accuracy"]*100,4)`%, dividido en una sensibilidad del `r round(MC$byClass["Sensitivity"]*100,4)`% y una especificidad del `r round(MC$byClass["Specificity"]*100,4)`%. Esta vez, se puede comprobar que los valores proporcionados por los datos de valor predecido positivo y valor predecido negativo están más balanceados, de forma que estos resultados parecen mucho más fiables.
+Esta vez, los resultados son más consistentes: los resultados obtenidos son muy diferentes a cuando los datos estaban desbalanceados. En este caso, la precisión obtenida ha sido del `r round(MC$overall["Accuracy"]*100,2)`%, dividido en una sensibilidad del `r round(MC$byClass["Sensitivity"]*100,2)`% y una especificidad del `r round(MC$byClass["Specificity"]*100,2)`%. Esta vez, se puede comprobar que los valores proporcionados por los datos de sensibilidad y especificidad están más balanceados, de forma que estos resultados parecen mucho más fiables.
 
 
 Sin embargo, se sabe que el LDA puede presentar problemas en el momento en el que las variables no presentan normalidad o cuando las matrices de covarianzas son diferentes para cada grupo. Como ya se apreció en la descriptiva post-preprocessing, muchas de nuestras variables no presentaban normalidad, de forma que esto podría ser un problema de cara al uso del LDA. Es por eso por lo que se ha decidido realizar un QDA (Quadratic Discriminant Analysis) con el objetivo de corregir dichos problemas y mejorar la performance del LDA.
@@ -335,34 +282,24 @@ Así pues, repitiendo el procedimiento seguido anteriormente en el LDA, toca rep
 
 
 ```{r, echo = F}
+set.seed(123)
+ind = createDataPartition(data_balanced$TARGET, times=1, p=.8, list=FALSE)
 
-# lda_cv = function(df_train, k){
-# 
-#   s = matrix(nrow = k, ncol = 7)
-# 
-#   for(i in 1:k){
-#     ind = c(1+((i-1)*(nrow(df_train)/k)),(df_train/k)*i)
-#     test = train[c(ind[1]:ind[2]),]
-#     train_cv = train[-c(ind[1]:ind[2]),]
-#     lda_cv = lda(reformulate(x,y), data = train_cv)
-#   
-#     s[i,] = lda_cv$scaling
-#   }
-# 
-#   discriminante_res = colMeans(s)
-# 
-# }
+train = data_balanced[ind,]
+validation = data_balanced[-ind,]
 
-ctrl = trainControl(method = "cv", number = 5)
-qda = caret::train(reformulate(x,y), 
-            data = train, 
-            method = "lda", 
-            trControl = ctrl, 
-            metric = "Accuracy")
 
-predicciones = factor(predict(qda, validation))
 
-MC = confusionMatrix(validation$TARGET, predicciones)
+def = qda(reformulate(x,y), data = train)
+def$scaling = qda_cv(train, 4)
+
+valores = predict(def, validation)
+
+prob = valores$posterior[,2]
+
+predicciones = factor(ifelse(prob>0.5, 2, 1))
+
+MC = confusionMatrix(predicciones, validation$TARGET) 
 
 tabla_qda = MC$table
 
@@ -378,7 +315,8 @@ kbl(tabla_qda,
    pack_rows(index=c("Predicción"=2))
 ```
 
-Por último, el modelo del QDA con datos balanceados presenta resultados similares al LDA. La precisión alcanzada por este modelo ha sido del `r round(MC$overall["Accuracy"]*100,4)`%, lo que retorna una sensibilidad del `r round(MC$byClass["Sensitivity"]*100,4)`% y una especificidad del `r round(MC$byClass["Specificity"]*100,4)`%. Este modelo corrige los problemas de desbalanceo que existían previamente, ya que ahora se puede apreciar cómo los resultados del modelo son más consistentes. Concretamente, el valor predictivo positivo y el valor predictivo negativo para este modelo son de `r round(MC$byClass["Pos Pred Value"]*100,4)`% `r round(MC$byClass["Neg Pred Value"]*100,4)`%, respectivamente. Para acabar, el F-score de este modelo es de `r 2/((1/MC$overall["Accuracy"]) + (1/MC$byClass["Sensitivity"]))`, algo más bajo que en LDA.
+
+Por último, el modelo del QDA con datos balanceados presenta resultados peores al LDA. La precisión alcanzada por este modelo ha sido del `r round(MC$overall["Accuracy"]*100,2)`%, lo que retorna una sensibilidad del `r round(MC$byClass["Sensitivity"]*100,2)`% y una especificidad del `r round(MC$byClass["Specificity"]*100,2)`%. Este modelo corrige los problemas de desbalanceo que existían previamente, ya que ahora se puede apreciar cómo los resultados del modelo son más consistentes. Concretamente, el valor predictivo positivo y el valor predictivo negativo para este modelo son de `r round(MC$byClass["Pos Pred Value"]*100,4)`% y `r round(MC$byClass["Neg Pred Value"]*100,4)`%, respectivamente. Para acabar, el F-score de este modelo es de `r 2/((1/MC$overall["Accuracy"]) + (1/MC$byClass["Sensitivity"]))`, algo más bajo que en LDA.
 
 En resumen, observando los resultados obtenidos, se puede afirmar que los dos modelos discriminantes presentan resultados muy pobres: es probable que el hecho de añadir posteriormente las variables categóricas acabe de hacer que se mejore de forma clara los resultados conseguidos hasta ahora.
 
