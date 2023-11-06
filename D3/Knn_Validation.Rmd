@@ -40,7 +40,7 @@ set.seed(12345)
 Index <- createDataPartition(y, p = 0.8, list = F)
 # Index <- sample(1:nrow(mydata),0.8*nrow(mydata))
 dist <- daisy(mydata, metric = "gower")^2
-dist <- as.data.frame(dist)
+dist <- as.matrix(dist)
 Train <- cbind(dist[Index,],y[Index])
 Test <- cbind(dist[-Index,],y[-Index])
 
@@ -54,7 +54,7 @@ La selección de un valor de K se considera un paso crucial, ya que K es un hipe
 Crosvalidación para obtener el mejor valor de k
 
 ```{r}
-k <- c(2:30) # las k que queremos probar
+k <- c(5:10) # las k que queremos probar
 f <- 5 # Numero de capas que queremos en el  CRVAl
 media_acc <-rep(0,length(k)) # Preparamos vect para las medias del accuracy
 d <- 1
@@ -71,7 +71,7 @@ for(i in k){
     Train_cross <- Train[train_ind,] # A partir del conjunto Train hacemos la crossval
     Test_cross <- Train[test_ind,]
     
-    model_cv <- knn(train=Train_cross[,-9], test=Test_cross[,-9], cl = Train_cross[,ncol(Train_cross)], k=i) 
+    model_cv <- knn(train=Train_cross[,-ncol(Train_cross)], test=Test_cross[,-ncol(Test_cross)], cl = Train_cross[,ncol(Train_cross)], k=i) 
     # Usamos knn para entrenar el modelo
     # CAMBIAR -9 si añades las categoricas 
     
@@ -89,7 +89,7 @@ for(i in k){
 El siguiente paso implica el entrenamiento del modelo KNN utilizando el conjunto de entrenamiento, donde el modelo almacena los datos de entrenamiento y calcula las distancias entre puntos.
 
 ```{r}
-model <- knn(train = Train[,-9], test=Test[,-9], cl=Train[,ncol(Train)], k=k_opt)
+model <- knn(train = Train[,-ncol(Train)], test=Test[,-ncol(Test)], cl=Train[,ncol(Train)], k=k_opt)
 ```
 
 Evaluación del modelo
