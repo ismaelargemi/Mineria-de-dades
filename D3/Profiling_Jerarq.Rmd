@@ -266,4 +266,14 @@ Cluster 4: Pocos familiares, menor importe de credicto por prestamo, ratio de an
 
 Cluster 5: Coches mas nuevos, mayor numero de credito por prestamo, Mujeres, commercial associate
 
+Comparación Profiling K means y Jerarquico
+
+El número de clústers se diferencia en los dos métodos. 
+
+Vemos como en el clústering jerarquico se obtienen perfiles de cada grupo muy especificos y caracterizables, a diferencia de los perfiles obtenidos en la metodologia kmeans. 
+
+En la metodologia kmeans vemos como solo se ven explicados los grupos por algunas variables numericas y ninguna categorica, debido que kmeans es un metodo que  solo permite variables numericas, por eso la variabilidad explicada por las variables categoricas no se ve reflejada eb el profiling de kmeans y obtenemos unos perfiles muy poco caracterizados.
+
+
+
 
