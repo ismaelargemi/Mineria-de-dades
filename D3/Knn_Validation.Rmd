@@ -1,0 +1,96 @@
+---
+title: "Knn_Validation"
+author: "Oscar"
+date: "2023-11-05"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, include=FALSE}
+#Llibreries
+library(class)
+library(caret)
+library(cluster)
+library(VIM)
+```
+
+```{r, include=FALSE}
+load("Dades preprocessades.Rdata")
+
+
+mydata <- df_preprocessed
+y <- mydata$TARGET
+mydata[,c("AMT_INCOME_TOTAL","AMT_CREDIT","AMT_ANNUITY","AMT_GOODS_PRICE",
+          "DAYS_BIRTH","TARGET","log_AMT_GOODS_PRICE","log_AMT_ANNUITY",
+          "DIFF_CREDIT_GOODS")] <- NULL
+
+Objectos <- sapply(mydata, class)
+Numeriques <- names(Objectos)[which(Objectos%in%c("numeric"))]
+mydata[,Numeriques] <- scale(mydata[,Numeriques])
+
+dd <- mydata[,Numeriques]
+```
+
+En el proceso de preparación de los datos, se dividen los datos en dos conjuntos: un conjunto de entrenamiento y un conjunto de prueba. El conjunto de entrenamiento se utiliza para entrenar el modelo KNN, mientras que el conjunto de prueba se emplea para evaluar su rendimiento.
+
+```{r}
+set.seed(12345)
+Index <- createDataPartition(y, p = 0.8, list = F)
+# Index <- sample(1:nrow(mydata),0.8*nrow(mydata))
+# dist <- daisy(mydata, metric = "gower")^2
+# dist <- as.matrix(dist)
+Train <- cbind(mydata[Index,],y[Index])
+Test <- cbind(mydata[-Index,],y[-Index])
+
+#Para usar solo numericas
+# Train <- cbind(dd[Index,],y[Index])
+# Test <- cbind(dd[-Index,],y[-Index])
+```
+
+La selección de un valor de K se considera un paso crucial, ya que K es un hiperparámetro en KNN que representa el número de vecinos más cercanos a considerar. Se recomienda realizar pruebas con diferentes valores de K y utilizar la validación cruzada para determinar el valor óptimo.
+
+Crosvalidación para obtener el mejor valor de k
+
+```{r}
+k <- c(5:10) # las k que queremos probar
+f <- 5 # Numero de capas que queremos en el  CRVAl
+media_acc <-rep(0,length(k)) # Preparamos vect para las medias del accuracy
+d <- 1
+
+
+for(i in k){
+  set.seed(123)
+  folds <- createFolds(Train$y, k=f,list=TRUE) 
+  accuracy <- rep(0,length(f))
+  for(j in 1:f){
+    train_ind <- unlist(folds[-j])
+    data_cv <- Train 
+    data_cv[-train_ind, 16] <- NA
+    model_cv <- kNN(data_cv, variable=data_cv$y, metric="gower")
+    # model_cv <- knn(train=Train_cross[,-ncol(Train_cross)], test=Test_cross[,-ncol(Test_cross)], cl = n Train_cross[,ncol(Train_cross)], k=i) 
+    # conff_cv <- table(Real = Test_cross[,ncol(Test_cross)], Predicted = model_cv) 
+    accuracy[j] <- sum(diag(model_cv))/sum(model_cv)
+  }
+  
+  media_acc[d] <- mean(accuracy) 
+  d <- d + 1
+}
+
+(k_opt <- k[which.max(media_acc)])
+```
+
+El siguiente paso implica el entrenamiento del modelo KNN utilizando el conjunto de entrenamiento, donde el modelo almacena los datos de entrenamiento y calcula las distancias entre puntos.
+
+```{r}
+model <- knn(train = Train[,-ncol(Train)], test=Test[,-ncol(Test)], cl=Train[,ncol(Train)], k=k_opt)
+```
+
+Evaluación del modelo
+
+```{r}
+conff <- table(Real=Test[,ncol(Test)], Predicted=model)
+(acc <- sum(diag(conff))/sum(conff))
+```

@@ -1,0 +1,245 @@
+---
+title: "profiling"
+author: "oskar"
+date: "2023-10-17"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+Cargamos los datos
+```{r}
+#Lectura de los datos
+load("Dades preprocessades.Rdata")
+mydata <- df_preprocessed
+mydata[,c("AMT_INCOME_TOTAL","AMT_CREDIT","AMT_ANNUITY","AMT_GOODS_PRICE",
+          "DAYS_BIRTH","TARGET","log_AMT_GOODS_PRICE","log_AMT_ANNUITY",
+          "DIFF_CREDIT_GOODS")] <- NULL
+dades <- mydata
+
+# 
+load("clust_fuzzy.Rdata")
+cluster <- clusters
+```
+
+CATEGORICAS
+```{r}
+indices_categoricas <- sapply(dades, is.factor)
+p_values <- numeric(length(dades))
+
+# Realiza pruebas de chi-cuadrado para las variables categóricas
+for (i in which(indices_categoricas)) {
+  variable_categorica <- dades[, i]
+  cross_table <- table(variable_categorica, cluster)
+  chi_square_result <- chisq.test(cross_table)
+  p_values[i] <- chi_square_result$p.value
+}
+
+
+# Muestra los resultados
+p_values_categoricas <- data.frame(
+  Variable = names(dades)[indices_categoricas],
+  P_Value = p_values[indices_categoricas]
+)
+print(p_values_categoricas)
+
+```
+NUMERICAS
+```{r}
+library(car)
+# Identifica las variables categóricas (factores)
+variables_categoricas <- sapply(dades, is.factor)
+
+# Filtra las variables numéricas
+variables_numericas <- dades[!variables_categoricas]
+# Inicializa un objeto para almacenar los p valores de la ANOVA
+p_values_numericas <- list()
+
+# Realiza un ANOVA para cada variable numérica en función de cluster6 y cluster3
+for (i in 1:ncol(variables_numericas)) {
+  variable_name <- names(variables_numericas)[i]
+  
+  formula_cluster <- as.formula(paste(variable_name, " ~ cluster"))
+  anova_result_cluster <- Anova(lm(formula_cluster, data = variables_numericas))
+  
+  # Almacena los p-valores de la ANOVA en p_values_anova
+  p_values_numericas[[variable_name]] <- c(Cluster = anova_result_cluster[["Pr(>F)"]][1])
+}
+
+# Muestra el objeto con los p-valores de la ANOVA
+print(p_values_numericas)
+```
+SIGNIFICATIVAS
+```{r}
+# Función para evaluar significancia de p-valores
+evaluate_p_values <- function(p_values, alpha = 0.05) {
+  significance <- ifelse(p_values <= alpha, 1, 0)
+  return(significance)
+}
+
+# Evalúa significancia de p-valores para variables numéricas y categóricas
+significance_numericas <- evaluate_p_values(p_values_numericas)
+significance_categoricas <- evaluate_p_values(p_values_categoricas[,2])
+
+print("Significancia de p-valores para variables numéricas:")
+print(significance_numericas)
+
+names(significance_categoricas) <- p_values_categoricas[,1]
+print("Significancia de p-valores para variables categóricas:")
+print(significance_categoricas)
+```
+
+Solo nos descarta 2 variables, pero graficamente muy pocas aportan informacion que muestre diferencias grandes entre cluster.
+
+```{r}
+# install.packages("FactoMineR")
+library(FactoMineR)
+dadesc <- cbind(dades,factor(cluster))
+resul <- catdes(dadesc,num.var=16,proba=0.05)
+resul$test.chi2 # Da el mismo resultado que lo anterior
+# resul$quanti # Sign de la var num por cada clúster. Todos Signif 
+# resul$category #Solo util para saber si el nivel explica el cluster
+```
+
+```{r}
+library(ggplot2)
+colores <- scales::brewer_pal(palette = "Set1")(length(unique(cluster)))
+```
+
+```{r}
+ggplot(data = dades, aes(x = cluster, y = dades$RATIO_CREDIT_INCOME)) +
+  geom_bar(stat = "summary", fun = "mean", fill= colores) +
+  geom_hline(yintercept = mean(dades$RATIO_CREDIT_INCOME)) +
+  labs(title = "Medias del Ratio del Importe del préstamo por clúster respecto la media global" , y = "Media", x = "Clúster")
+```
+
+En la cantidad de años que los clientes tardan en devolver el importe del prestamo vemos como el clúster 1 es mas rapido respecto el 2.
+
+
+```{r}
+ggplot(data = dades, aes(x = cluster, y = dades$RATIO_ANNUITY_CREDIT)) +
+  geom_bar(stat = "summary", fun = "mean", fill= colores) +
+  geom_hline(yintercept = mean(dades$RATIO_ANNUITY_CREDIT)) +
+  labs(title = "Medias del Ratio de la Anualidad del préstamo por clúster respecto la media global" , y = "Media", x = "Clúster")
+
+```
+
+El cluster 1 es el que tiene mayor anualidad respecto el credito
+
+```{r}
+ggplot(data = dades, aes(x = cluster, y = dades$DTI_RATIO)) +
+  geom_bar(stat = "summary", fun = "mean", fill= colores) +
+  geom_hline(yintercept = mean(dades$DTI_RATIO)) +
+  labs(title = "Medias de la Capacidad de cliente para pagar la annuity con sus ingresos por clúster respecto la media global" , y = "Media", x = "Clúster")
+```
+El cluster 1 es el que tiene mas capazidad de devolver el prestamo a partir de sus ingresos.
+
+Conclusiones:
+
+Lo único qye caracteriza a nuestros clústers, diferenciandolos entre ellos son las capacidades economicas de estos.
+
+Cluster 1 se define como el grupo de los clientes que tienen mejor capacidad de devolver el prestamo, una mayor proporcion de anualidad y de ser los usuarios que mas rapido devuelven el prestamo, de media en 2 años.
+
+Por otro lado
+
+El cluster 2 se define como el grupo de los clientes que menor capacidad tienen de devolver el prestamo y por ello menor anualidad debido el peso de esta y su menor capacidad. son los usuarios que tardan mas en devolver el prestamo, de media alrededor de 5-6 años.
+
+El resto de graficos de las variables se encuentran en el anexo, estos se han analizado pero no se han incluido debido lo poco informativos que son.
+
+
+ANEXO DE GRAFICOS DEL PROFILING FUZZY
+
+```{r}
+ggplot(data = dades, aes(x = cluster, y = dades$OWN_CAR_AGE)) + 
+  geom_bar(stat = "summary", fun = "mean", fill= colores) +
+  geom_hline(yintercept = mean(dades$OWN_CAR_AGE)) +
+  labs(title = "Medias de la Edad en años del coche del cliente por clúster respecto la media global" , y = "Media", x = "Clúster") 
+```
+
+```{r}
+ggplot(data = dades, aes(x = cluster, y = dades$CNT_FAM_MEMBERS)) +
+  geom_bar(stat = "summary", fun = "mean", fill= colores) +
+  geom_hline(yintercept = mean(dades$CNT_FAM_MEMBERS)) +
+  labs(title = "Medias del Número de familiares del cliente por clúster respecto la media global" , y = "Media", x = "Clúster")
+```
+
+```{r}
+ggplot(data = dades, aes(x = cluster, y = dades$log_AMT_INCOME_TOTAL)) +
+  geom_bar(stat = "summary", fun = "mean", fill= colores) +
+  geom_hline(yintercept = mean(dades$log_AMT_INCOME_TOTAL)) +
+  labs(title = "Medias del logaritmo de los Ingresos totales del cliente por clúster respecto la media global" , y = "Media", x = "Clúster") 
+```
+
+```{r}
+ggplot(data = dades, aes(x = cluster, y = dades$log_AMT_CREDIT)) +
+  geom_bar(stat = "summary", fun = "mean", fill= colores) +
+  geom_hline(yintercept = mean(dades$log_AMT_CREDIT)) +
+  labs(title = "Medias del Importe de crédito del préstamo por clúster respecto la media global" , y = "Media", x = "Clúster")
+
+```
+
+```{r}
+ggplot(data = dades, aes(x = cluster, y = dades$AGE_YEARS)) +
+  geom_bar(stat = "summary", fun = "mean", fill= colores) +
+  coord_cartesian(ylim=c(35,50)) +
+  geom_hline(yintercept = mean(dades$AGE_YEARS)) +
+  labs(title = "Medias de la Edad por clúster respecto la media global" , y = "Media", x = "Clúster")
+
+```
+
+```{r}
+ggplot(data = dades, aes(x = cluster, fill = dades$CODE_GENDER)) +
+  geom_bar(position = "dodge") +
+  labs(title = "Gráfico de la distribución del Género respecto el Clúster", y = "Freq", x = "Clúster") +
+  theme(legend.position = "top") + guides(fill = guide_legend(title = NULL))
+```
+
+
+```{r}
+ggplot(data = dades, aes(x = cluster, fill = dades$NAME_INCOME_TYPE)) +
+  geom_bar(position = "dodge") +
+  labs(title = "Gráfico de la distribución del Tipo de ingresos respecto el Clúster", y = "Freq", x = "Clúster") +
+  theme(legend.position = "top") + guides(fill = guide_legend(title = NULL))
+```
+
+
+```{r}
+ggplot(data = dades, aes(x = cluster, fill = dades$NAME_EDUCATION_TYPE)) +
+  geom_bar(position = "dodge") +
+  labs(title = "Gráfico de la distribución del Nivel de estudios del cliente respecto el Clúster", y = "Freq", x = "Clúster") +
+  theme(legend.position = "top") + guides(fill = guide_legend(title = NULL))
+```
+
+```{r}
+ggplot(data = dades, aes(x = cluster, fill = dades$NAME_FAMILY_STATUS)) +
+  geom_bar(position = "dodge") +
+  labs(title = "Gráfico de la distribución del Estado civil respecto el Clúster", y = "Freq", x = "Clúster") +
+  theme(legend.position = "top") + guides(fill = guide_legend(title = NULL))
+```
+
+
+```{r}
+ggplot(data = dades, aes(x = cluster, fill = dades$OCCUPATION_TYPE)) +
+  geom_bar(position = "dodge") +
+  labs(title = "Gráfico de la distribución de la Actividad laboral respecto el Clúster", y = "Freq", x = "Clúster") +
+  theme(legend.position = "top") + guides(fill = guide_legend(title = NULL))
+```
+
+
+```{r}
+ggplot(data = dades, aes(x = cluster, fill = dades$ORGANIZATION_TYPE)) +
+  geom_bar(position = "dodge") +
+  labs(title = "Gráfico de la distribución del Tipo de organización donde trabaja el cliente respecto el Clúster", y = "Freq", x = "Clúster") +
+  theme(legend.position = "top") + guides(fill = guide_legend(title = NULL))
+```
+
+
+```{r}
+ggplot(data = dades, aes(x = cluster, fill = dades$REGION_RATING_CLIENT)) +
+  geom_bar(position = "dodge") +
+  labs(title = "Gráfico de la distribución de la Calificación de la región donde vive el cliente respecto el Clúster", y = "Freq", x = "Clúster") +
+  theme(legend.position = "top") + guides(fill = guide_legend(title = NULL))
+```

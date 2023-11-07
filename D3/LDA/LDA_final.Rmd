@@ -12,10 +12,9 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 
-# LDA (Linear Discriminant Analysis)
+## LDA (Linear Discriminant Analysis)
 
-Para comenzar con los modelos discriminantes, se realizará en primer lugar un linear discriminant analysis (LDA) con el objetivo de intentar separar aquellos clientes que puedan tener dificultades de pago con aquellos solventes. Para ello, sin embargo, realizaremos un procedimiento ROSE (Random Over-Sampling Examples) con el objetivo de balancear nuestros datos evitando el over-fitting de nuestros datos y evitando una mala calibración de los algoritmos.
-
+Para comenzar con los modelos discriminantes, se realizará en primer lugar un linear discriminant analysis (LDA) con el objetivo de intentar separar aquellos clientes que puedan tener dificultades de pago con aquellos solventes. Así pues, se procede a realizar dicho análisis discriminante.
 
 ```{r, include = F, warning=F, include=F}
 library(MASS)
@@ -35,64 +34,64 @@ library(ROSE)
 load("C:/Users/iker1/Downloads/Dades preprocessades.RData")
 ```
 
-En primer lugar, estandarizamos los datos usando la función de R `scale()` para así hacer que todos las variables tengan el mismo peso. Una vez los datos han sido normalizados y tienen todas las variables el mismo peso en el modelo, aplicamos ROSE:
-
 
 ```{r, warning = F, echo = F}
 x = c("CNT_FAM_MEMBERS", "log_AMT_INCOME_TOTAL", "log_AMT_CREDIT", "AGE_YEARS", "RATIO_CREDIT_INCOME", "RATIO_ANNUITY_CREDIT", "DTI_RATIO")
+y = "TARGET"
 
 df_prep_num = df_preprocessed[,x]
 df_prep_num = scale(df_prep_num)
-```
-
-```{r, include =F}
-library(ROSE)
-
-y = "TARGET"
 
 df_prep_num = data.frame(df_prep_num, TARGET = df_preprocessed$TARGET)
+```
 
+Para ello, se recurrirá primero a un proceso de escalado de los datos a través de la función `scale()`, lo cual hará que todas las variables tengan un peso similar en la construcción del discriminante lineal. Una vez se ha realizado este proceso, el siguiente paso será realizar la partición de la base de datos disponible. Para ello, se realizará una partición clásica: el 80% de los datos se destinarán a entrenar el modelo y el otro 20, a validarlo. Además, dentro de la partición del train se realizará un proceso 5-fold validation con el objetivo de reducir el overfitting y proporcionar un modelo robusto.
+
+```{r, echo = F, message = F, warning = F}
 set.seed(123)
-df_rose = ROSE(reformulate(x,y), data = data.frame(df_prep_num), p = 0.5)
+ind = createDataPartition(df_prep_num$TARGET, times=1, p=.8, list=FALSE)
 
-df_rose = df_rose$data
-```
+train = df_prep_num[ind,]
+validation = df_prep_num[-ind,]
 
-Seguidamente, se realiza una partición del dataset entre train y test con el objetivo de conseguir aproximaciones correctas para que puedan ser usadas, evitando el over-fitting. Para ello, se realizará una partición 80-20 de la base de datos:
+lda_cv = function(df_train, k){
 
-```{r, include = F}
-set.seed(2023)
-ind = sample(1:5000, 0.8*5000, replace = F)
+  s = matrix(nrow = k, ncol = 7)
 
-train = df_rose[ind,]
-test = df_rose[-ind,]
+  for(i in 1:k){
+    
+    ind = c(1+((i-1)*(nrow(df_train)/k)),(nrow(df_train)/k)*i)
+    test = df_train[c(ind[1]:ind[2]),]
+    train_cv = df_train[-c(ind[1]:ind[2]),]
+    lda_cv = lda(reformulate(x,y), data = train_cv)
 
-x_train = train[!names(train) %in% "TARGET"]
-y_train = train$TARGET
+    s[i,] = lda_cv$scaling
+  }
 
-x_test = test[!names(test) %in% "TARGET"]
-y_test = test$TARGET
-```
+  discriminante_res = colMeans(s)
+  
+  resultado = matrix(nrow = ncol(df_train)-1, ncol = 1)
+  
+  resultado[,1] = discriminante_res
+  rownames(resultado) = colnames(df_train)[1:(ncol(df_train)-1)]
+  colnames(resultado) = "LDA"
+  
+  return(resultado)
+}
 
-Aplicando el discriminante lineal correspondiente, se obtienen los siguientes resultados en cuanto a la proyección de las observaciones se refiere:
+a = lda(reformulate(x,y), data = train)
 
-```{r, echo = F}
-linear_discriminant = lda(x_train, y_train)
-plot(linear_discriminant)
-```
 
-A primera vista, se podría decir que el modelo separa de forma errónea, ya que los dos histogramas están sobrepuestos. Sin embargo, es necesario realizar la matriz de confusión:
+a$scaling = lda_cv(train, 5)
 
-```{r, echo  =F}
-predictions = linear_discriminant %>% predict(x_train)
-pred1 = predictions$posterior[,2]
+valores = predict(a, validation)
 
-predictions_test = linear_discriminant %>% predict(x_test)
 
-pred2 = predictions_test$posterior[,2]
-pred2 = factor(ifelse(pred2>0.5, 1, 0))
+prob = valores$posterior[,2]
 
-MC = confusionMatrix(pred2, y_test)
+predicciones = factor(ifelse(prob>0.5, 1,0))
+
+MC = confusionMatrix(predicciones, validation$TARGET) 
 
 tabla_lda = MC$table
 
@@ -100,35 +99,87 @@ rownames(tabla_lda) = c("No moroso","Potencial moroso")
 colnames(tabla_lda) = c("No moroso","Potencial moroso")
 
 kbl(tabla_lda,
-    caption = "Matriz de confusión del conjunto test",
+    caption = "Matriz de confusión del conjunto de validación",
     booktabs=T)%>% 
   kable_styling(position = "center", 
                 latex_options = c("HOLD_position")) %>%
     add_header_above(c("","Realidad" = 2)) %>%
    pack_rows(index=c("Predicción"=2))
-
 ```
 
-Como ya se podía prever, los resultados son muy pobres: únicamente se ha obtenido una accuracy del `r round(MC$overall["Accuracy"]*100,4)`%, segregado en una sensibilidad de un `r round(MC$byClass["Sensitivity"]*100,4)`% y una especificidad del `r round(MC$byClass["Specificity"]*100,4)`%.
+Apreciando los resultados obtenidos, se puede ver que la precisión obtenida por el modelo ha sido del `r round(MC$overall["Accuracy"]*100,2)`%, algo baja en comparación con ejemplos en otras áreas. Si desglosamos por sensibilidad y especificidad, vemos que los resultados en estos dos indicadores han sido de `r round(MC$byClass["Sensitivity"]*100,2)`% , pero una especificidad del `r round(MC$byClass["Specificity"]*100,2)`%. Esta gran diferencia entre las dos métricas indica que el algoritmo tiene problemas para detectar la clase minoritaria, en este caso, los clientes morosos. Así pues, será necesario balancear nuestros datos para así conseguir resultados aceptables. Será necesario mejorar el dato de especificidad para así poder aceptar este algoritmo como válido. Adicionalmente, el valor del F-score es de `r round(2/((1/MC$overall["Accuracy"]) + (1/MC$byClass["Sensitivity"])), 4)`. Como otras métricas interesantes, se puede apreciar que el valor predictivo positivo es de `r round(MC$byClass["Pos Pred Value"]*100,2)`% y el valor predictivo negativo es de `r round(MC$byClass["Neg Pred Value"]*100,2)`%.
 
 Sin embargo, se sabe que el LDA puede presentar problemas en el momento en el que las variables no presentan normalidad o cuando las matrices de covarianzas son diferentes para cada grupo. Como ya se apreció en la descriptiva post-preprocessing, muchas de nuestras variables no presentaban normalidad, de forma que esto podría ser un problema de cara al uso del LDA. Es por eso por lo que se ha decidido realizar un QDA (Quadratic Discriminant Analysis) con el objetivo de corregir dichos problemas y mejorar la performance del LDA.
 
-**QDA**
+
+## QDA
 
 Así pues, repitiendo el procedimiento seguido anteriormente en el LDA, toca repetir los mismos pasos para este modelo. De esta forma, los resultados obtenidos son los siguientes:
 
-```{r, echo = F}
-quadratic_discriminant = qda(x_train, y_train)
+```{r, include = F, message = F, warning = F}
+x = c("CNT_FAM_MEMBERS", "log_AMT_INCOME_TOTAL", "log_AMT_CREDIT", "AGE_YEARS", "RATIO_CREDIT_INCOME", "RATIO_ANNUITY_CREDIT", "DTI_RATIO")
+y = "TARGET"
 
-predictions = quadratic_discriminant %>% predict(x_train)
-pred1 = predictions$posterior[,2]
+df_prep_num = df_preprocessed[,x]
+df_prep_num = scale(df_prep_num)
 
-predictions_test = quadratic_discriminant %>% predict(x_test)
+df_prep_num = data.frame(df_prep_num, TARGET = df_preprocessed$TARGET)
+```
 
-pred2 = predictions_test$posterior[,2]
-pred2 = factor(ifelse(pred2>0.5, 1, 0))
 
-MC = confusionMatrix(pred2, y_test)
+```{r, message = F, warning = F, echo = F}
+set.seed(123)
+ind = createDataPartition(df_prep_num$TARGET, times=1, p=.8, list=FALSE)
+
+train = df_prep_num[ind,]
+validation = df_prep_num[-ind,]
+
+qda_cv = function(df_train, k){
+  
+  resultado = array(dim = c((ncol(df_train)-1), (ncol(df_train)-1), 2))
+  
+  
+  ind = c(1,nrow(df_train)/k)
+  test = df_train[c(ind[1]:ind[2]),]
+  train_cv = df_train[-c(ind[1]:ind[2]),]
+  qda_inicial = qda(reformulate(x,y), data = train_cv)
+
+  resultado_final = qda_inicial$scaling
+  
+  for(i in 2:k){
+    
+    ind = c(1+((i-1)*(nrow(df_train)/k)),(nrow(df_train)/k)*i)
+    test = df_train[c(ind[1]:ind[2]),]
+    train_cv = df_train[-c(ind[1]:ind[2]),]
+    qda_cv = qda(reformulate(x,y), data = train_cv)
+
+    resultado_loop = qda_cv$scaling
+    
+    for(j in 1:(ncol(df_train)-1)){
+      for(k in 1:(ncol(df_train)-1)){
+        resultado_final[j,k,1] = resultado_final[j,k,1]*((i-1)/i) + resultado_loop[j,k,1]*(1/i)
+        resultado_final[j,k,2] = resultado_final[j,k,2]*((i-1)/i) + resultado_loop[j,k,2]*(1/i)
+
+      }
+    }
+  }
+
+  rownames(resultado_final[,,1]) = colnames(df_train)[1:(ncol(df_train)-1)]
+  rownames(resultado_final[,,2]) = colnames(df_train)[1:(ncol(df_train)-1)]
+  
+  return(resultado_final)
+}
+
+qda = qda(reformulate(x,y), data = train)
+qda$scaling = qda_cv(train, 5)
+
+valores = predict(qda, validation)
+
+prob = valores$posterior[,2]
+
+predicciones = factor(ifelse(prob>0.5, 1, 0))
+
+MC = confusionMatrix(predicciones, validation$TARGET) 
 
 tabla_qda = MC$table
 
@@ -136,7 +187,82 @@ rownames(tabla_qda) = c("No moroso","Potencial moroso")
 colnames(tabla_qda) = c("No moroso","Potencial moroso")
 
 kbl(tabla_qda,
-    caption = "Matriz de confusión del conjunto test",
+    caption = "Matriz de confusión del conjunto de validación",
+    booktabs=T)%>% 
+  kable_styling(position = "center", 
+                latex_options = c("HOLD_position")) %>%
+    add_header_above(c("","Realidad" = 2)) %>%
+   pack_rows(index=c("Predicción"=2))
+
+```
+
+
+Como se puede apreciar, los resultados obtenidos son bastante similares a los presentados en el discriminante lineal. De hecho, en este caso, la precisión ha sido del `r round(MC$overall["Accuracy"]*100,4)`%, algo peor que la del LDA. Si observamos sensibilidad y especificidad, apreciaremos que se ha obtenido una sensibilidad del `r round(MC$byClass["Sensitivity"]*100,4)`%, pero una especificidad del `r round(MC$byClass["Specificity"]*100,4)`%. Si observamos otras métricas disponibles, apreciaremos nuevamente valores altos en la tasa de valores positivos predecidos (`r round(MC$byClass["Pos Pred Value"]*100,4)`%) y valores bajos en la tasa de valores negativos predecidos (`r round(MC$byClass["Neg Pred Value"]*100,4)`%). Sin embargo, la diferencia entre estos no es tan extrema como en LDA. Por último, podemos apreciar que el valor del F-score es de `r 2/((1/MC$overall["Accuracy"]) + (1/MC$byClass["Sensitivity"]))`. Como se puede apreciar, las conclusiones que se extraen son las mismas que en LDA: es necesario balancear los datos.
+
+
+Tras haber estudiado los resultados, se ha concluido que, si bien es cierto que los resultados obtenidos son mejorables, los datos presentan un ligero desbalanceo. Este hecho hace que las esimaciones proporcionadas puedan no ser del todo fiables, ya que es posible que los algoritmos tengan problemas en la detección de la clase minoritaria. Para ello, realizaremos un procedimiento undersampling con el objetivo de balancear nuestros datos evitando una mala calibración de los algoritmos. Así pues, repetimos el mismo proceso que el realizado anteriormente con los datos ahora balanceados.
+
+
+## LDA (usando datos balanceados con undersampling)
+
+En primer lugar, estandarizamos los datos usando la función de R `scale()` para así hacer que todos las variables tengan el mismo peso. Una vez los datos han sido normalizados y tienen todas las variables el mismo peso en el modelo, aplicamos ROSE:
+
+```{r, warning = F, echo = F}
+x = c("CNT_FAM_MEMBERS", "log_AMT_INCOME_TOTAL", "log_AMT_CREDIT", "AGE_YEARS", "RATIO_CREDIT_INCOME", "RATIO_ANNUITY_CREDIT", "DTI_RATIO")
+y = "TARGET"
+
+df_prep_num = df_preprocessed[,x]
+df_prep_num = scale(df_prep_num)
+```
+
+```{r, include =F, warning=F, message=F}
+library(unbalanced)
+
+pred_vars = df_prep_num[,x]
+response_vars = df_preprocessed[,y]
+undersampled_data <- ubBalance(pred_vars, 
+                               response_vars, 
+                               type='ubUnder',         # Option for undersampling
+                               verbose = F)
+data_x = undersampled_data$X
+data_balanced = cbind(data_x, factor(undersampled_data$Y))
+data_balanced = data.frame(data_balanced)
+
+names(data_balanced) = c(x, "TARGET")
+data_balanced$TARGET = factor(data_balanced$TARGET)
+```
+
+Seguidamente, se realiza una partición del dataset entre train y validation con el objetivo de conseguir aproximaciones correctas que puedan ser usadas, evitando el over-fitting. Para ello, se realizará una partición 80-20 de la base de datos. Además, se realizará un 5-fold validation dentro del conjunto train, eliminando así cualquier problema de overfitting que pudiera existir:
+
+```{r, echo = F}
+set.seed(123)
+ind = createDataPartition(data_balanced$TARGET, times=1, p=.8, list=FALSE)
+
+train = data_balanced[ind,]
+validation = data_balanced[-ind,]
+
+
+a = lda(reformulate(x,y), data = train)
+
+
+a$scaling = lda_cv(train, 5)
+
+valores = predict(a, validation)
+
+
+prob = valores$posterior[,2]
+
+predicciones = factor(ifelse(prob>0.5, 2,1))
+
+MC = confusionMatrix(predicciones, validation$TARGET) 
+
+tabla_lda = MC$table
+
+rownames(tabla_lda) = c("No moroso","Potencial moroso")
+colnames(tabla_lda) = c("No moroso","Potencial moroso")
+
+kbl(tabla_lda,
+    caption = "Matriz de confusión del conjunto de validación",
     booktabs=T)%>% 
   kable_styling(position = "center", 
                 latex_options = c("HOLD_position")) %>%
@@ -144,7 +270,53 @@ kbl(tabla_qda,
    pack_rows(index=c("Predicción"=2))
 ```
 
-Como se puede apreciar, los resultados obtenidos usando QDA son muy similares a los que se obtuvieron en el discriminante lineal. Si bien es cierto que la precisión del modelo es del `r round(MC$overall["Accuracy"]*100,4)`%, algo peor que en LDA, parece que la especificidad (`r round(MC$byClass["Specificity"]*100,4)`%) es superior en este modelo. Por contra, la sensibilidad es menor que en LDA (`r round(MC$byClass["Sensitivity"]*100,4)`%)
+
+Esta vez, los resultados son más consistentes: los resultados obtenidos son muy diferentes a cuando los datos estaban desbalanceados. En este caso, la precisión obtenida ha sido del `r round(MC$overall["Accuracy"]*100,2)`%, dividido en una sensibilidad del `r round(MC$byClass["Sensitivity"]*100,2)`% y una especificidad del `r round(MC$byClass["Specificity"]*100,2)`%. Esta vez, se puede comprobar que los valores proporcionados por los datos de sensibilidad y especificidad están más balanceados, de forma que estos resultados parecen mucho más fiables.
+
+
+Sin embargo, se sabe que el LDA puede presentar problemas en el momento en el que las variables no presentan normalidad o cuando las matrices de covarianzas son diferentes para cada grupo. Como ya se apreció en la descriptiva post-preprocessing, muchas de nuestras variables no presentaban normalidad, de forma que esto podría ser un problema de cara al uso del LDA. Es por eso por lo que se ha decidido realizar un QDA (Quadratic Discriminant Analysis) con el objetivo de corregir dichos problemas y mejorar la performance del LDA.
+
+## QDA (usando datos balanceados con undersampling)
+
+Así pues, repitiendo el procedimiento seguido anteriormente en el LDA, toca repetir los mismos pasos para este modelo. De esta forma, los resultados obtenidos son los siguientes:
+
+
+```{r, echo = F}
+set.seed(123)
+ind = createDataPartition(data_balanced$TARGET, times=1, p=.8, list=FALSE)
+
+train = data_balanced[ind,]
+validation = data_balanced[-ind,]
+
+
+
+def = qda(reformulate(x,y), data = train)
+def$scaling = qda_cv(train, 4)
+
+valores = predict(def, validation)
+
+prob = valores$posterior[,2]
+
+predicciones = factor(ifelse(prob>0.5, 2, 1))
+
+MC = confusionMatrix(predicciones, validation$TARGET) 
+
+tabla_qda = MC$table
+
+rownames(tabla_qda) = c("No moroso","Potencial moroso")
+colnames(tabla_qda) = c("No moroso","Potencial moroso")
+
+kbl(tabla_qda,
+    caption = "Matriz de confusión del conjunto de validación",
+    booktabs=T)%>% 
+  kable_styling(position = "center", 
+                latex_options = c("HOLD_position")) %>%
+    add_header_above(c("","Realidad" = 2)) %>%
+   pack_rows(index=c("Predicción"=2))
+```
+
+
+Por último, el modelo del QDA con datos balanceados presenta resultados peores al LDA. La precisión alcanzada por este modelo ha sido del `r round(MC$overall["Accuracy"]*100,2)`%, lo que retorna una sensibilidad del `r round(MC$byClass["Sensitivity"]*100,2)`% y una especificidad del `r round(MC$byClass["Specificity"]*100,2)`%. Este modelo corrige los problemas de desbalanceo que existían previamente, ya que ahora se puede apreciar cómo los resultados del modelo son más consistentes. Concretamente, el valor predictivo positivo y el valor predictivo negativo para este modelo son de `r round(MC$byClass["Pos Pred Value"]*100,4)`% y `r round(MC$byClass["Neg Pred Value"]*100,4)`%, respectivamente. Para acabar, el F-score de este modelo es de `r 2/((1/MC$overall["Accuracy"]) + (1/MC$byClass["Sensitivity"]))`, algo más bajo que en LDA.
 
 En resumen, observando los resultados obtenidos, se puede afirmar que los dos modelos discriminantes presentan resultados muy pobres: es probable que el hecho de añadir posteriormente las variables categóricas acabe de hacer que se mejore de forma clara los resultados conseguidos hasta ahora.
 
