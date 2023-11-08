@@ -19,15 +19,16 @@ Comentaris:
 
 ```{r, include=FALSE}
 library(FactoMineR)
+install.packages("factoextra")
 library(factoextra)
 library(Matrix)
 library(ggplot2)
-
 ```
 
 ```{r, include=FALSE}
 # Lectura de la base de datos
-df <-get(load("Dades preprocessades.RData"))
+#df <- (load("Dades preprocessades.RData"))
+df <- df_preprocessed
 df2<- df[1:15] 
 df2 <- df2[,-8] #eliminamos la variable TARGET del análisis
 ```
@@ -46,7 +47,6 @@ new_variable_names <- c(
 )
 
 colnames(df2) <- new_variable_names
-
 ```
 
 
@@ -162,6 +162,10 @@ Observamos como diferenciando a los individuos según si tienen dificultades o n
 Para tener una representación aún más clara sobre las variables y su asociación, a continuación se grafican estas variables con curvas de densidad para ver aquellas zonas donde hay una mayor concentración.
 
 ```{r}
+res.mca$var$contrib
+```
+
+```{r}
 # Totes les variables actives
 newbd<- df2[1:7]
 res.mca1<-MCA(newbd, method="Burt", graph=FALSE)
@@ -186,7 +190,12 @@ ggplot(data = mca1_vars_df, aes(x = Dim.1, y = Dim.2)) +
 ```
 
 
-<!-- CAL ANALITZAR. Es veu poc, aixi que es passa a anlitzar per cada variable. -->
+A partir de este gráfico, vemos que la dimension 1 no está explicada con claridad ya que predominan los unknowns y errores.
+La dimensión 2 se ve explicada por tipo de ingresos, tipo de organización donde trabaja el cliente y actividad laboral del mismo. 
+Entonces, nos explica la calidad del trabajo en relación a los ingresos obtenidos y nivel de estudios. 
+Podemos ver que los mig-high skill laborers se encontran más arriba que los high skill laborer. Predecimos que esto es devido a un sesgo y que los que tienen high skill laborers necesitan menos créditos que los demás.
+
+No podemos analizar nada preciso a partir de este gráfico y por eso pasamos a analizar por cada una de las variables.
 
 
 ### Gráficos de dispersión agrupado por cada variable
@@ -203,12 +212,13 @@ for(i in 1:7){
     plot(graf)
 }
 ```
-<!-- HACER UN PEQUEÑO ANÁLISIS DE LO QUE SE VE EN ESTAS DOS DIMENSIONES. OBSERVAMOS COMO HAY CATEGORÍAS SEPARADAS DE LAS OTRAS, PERO HAY ALGUNAS QUE NO MUESTRAN DIFERENCIAS ENTRE ELLAS AL ESTAR SUPERPUESTAS. -->
+
+Como hemos dicho antes, analizamos por cada variable de manera individual. 
+Aún así, hay muchos gráficos donde encontramos categorias superpuestas entre ellas, y que por tanto, no nos dan información significativa.
+
 
 Como se ha observado que en las dos primeras dimensiones únicamente se muestra aproximadamente el 30% de la varibabilidad, para poder estudiar las categorías y su asociación más a fondo, a continuación se representan estas categorías a través de las cinco primeras dimensiones:
 
-<!-- ES NECESARIO REALMENTE?????
-TARDA UN POCO EN EJECUTARSE-->
 
 ````{r}
 for (k in 1:7){ #para cada variable
@@ -224,12 +234,6 @@ for (k in 1:7){ #para cada variable
 
 
 ````
-<!-- CAL ANALITZAR. agrupar variables que tienen alta asociación, en 2 o 3 grupos.  -->
-
-
-## Conclusiones
-
-
-
+Hem provat de fer les tres dimensions i no hi ha ningún gràfic significatiu per poder extreure més de la que ja hem extret amb les dues dimensions. Per tant ens quedem amb gràfics de dos dimensions.
 
 
