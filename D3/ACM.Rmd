@@ -7,19 +7,12 @@ output: html_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
 ```
-Comentaris:
-- posar més subtítols? 
-- canviar noms variables per a evitar solapaments. HECHO
-- treure les variables numèriques de les suplementàries que s'hagin considerat no rellevants en l'ACP
-- CAL ACABAR TOT EL QUE ESTÀ EN MAJÚSCULES, I SI VOLEU AFEGIR MÉS ANÀLISI I CANVIAR COSES CAP PROBLEMA
-- CONCLUSIONES
-- HE AÑADIDO UNA NUEVA LINEA DONDE SE PUEDE VER LA CONTRIBUCIÓNDE CADA VARIABLE EN CADA EJE Y SUS P-VALORES, DISCUTIR SI ES IMPORTANTE O NO
 
 # ACM
 
 ```{r, include=FALSE}
 library(FactoMineR)
-install.packages("factoextra")
+#install.packages("factoextra")
 library(factoextra)
 library(Matrix)
 library(ggplot2)
@@ -61,8 +54,8 @@ colnames(dd) <- new_variable_names
 ```{r, out.width="95%"}
 res.mca <- MCA(dd, quanti.sup = c(8:15), method = "Burt")
 res.mca
-
-#Con este gráfico se ve mejor, OBSERVAMOS COMO LA CATEGORIA SEPARATED APARECE, ANALIZAMOS??????
+```
+```{r}
 plot(res.mca,invisible=c("ind","quali.sup"), cex=0.5)
 ```
 
@@ -127,15 +120,16 @@ fviz_mca_var(res.mca, col.var = "cos2",
 Salen muchas categorías que no están muy bien representadas por las dos primeras dimensiones. Esto implica que la posición de los puntos correspondientes en el diagrama de dispersión debe interpretarse con cierta cautela. Probablemente sea necesaria una solución de mayor dimensión. Aún así, se ha decidido no realizar el MCA de mayores dimensiones debido a la dificultad de representación gráfica. Por tanto, los resultados del MCA se analizarán con cautela, especialmente las variables poco representadas en las dos primeras dimensiones.
 
 
-**Contribuciones de las variables a cada eje y test-values significativos**
+## Gráfico de individuos y variables
 
-Con tal de observar en más profundidad cuales són las variables que más contribuyen a cada eje, se plantea la siguiente función que nos muestra la contribución de cada dimensión a las variables continuas y categóricas:
-
+Para una primera visualización de la relación entre las variables y las observaciones en un espacio reducido de dimensiones, acudimos al gráfico biplot. Este gráfico nos facilita la interpretación de la estructura de los datos al proporcionar una visualización que muestra la relación entre variables categóricas y observaciones. 
 ```{r}
-dimdesc(res.mca)
+
+ fviz_mca_biplot(res.mca, col.var = "#FC4E07", col.ind = "#00AFBB", ggtheme = theme_minimal())
+
 ```
 
-De esta manera, confirmamos que se requiere una solución con más dimensiones para capturar con precisión la estructura de los datos. Por lo tanto, se abordarán los resultados del MCA con prudencia, especialmente en lo que respecta a las variables que tienen una baja representación en las dos primeras dimensiones.
+Con tal de poder analizar estos resultados de manera más precisa, se decide dividir este gráfico y analizar por una parte únicamente el gráfico de observaciones y por otra parte el gráfico de las variables categóricas.
 
 
 ## Gráfico de individuos
@@ -197,7 +191,7 @@ ggplot(data = mca1_vars_df, aes(x = Dim.1, y = Dim.2)) +
 A partir de este gráfico, vemos que la dimension 1 no está explicada con claridad ya que predominan los unknowns y errores.
 La dimensión 2 se ve explicada por tipo de ingresos, tipo de organización donde trabaja el cliente y actividad laboral del mismo. 
 Entonces, nos explica la calidad del trabajo en relación a los ingresos obtenidos y nivel de estudios. 
-Podemos ver que los mig-high skill laborers se encontran más arriba que los high skill laborer. Predecimos que esto es devido a un sesgo y que los que tienen high skill laborers necesitan menos créditos que los demás.
+Podemos ver que los mig-high skill laborers se encontran más arriba que los high skill laborer. Predecimos que esto es debido a un sesgo y que los que tienen high skill laborers necesitan menos créditos que los demás.
 
 No podemos analizar nada preciso a partir de este gráfico y por eso pasamos a analizar por cada una de las variables.
 
@@ -238,14 +232,8 @@ Como se ha observado que en las dos primeras dimensiones únicamente se muestra 
 # 
 
 ````
-Hem provat de hacer las tres dimensions y no hi ha ningún gràfic significatiu per poder extreure més de la que ja hem extret amb les dues dimensions. Per tant ens quedem amb gràfics de dos dimensions.
+Hemos probado de analizar tres dimensions y no hi hay ningun gráfico significativo que nos permita extraer más información de la que ya hemos extraido con dos dimensiones. Por lo tanto, nos quedamos con los análisis sacados a partir de los gráficos de las dos primeras dimensiones. 
 
-
-## Conclusiones
-```{r}
-# Gráfico de individuos y variables en un solo gráfico
-fviz_mca_biplot(res.mca, ggtheme = theme_minimal())
-```
 
 
 
