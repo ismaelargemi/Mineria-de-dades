@@ -197,7 +197,7 @@ ggplot(data = mca1_vars_df, aes(x = Dim.1, y = Dim.2)) +
   ggtitle("Gráfico MCA de variables") +
   scale_colour_discrete(name = "Variable")+ 
   xlim(-2,1.5) + 
-  ylim(-1,1.5)
+  ylim(-1,1.5) + re
 ```
 
 
