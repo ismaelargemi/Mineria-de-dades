@@ -13,6 +13,21 @@ knitr::opts_chunk$set(echo = TRUE)
 #Llibreries
 library(class)
 library(caret)
+library(cluster)
+library(VIM)
+library(scales)
+library(tidyverse)
+library(ggplot2)
+
+#devtools::install_github('bbc/bbplot')
+
+if(!require(pacman))install.packages("pacman")
+
+pacman::p_load('dplyr', 'tidyr', 'gapminder',
+               'ggplot2',  'ggalt',
+               'forcats', 'R.utils', 'png', 
+               'grid', 'ggpubr', 'scales',
+               'bbplot')
 ```
 
 ```{r, include=FALSE}
@@ -34,68 +49,221 @@ dd <- mydata[,Numeriques]
 
 En el proceso de preparación de los datos, se dividen los datos en dos conjuntos: un conjunto de entrenamiento y un conjunto de prueba. El conjunto de entrenamiento se utiliza para entrenar el modelo KNN, mientras que el conjunto de prueba se emplea para evaluar su rendimiento.
 
-```{r}
+
+Para la generación del conjunto de train 
+```{r, include=FALSE}
 set.seed(12345)
 Index <- createDataPartition(y, p = 0.8, list = F)
 # Index <- sample(1:nrow(mydata),0.8*nrow(mydata))
-Train <- cbind(mydata[Index,],y[Index])
-Test <- cbind(mydata[-Index,],y[-Index])
+# dist <- daisy(mydata, metric = "gower")^2
+# dist <- as.matrix(dist)
 
-# De mom usamos solo las numericas, usamos la dist para meter las categoricas ??
-Train <- cbind(dd[Index,],y[Index])
-Test <- cbind(dd[-Index,],y[-Index])
+
+#Train <- cbind(mydata[Index,],y[Index])
+#Test <- cbind(mydata[-Index,],y[-Index])
+Train <- mydata[Index,]
+Test <- mydata[-Index,]
+
+Traincl <- y[Index]
+Testcl <- y[-Index]
+
+#Para usar solo numericas
+# Train <- cbind(dd[Index,],y[Index])
+# Test <- cbind(dd[-Index,],y[-Index])
 ```
 
 La selección de un valor de K se considera un paso crucial, ya que K es un hiperparámetro en KNN que representa el número de vecinos más cercanos a considerar. Se recomienda realizar pruebas con diferentes valores de K y utilizar la validación cruzada para determinar el valor óptimo.
 
 Crosvalidación para obtener el mejor valor de k
 
-```{r}
-k <- c(2:30) # las k que queremos probar
-f <- 5 # Numero de capas que queremos en el  CRVAl
+```{r,include=FALSE}
+k <- c(1:15) # las k que queremos probar
+f <- 10 # Numero de capas que queremos en el  CRVAl podriem posar tant 5 com 10
 media_acc <-rep(0,length(k)) # Preparamos vect para las medias del accuracy
 d <- 1
 
+
 for(i in k){
-  set.seed(12345)
-  folds <- createFolds(Train$y, k=f,list=TRUE) # hay la funcion createfolds que te crea las capas del crossval
-  accuracy <- rep(0,length(f))# Preparamos el vect para guardar los valores de accuracy
-  
+  folds <- createFolds(Traincl, k=f,list=TRUE) 
+  accuracy <- rep(0,f)
   for(j in 1:f){
-    train_ind <- unlist(folds[-j]) # Preparamos los indices de las capas del CV 
-    test_ind <- unlist(folds[j])
     
-    Train_cross <- Train[train_ind,] # A partir del conjunto Train hacemos la crossval
-    Test_cross <- Train[test_ind,]
+    tcl <- Traincl
     
-    model_cv <- knn(train=Train_cross[,-9], test=Test_cross[,-9], cl = Train_cross$y, k=i) 
-    # Usamos knn para entrenar el modelo
-    # CAMBIAR -9 si añades las categoricas 
+    train_ind <- unlist(folds[-j])
     
-    conff_cv <- table(Real = Test_cross$y, Predicted = model_cv) # Creamos la matriz de confusion y calculamos el accuracy
-    accuracy[j] <- sum(diag(conff_cv))/sum(conff_cv)
+    tcl[-train_ind] <- NA   #posem com a NA el TARGET del test
+    
+    tclreal <- Traincl[-train_ind]   #Guardem el TARGET real del test per fer la taula després i calcular l'accuracy
+    
+    data_cv <- cbind(Train,TARGET = tcl)
+    
+    #data_cv <- Train 
+    #data_cv$`y[Index]`[train_ind] <- NA
+    
+    #data_cv[train_ind, 16] <- NA
+    model_cv <- kNN(data_cv, variable="TARGET", metric="gower",k = i)
+    # model_cv <- knn(train=Train_cross[,-ncol(Train_cross)], test=Test_cross[,-ncol(Test_cross)], cl = n Train_cross[,ncol(Train_cross)], k=i) 
+    # conff_cv <- table(Real = Test_cross[,ncol(Test_cross)], Predicted = model_cv) 
+    result <- table(Real= tclreal, Predicted=model_cv$TARGET[-train_ind])
+    accuracy[j] <- sum(diag(result))/sum(result)
   }
   
-  media_acc[d] <- mean(accuracy) # Sacamos la media del accuracy por cada k
+  media_acc[d] <- mean(accuracy) 
   d <- d + 1
 }
+```
 
-(k_opt <- k[which.max(media_acc)]) # Seleccionamos la mejor k
+
+A continuación se muestra una tabla en la que se recoge la media del accuracy para cada una de las k utilitzadas en el proceso de cross-validación.
+
+```{r,echo=FALSE, warning=FALSE}
+names(media_acc) <- paste(rep("k=",length(k)),k)
+
+data_acc <- data.frame(k=k, mean_acc = media_acc)
+```
+
+Con el fin de facilitar la interpretación se reproduce un gráfico de la tabla anterior. En este, se resalta la k con la que se ha conseguido un Accuracy más elevado y seguidamente se muestra su valor.
+
+```{r, echo=FALSE, warning=FALSE}
+print(data_acc)
+
+opt <- data_acc[which.max(data_acc$mean_acc),]
+
+ggplot(data_acc, aes(x = k, y = mean_acc)) +
+  geom_line(colour="#1380A1", size = 1) +  # Líneas que unen los puntos
+  geom_point() +# Puntos en el gráfico
+  labs(subtitle="Media del Acc. para cada k") +
+  bbc_style() +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  geom_hline(yintercept = opt$mean_acc, linetype = "dashed", color = "red") +
+  geom_vline(xintercept = opt$k, linetype = "dashed", color = "red") + 
+  geom_point(data= opt, aes(x=k, y=mean_acc),color="red", size=3)
+```
+
+Como se puede ver, la k que ha conseguido una Accuracy más elevada és:
+
+```{r, echo=FALSE}
+print(opt)
+
+k_opt <- opt$k
 ```
 
 El siguiente paso implica el entrenamiento del modelo KNN utilizando el conjunto de entrenamiento, donde el modelo almacena los datos de entrenamiento y calcula las distancias entre puntos.
 
 ```{r}
-model <- knn(train = Train[,-9], test=Test[,-9], cl=Train$y, k=k_opt)
+cl <- y
+cl[-Index] <- NA
+
+dades <- cbind(mydata, cl)
+```
+
+```{r}
+#model <- knn(train = Train[,-ncol(Train)], test=Test[,-ncol(Test)], cl=Train[,ncol(Train)], k=k_opt)
+model <- kNN(dades, variable = "cl", metric = "gower", k=k_opt)
 ```
 
 Evaluación del modelo
 
 ```{r}
-conff <- table(Real=Test$y, Predicted=model)
+(conff <- table(Real=Testcl, Predicted=model$cl[-Index]))
 (acc <- sum(diag(conff))/sum(conff))
 ```
 
 
+```{r}
+decisionplot <- function(model, x, cl = NULL, predict_type = "class",
+                         resolution = 100) {
+  
+  if(!is.null(cl)) {
+    x_data <- x %>% dplyr::select(-all_of(cl))
+    cl <- x %>% pull(cl)
+  } else cl <- 1
+  k <- length(unique(cl))
+  
+  # resubstitution accuracy
+  prediction <- predict(model, x_data, type = predict_type)
+  if(is.list(prediction)) prediction <- prediction$class
+  if(is.numeric(prediction))
+    prediction <-  factor(prediction, labels = levels(cl))
+  else
+    prediction <- factor(prediction, levels = levels(cl))
+  
+  cm <- confusionMatrix(data = prediction, reference = cl)
+  acc <- cm$overall["Accuracy"]
+  
+  # evaluate model on a grid
+  r <- sapply(x[, 1:2], range, na.rm = TRUE)
+  xs <- seq(r[1,1], r[2,1], length.out = resolution)
+  ys <- seq(r[1,2], r[2,2], length.out = resolution)
+  g <- cbind(rep(xs, each = resolution), rep(ys, time = resolution))
+  colnames(g) <- colnames(r)
+  g <- as_tibble(g)
+  
+  ### guess how to get class labels from predict
+  ### (unfortunately not very consistent between models)
+  prediction <- predict(model, g, type = predict_type)
+  if(is.list(prediction)) prediction <- prediction$class
+  if(is.numeric(prediction))
+    prediction <-  factor(prediction, labels = levels(cl))
+  else
+    prediction <- factor(prediction, levels = levels(cl))
+  
+  g <- g %>% add_column(prediction)
+  
+  ggplot(g, mapping = aes_string(
+    x = colnames(g)[1],
+    y = colnames(g)[2])) +
+    geom_tile(mapping = aes(fill = prediction)) +
+    geom_point(data = x, mapping =  aes_string(
+      x = colnames(x)[1],
+      y = colnames(x)[2],
+      shape = colnames(x)[3]), alpha = .5) +
+    labs(subtitle = paste("Training accuracy:", round(acc, 2)))
+}
+```
 
+
+
+```{r}
+Train2 <- cbind(Train,Traincl)
+
+knnfit <- train(Traincl~.,method="knn",data=Train2,tuneLength=5, tuneGrid=data.frame(k=1:15), trControl=trainControl(method="cv", indexOut = folds))
+
+knnfit$finalModel
+knnfit$bestTune
+
+```
+
+
+
+
+
+
+
+
+```{r}
+pca <- prcomp(dd, scale = TRUE)
+CP1 <- pca$x[Index,1]
+CP2 <- pca$x[Index,2]
+
+data_pca <- cbind(CP1,CP2)
+data_pca <- as.data.frame(data_pca)
+
+data_pca$cl <- Traincl
+
+
+
+set.seed(123)
+folds <- createFolds(Traincl, k=f,list=FALSE)
+knnfit <- train(Traincl~.,method="knn",data=Train2,tuneLength=5, tuneGrid=data.frame(k=1:15), trControl=trainControl(method="cv", indexOut = folds))
+
+
+decisionplot(knnfit$finalModel,Train2, cl="cl")
+knnfit$finalModel
+
+
+
+ggplot(data_pca, aes(x = CP1, y = CP2, color = cl)) + geom_point()
+```
 

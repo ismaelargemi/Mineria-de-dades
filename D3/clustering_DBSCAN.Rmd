@@ -76,16 +76,16 @@ kNNdistplot(datos, k = 2, minPts = min_pts)
 epsilon=4.5
 ```
 
-El valor de epsilon se decide a aprtir de el corte en el máximo cambio de la pendiente. En el gráfico se observa que esto se da alrededor de epsilon = 5.
+El valor de epsilon se decide a aprtir de el corte en el máximo cambio de la pendiente. En el gráfico se observa que esto se da alrededor de epsilon = 4.5.
 
 
 ## Resultado DBSCAN
-Aplicamos el método DBSCAN con los valores extraídos: epsilon=5346.005 y mínimo de puntos de 10. 
+Aplicamos el método DBSCAN con los valores extraídos: epsilon=4.5 y mínimo de puntos de 10. 
 ```{r, include=FALSE}
 res <- dbscan(datos, eps = epsilon, minPts = min_pts) 
 print (res)
 ```
-EL resultado del DBSCAN indica que agrupa los datos en 2 clústers, y devuelve 64 puntos como outliers. 
+EL resultado del DBSCAN indica que agrupa los datos en 2 clústers, y devuelve 61 puntos como outliers. 
 
 Se presenta el gráfico de los clústers obtenidos con el DBSCAN:
 ```{r, include=FALSE}
@@ -105,4 +105,4 @@ fviz_cluster(object = res, data = datos, geom = "point", ellipse = FALSE,
   theme(legend.position = "none")
 
 ```
-Con estos resultados, ya se aprecia que el DBSCAN no realiza agrupaciones del todo óptimas en estos datos, ya que la inmensa mayoría de datos se ubican en el primer clúster, y el segundo clúster contiene una proporción de datos ínfima. Esto puede ser debido a que el DBSCAN es un método que parte de las densidades, y en los datos que se agrupan con formas más simples y uniformes, como los que se tratan en este trabajo, puede no encontrar la solución ótpima, como se considera en este caso. A esta misma conclusión se llegará también con el método OPTICS, ya que también es un método de clústering basado en densidades.
+Con estos resultados, ya se aprecia que el DBSCAN no realiza agrupaciones óptimas en estos datos, ya que la inmensa mayoría de datos se ubican en el primer clúster, y el segundo clúster contiene una proporción de datos ínfima. Esto puede ser debido a que el DBSCAN es un método que parte de las densidades, y en los datos que se agrupan con formas más simples y uniformes, como los que se tratan en este trabajo, puede no encontrar la solución ótpima, como se considera en este caso. A esta misma conclusión se llegará también con el método OPTICS, ya que también es un método de clústering basado en densidades.

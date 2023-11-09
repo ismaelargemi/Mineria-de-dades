@@ -13,7 +13,7 @@ knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
 
 ```{r, warning=FALSE, echo=FALSE}
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
-data <- get (load('prepro_dades.Rdata'))
+data <- get (load('Dades preprocessades.Rdata'))
 rm(df_preprocessed)
 library("factoextra")
 library("kableExtra")
@@ -360,6 +360,3 @@ kbl(pc1$rotation[,1:4],
 - **PC3**: Para este tercer plano factorial, las variables más significativas son **CNT_FAM_MEMBERS** de forma negativa y **AGE_YEARS** de forma positiva. Así pues, aquellos individuos que cumplen estas características son clientes con familias poco numerosas y mayores (si su año de nacimiento es un valor alto, significa que son más mayores, dado a la correlación positiva con la variable de edad). Podría decirse que el tercer plano factorial (**PC3**) representa la "**Edad y grandaria familiar**".
 
 - **PC4**: Para el cuarto plano factorial, se puede ver que la variable con mayor contribución en gran diferencia a las demás es **OWN_CAR_AGE**, correlacionada de forma negativa. Es decir, los clientes con valores de proyección en PC4 más grandes seran aquellos con coches más nuevos. Por lo tanto, el cuarto plano factorial (**PC4**) podría recibir el nombre de "**Edad vehículo **".
-
-
-

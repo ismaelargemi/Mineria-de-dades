@@ -1,0 +1,73 @@
+---
+title: "K-MODE Algorithm"
+output: html_document
+date: "2023-11-01"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Instalamos los paquetes necesarios:
+
+```{r}
+install.packages("klaR") #instalamos el paquete
+library(klaR) #cargamos el paquete
+```
+
+Cargamos los datos:
+
+```{r}
+### Creamos la base de datos que vamos a utilizar para detectar los grupos
+
+#Lectura de los datos
+load("Dades preprocessades.Rdata")
+
+#mydata contiene toda la base de datos
+mydata <- df_preprocessed
+mydata[,c("AMT_INCOME_TOTAL","AMT_CREDIT","AMT_ANNUITY","AMT_GOODS_PRICE",
+          "DAYS_BIRTH","TARGET","log_AMT_GOODS_PRICE","log_AMT_ANNUITY",
+          "DIFF_CREDIT_GOODS")] <- NULL
+
+#dd solo contiene las varibales numericas
+df <- mydata
+```
+
+Ejecutamos el algoritmo de clustering K-Modes
+
+```{r}
+cldf <- klaR::kmodes(df, 5) # 5 hace referencia al número de clusters
+```
+
+Verificamos los resultados
+
+
+
+Por la tabla anterior podemos ver que las clases mayoritarias se corresponden a hombres casados de 40 años que trabajan en empresas y bancos con habilidades medias/bajas y educación secundaria i/o secundaria especial. La edad del coche del cliente es de 13 años y 3 familiares incluyendo al cliente. 
+Tardan 2 años en devolver el crédito.
+
+
+
+Ratio mide la capacidad del cliente para pagar la annuity de su préstamo en relación con sus ingresos = 0,1, es decir, cuanto dinero gana el cliente versus el dinero que se gasta. Por debajo de 35% es considerado bueno.
+Todos los pagos mensuales de su deuda divididos por su ingreso mensual bruto. Este número es una forma en que los prestamistas miden su capacidad para administrar los pagos mensuales para pagar el dinero que planea pedir prestado.
+
+```{r}
+print(cldf)
+```
+
+
+Visualizamos los clusters obtenidos:
+
+```{r}
+plot(jitter(df$DTI_RATIO, df$CNT_FAM_MEMBERS), col = cldf$cluster)
+```
+
+En este gráfico no podemos ver una separación de clusters clara, así que hablaremos de la clase mayoritaria que vemos en la tabla.
+
+La clase mayoritaria se corresponde a hombres casados de 40 años que trabajan en empresas y bancos con habilidades medias/bajas y educación secundaria i/o secundaria especial. La edad del coche del cliente es de 13 años y 3 familiares incluyendo al cliente. 
+Tardan 2 años en devolver el crédito.
+
+
+
+Ratio mide la capacidad del cliente para pagar la annuity de su préstamo en relación con sus ingresos = 0,1, es decir, cuanto dinero gana el cliente versus el dinero que se gasta. Por debajo de 35% es considerado bueno.
+Todos los pagos mensuales de su deuda divididos por su ingreso mensual bruto. Este número es una forma en que los prestamistas miden su capacidad para administrar los pagos mensuales para pagar el dinero que planea pedir prestado.

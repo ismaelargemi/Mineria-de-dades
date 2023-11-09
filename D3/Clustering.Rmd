@@ -105,7 +105,7 @@ A continuación se muestra el gráfico de los individuos pintados según su clas
 k <- 3
 resultado <- kmeans(x = dd,centers = k,iter.max = 10)
 clusters <- resultado$cluster
-
+save(clusters, file = 'clust_kmeans.Rdata')
 colors <- ifelse(clusters == 1, "blue",
                        ifelse(clusters == 2, "green",
                        ifelse(clusters == 3, "red", "Otros")))

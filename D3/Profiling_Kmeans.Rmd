@@ -10,11 +10,6 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 
-Cargamos los datos
-
-PARA LOS QUE USAIS ESTE CODIGO:
-Usad estos datos sin estandarizar, poned vuestro vector de cluster en el objeto cluster y tened en cuenta la escala del eje  Y, que esta tocada y tal vez lateneis que cambiar o quitar def por esto "coord_cartesian(ylim=c(0.1,0.25))+"
-
 ```{r}
 #Lectura de los datos
 load("Dades preprocessades.Rdata")
@@ -25,8 +20,8 @@ mydata[,c("AMT_INCOME_TOTAL","AMT_CREDIT","AMT_ANNUITY","AMT_GOODS_PRICE",
 dades <- mydata
 
 # 
-load("data_clust.Rdata")
-cluster <- mydata$cluster2
+load("todoslosdatosclustjer.Rdata")
+cluster <- resultado$cluster
 ```
 
 CATEGORICAS
@@ -95,7 +90,11 @@ names(significance_categoricas) <- p_values_categoricas[,1]
 print("Significancia de p-valores para variables categóricas:")
 print(significance_categoricas)
 ```
-Vemos como solo una 
+
+
+
+
+
 ```{r}
 # install.packages("FactoMineR")
 library(FactoMineR)
@@ -114,86 +113,89 @@ colores <- scales::brewer_pal(palette = "Set1")(length(unique(cluster)))
 ```{r}
 ggplot(data = dades, aes(x = cluster, y = dades$OWN_CAR_AGE)) + 
   geom_bar(stat = "summary", fun = "mean", fill= colores) +
-  coord_cartesian(ylim=c(8,12))+
   geom_hline(yintercept = mean(dades$OWN_CAR_AGE)) +
   labs(title = "Medias de la Edad en años del coche del cliente por clúster respecto la media global" , y = "Media", x = "Clúster") 
 ```
 
-En la edad del coche del cliente vemos como el clúster 5 se caracteriza por tener una media de edad de coche mucho menor que los otros, tiene los coches mas nuevos/con menos años.
+El clúster 2 tiene los coches mas nuevos
 
-
-```{r}
-ggplot(data = dades, aes(x = cluster, y = dades$CNT_FAM_MEMBERS)) +
-  geom_bar(stat = "summary", fun = "mean", fill= colores) +
-  geom_hline(yintercept = mean(dades$CNT_FAM_MEMBERS)) +
-  labs(title = "Medias del Número de familiares del cliente por clúster respecto la media global" , y = "Media", x = "Clúster")
-```
-
-El cluster 1 y 4 se caracterizan por tener el menor numero de familiares, y el 2 y 3 el mayor neo de familiares
-
-```{r}
-ggplot(data = dades, aes(x = cluster, y = dades$log_AMT_INCOME_TOTAL)) +
-  geom_bar(stat = "summary", fun = "mean", fill= colores) +
-  coord_cartesian(ylim=c(11,12.5))+
-  geom_hline(yintercept = mean(dades$log_AMT_INCOME_TOTAL)) +
-  labs(title = "Medias del logaritmo de los Ingresos totales del cliente por clúster respecto la media global" , y = "Media", x = "Clúster") 
-```
-
-En los ingresos totales el cluster 1 se caracteriza por tener el menor numero de ingresos  y el 3 el que mas- Aunque no hay diferencias muy grandes entre ellos debido que es el logaritmo de estos ingresos y la interpretacion esta afectada.
-
-```{r}
-ggplot(data = dades, aes(x = cluster, y = dades$log_AMT_CREDIT)) +
-  geom_bar(stat = "summary", fun = "mean", fill= colores) +
-  coord_cartesian(ylim=c(12.5,13.5))+
-  geom_hline(yintercept = mean(dades$log_AMT_CREDIT)) +
-  labs(title = "Medias del Importe de crédito del préstamo por clúster respecto la media global" , y = "Media", x = "Clúster")
-
-```
-
-En el importe de credito por prestamo vemos como el 4 y 1 son los que mas se diferencian teniendo un importe menor y el 3 y 4 mayor
-
-```{r}
-ggplot(data = dades, aes(x = cluster, y = dades$AGE_YEARS)) +
-  geom_bar(stat = "summary", fun = "mean", fill= colores) +
-  coord_cartesian(ylim=c(20,60))+
-  geom_hline(yintercept = mean(dades$AGE_YEARS)) +
-  labs(title = "Medias de la Edad por clúster respecto la media global" , y = "Media", x = "Clúster")
-
-```
-
-El cluster 1 se caraccteriza por ser el grupo mas mayor
 
 ```{r}
 ggplot(data = dades, aes(x = cluster, y = dades$RATIO_CREDIT_INCOME)) +
   geom_bar(stat = "summary", fun = "mean", fill= colores) +
-  coord_cartesian(ylim=c(2,5))+
   geom_hline(yintercept = mean(dades$RATIO_CREDIT_INCOME)) +
   labs(title = "Medias del Ratio del Importe del préstamo por clúster respecto la media global" , y = "Media", x = "Clúster")
 ```
 
-En el número de años que se tarda en devolver el crédito, vemos como los mas rapidos son los sujetos del cluster 4, el grupo 1 y 2 son los que mas tardan en retornar el credito. 
+Vemos como el cluster 1 es el que menos años tarda en devolver el prestamo, en concreto 2 años y con mas de 7 años el cluster 3 es el que mas tarda en devolverlo.
+
+
 
 ```{r}
 ggplot(data = dades, aes(x = cluster, y = dades$RATIO_ANNUITY_CREDIT)) +
   geom_bar(stat = "summary", fun = "mean", fill= colores) +
-  coord_cartesian(ylim=c(0.04,0.06))+
   geom_hline(yintercept = mean(dades$RATIO_ANNUITY_CREDIT)) +
   labs(title = "Medias del Ratio de la Anualidad del préstamo por clúster respecto la media global" , y = "Media", x = "Clúster")
 
 ```
 
-El que se diferencia es el 4 con una Ratio entre la anuidad del préstamo y el crédito total solicitado
+El cluster 1 es el que tiene una anualidad mas alta, por otro lado el 3 es el que menos. Esto puede explicar lo que tardan en devolver el prestamo cada cluster.
+
+
 
 ```{r}
 ggplot(data = dades, aes(x = cluster, y = dades$DTI_RATIO)) +
   geom_bar(stat = "summary", fun = "mean", fill= colores) +
-  coord_cartesian(ylim=c(0.1,0.25))+
   geom_hline(yintercept = mean(dades$DTI_RATIO)) +
   labs(title = "Medias de la Capacidad de cliente para pagar la annuity con sus ingresos por clúster respecto la media global" , y = "Media", x = "Clúster")
 ```
-La ratio mide la capacidad del cliente para pagar la annuity de su préstamo en relación con sus ingresos, los menos capaces son el cluster 2 
 
-CATEGORICAS
+Vemos como el cluster 3 tiene menos capacidad para pagar el prestamo.
+
+Conclusiones
+
+cluster 1: Anualidad mas alta, menos tarda en devolver el prestamo
+cluster 2: Coches nuevos
+cluster 3: Mas tarda para devolver el prestamo, Menor capacidad de devolver el credito
+
+nota: Todas los clusters segun las categoricas se comportan igual, seguramente debio porq kmean solo usa datos numericos. Los graficos usados pero sin interpretacion informativa sobre los clusters se encuentran en el anexo.
+
+
+Anexo
+
+```{r}
+ggplot(data = dades, aes(x = cluster, y = dades$CNT_FAM_MEMBERS)) +
+  geom_bar(stat = "summary", fun = "mean", fill= colores) +
+  coord_cartesian(ylim=c(2,2.5))+
+  geom_hline(yintercept = mean(dades$CNT_FAM_MEMBERS)) +
+  labs(title = "Medias del Número de familiares del cliente por clúster respecto la media global" , y = "Media", x = "Clúster")
+```
+
+```{r}
+ggplot(data = dades, aes(x = cluster, y = dades$log_AMT_INCOME_TOTAL)) +
+  geom_bar(stat = "summary", fun = "mean", fill= colores) +
+  geom_hline(yintercept = mean(dades$log_AMT_INCOME_TOTAL)) +
+  labs(title = "Medias del logaritmo de los Ingresos totales del cliente por clúster respecto la media global" , y = "Media", x = "Clúster") 
+```
+
+```{r}
+ggplot(data = dades, aes(x = cluster, y = dades$log_AMT_CREDIT)) +
+  geom_bar(stat = "summary", fun = "mean", fill= colores) +
+  geom_hline(yintercept = mean(dades$log_AMT_CREDIT)) +
+  labs(title = "Medias del Importe de crédito del préstamo por clúster respecto la media global" , y = "Media", x = "Clúster")
+```
+
+```{r}
+ggplot(data = dades, aes(x = cluster, y = dades$AGE_YEARS)) +
+  geom_bar(stat = "summary", fun = "mean", fill= colores) +
+  geom_hline(yintercept = mean(dades$AGE_YEARS)) +
+  labs(title = "Medias de la Edad por clúster respecto la media global" , y = "Media", x = "Clúster")
+
+```
+
+
+
+
 ```{r}
 ggplot(data = dades, aes(x = cluster, fill = dades$CODE_GENDER)) +
   geom_bar(position = "dodge") +
@@ -201,7 +203,10 @@ ggplot(data = dades, aes(x = cluster, fill = dades$CODE_GENDER)) +
   theme(legend.position = "top") + guides(fill = guide_legend(title = NULL))
 ```
 
-El grupo 1, 2 y 5 esta formado por mujeres, el 3 por hombres y el 4 por hombres y mujeres a partes iguales.
+
+
+
+
 
 ```{r}
 ggplot(data = dades, aes(x = cluster, fill = dades$NAME_INCOME_TYPE)) +
@@ -210,7 +215,10 @@ ggplot(data = dades, aes(x = cluster, fill = dades$NAME_INCOME_TYPE)) +
   theme(legend.position = "top") + guides(fill = guide_legend(title = NULL))
 ```
 
-El primer grupo es el de los pensionistas y el 5 el de los commerciantes asociantes(?)
+
+
+
+
 
 ```{r}
 ggplot(data = dades, aes(x = cluster, fill = dades$NAME_EDUCATION_TYPE)) +
@@ -219,7 +227,10 @@ ggplot(data = dades, aes(x = cluster, fill = dades$NAME_EDUCATION_TYPE)) +
   theme(legend.position = "top") + guides(fill = guide_legend(title = NULL))
 ```
 
-No hay diferencias con la distrib
+
+
+
+
 
 ```{r}
 ggplot(data = dades, aes(x = cluster, fill = dades$NAME_FAMILY_STATUS)) +
@@ -228,7 +239,10 @@ ggplot(data = dades, aes(x = cluster, fill = dades$NAME_FAMILY_STATUS)) +
   theme(legend.position = "top") + guides(fill = guide_legend(title = NULL))
 ```
 
-Gente no casada o casada civilmente en el cluster 4
+
+
+
+
 
 ```{r}
 ggplot(data = dades, aes(x = cluster, fill = dades$OCCUPATION_TYPE)) +
@@ -237,7 +251,11 @@ ggplot(data = dades, aes(x = cluster, fill = dades$OCCUPATION_TYPE)) +
   theme(legend.position = "top") + guides(fill = guide_legend(title = NULL))
 ```
 
-El grupo uno es el que no trabaja, tmb es porque es el grupo de los pensionistas. El grupo dos tiene mas proporcion de mid skill workers
+
+
+
+
+
 
 ```{r}
 ggplot(data = dades, aes(x = cluster, fill = dades$ORGANIZATION_TYPE)) +
@@ -245,34 +263,23 @@ ggplot(data = dades, aes(x = cluster, fill = dades$ORGANIZATION_TYPE)) +
   labs(title = "Gráfico de la distribución del Tipo de organización donde trabaja el cliente respecto el Clúster", y = "Freq", x = "Clúster") +
   theme(legend.position = "top") + guides(fill = guide_legend(title = NULL))
 ```
-El grupo uno no se sabe le tipo de organiZacion porque no trabaja, son los pensionistas, el resto sigue las distribucuin muy parecida aunqu el grupo uno parece estear mas dediacdo a la educiacion que los otros. (cocnlusuon dudosa)
+
+
+
+
+
+
 ```{r}
 ggplot(data = dades, aes(x = cluster, fill = dades$REGION_RATING_CLIENT)) +
   geom_bar(position = "dodge") +
   labs(title = "Gráfico de la distribución de la Calificación de la región donde vive el cliente respecto el Clúster", y = "Freq", x = "Clúster") +
   theme(legend.position = "top") + guides(fill = guide_legend(title = NULL))
 ```
-No hay grandes diferencias ane la distribucion de  la clasificacion por region.
 
-Conclusiones:
 
-Cluster 1: Pocos familiares, menor numero de ingresos, los mas viejos, mujeres, pensionistas, de los que mas tardan de devolver el prestamo
 
-Cluster 2: Mujeres,  proporcionalmente con mas mid skill workers, alta cantidad de familiares, mayor cantidad de importe del prestamo, peor capacidad de devolver el prestamo, los que mas tardan en devolver el prestamo.
 
-Cluster 3: Mayor numero de ingresos, Hombres, mas cantidad de familiares
 
-Cluster 4: Pocos familiares, menor importe de credicto por prestamo, ratio de anualidad mas grande, tanto hombres como mujeres, gente soltera o casada civilmente, menor cantidad de importe en el prestamo. Los mas rapidos en devolver el credito
-
-Cluster 5: Coches mas nuevos, mayor numero de credito por prestamo, Mujeres, commercial associate
-
-Comparación Profiling K means y Jerarquico
-
-El número de clústers se diferencia en los dos métodos. 
-
-Vemos como en el clústering jerarquico se obtienen perfiles de cada grupo muy especificos y caracterizables, a diferencia de los perfiles obtenidos en la metodologia kmeans. 
-
-En la metodologia kmeans vemos como solo se ven explicados los grupos por algunas variables numericas y ninguna categorica, debido que kmeans es un metodo que  solo permite variables numericas, por eso la variabilidad explicada por las variables categoricas no se ve reflejada eb el profiling de kmeans y obtenemos unos perfiles muy poco caracterizados.
 
 
 
