@@ -1,10 +1,11 @@
 ---
 title: "BMA"
-output: html_document
-date: "`r Sys.Date()`"
+output:
+  pdf_document:
+    df_print: paged
 ---
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
 ```
 
 
@@ -111,34 +112,33 @@ summary(testFisher)
 # quality(subconjunto.target1) <- cbind(quality(subconjunto.target1), testFisher)
 ```
 
-```{r, include=FALSE, echo=FALSE}
+```{r, include=TRUE, echo=FALSE}
 # Visualización per a target = 0 
 plot(subconjunto.target0, measure = c("support", "lift"), shading = "confidence")
-plot(subconjunto.target0, method = "two-key plot", main= "Two-key plot")
+# plot(subconjunto.target0, method = "two-key plot", main= "Two-key plot")
 #plot(subconjunto.target0, method = "grouped") 
 #plot(subconjunto.target0, method = "paracoord") # no ejecutable
-plot(subconjunto.target0, method = "graph") 
+# plot(subconjunto.target0, method = "graph") 
 ``` 
 
 Como podemos ver, el primer gráfico muestra la matriz de puntos de las reglas de asociación filtrada respecto la métrica lift. La reglas de asociación de interés corresponden a los puntos con un color rojo de mayor intensidad (confianza que supere la mínima, 0.8) y como vemos, estas reglas se situan en el gráfico con un soporte mayor al mínimo (0.002)
 
 En el último gráfico se ve algo parecido, aquí las reglas de asociación que interesan corresponden a los puntos con una intensidad roja mayor y los puntos más grandes, que corresponderan a las reglas que tienen un suporte superior al mínimo (0.002).
 
-```{r, include=FALSE, echo=FALSE}
+```{r, include=TRUE, echo=FALSE}
 # Visualización per a target = 1 
 plot(subconjunto.target1, measure = c("support", "lift"), shading = "confidence")
-plot(subconjunto.target1, method = "two-key plot", main= "Two-key plot")
-plot(subconjunto.target1, method = "grouped") 
-# plot(subconjunto.target0, method = "paracoord") # no ejecutable
-plot(subconjunto.target0, method = "graph") 
+# plot(subconjunto.target1, method = "two-key plot", main= "Two-key plot")
+# plot(subconjunto.target1, method = "grouped") 
+# # plot(subconjunto.target0, method = "paracoord") # no ejecutable
+# plot(subconjunto.target0, method = "graph") 
 ``` 
 
 Estos gráficos se interpretan de manera igual a los anteriores vistos. 
 
+Con target = 0 obtenemos 6313 reglas y con tagret = 1 2858 reglas. Vemos las 10 primeras reglas en cada caso con mayor lift.  
 
-Con target = 0 obtenemos `r subconjunto.target0` y con tagret = 1 `r subconjunto.target1`. 
-
-Vemos las 10 primeras reglas en cada caso con mayor lift, es decir, van ordenadas de forma decreciente siendo la primera la que tiene una mayor asociación encontrada con la variable respuesta. 
+Vemos las 10 primeras reglas en cada caso con mayor lift, es decir, van ordenadas de forma decreciente siendo la primera la que tiene una mayor asociación encontrada con la variable respuesta, y se grafican en cada caso. 
 
 ```{r}
 subconjunto.target0<-subconjunto.target0[order(quality(subconjunto.target0)[,"lift"], decreasing = TRUE)]
@@ -146,10 +146,20 @@ top <- subconjunto.target0[1:10]
 inspect(top)
 ```
 
+```{r include=TRUE, echo=FALSE}
+plot(top, measure = c("support", "lift"), shading = "confidence")
+plot(top, method = "paracoord")
+```
+
 ```{r}
 subconjunto.target1<-subconjunto.target1[order(quality(subconjunto.target1)[,"lift"], decreasing = TRUE)]
-top <- subconjunto.target1[1:10]
-inspect(top)
+top2 <- subconjunto.target1[1:10]
+inspect(top2)
+```
+
+```{r, include=TRUE, echo=TRUE}
+plot(top2, measure = c("support", "lift"), shading = "confidence")
+plot(top2, method = "paracoord")
 ```
 
 ## ECLAT
