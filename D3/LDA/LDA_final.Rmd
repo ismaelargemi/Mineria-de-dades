@@ -55,17 +55,31 @@ train = df_prep_num[ind,]
 validation = df_prep_num[-ind,]
 
 lda_cv = function(df_train, k){
-
+  set.seed(345)
+  folds = createFolds(1:nrow(df_train), k)
+  
+  accuracy_acumulada = NULL
+  
   s = matrix(nrow = k, ncol = 7)
 
   for(i in 1:k){
     
-    ind = c(1+((i-1)*(nrow(df_train)/k)),(nrow(df_train)/k)*i)
-    test = df_train[c(ind[1]:ind[2]),]
-    train_cv = df_train[-c(ind[1]:ind[2]),]
+    individuos_test = folds[[i]]
+    
+    test = df_train[individuos_test, ]
+    train_cv = df_train[-individuos_test, ]
     lda_cv = lda(reformulate(x,y), data = train_cv)
 
+    valores = predict(lda_cv, test)
+
+    predicciones = valores$class
+
+    MC = confusionMatrix(predicciones, test$TARGET) 
+    
+    accuracy_acumulada[i] = MC$overall["Accuracy"]
+
     s[i,] = lda_cv$scaling
+    
   }
 
   discriminante_res = colMeans(s)
@@ -76,20 +90,25 @@ lda_cv = function(df_train, k){
   rownames(resultado) = colnames(df_train)[1:(ncol(df_train)-1)]
   colnames(resultado) = "LDA"
   
-  return(resultado)
+  objeto_return = list(resultado, accuracy_acumulada)
+  
+  return(objeto_return)
 }
+
+results_function = lda_cv(train, 5)
+
+av_accuracy = mean(results_function[[2]])
 
 a = lda(reformulate(x,y), data = train)
 
+a$scaling = results_function[[1]]
 
-a$scaling = lda_cv(train, 5)
+plot(a)
 
 valores = predict(a, validation)
 
 
-prob = valores$posterior[,2]
-
-predicciones = factor(ifelse(prob>0.5, 1,0))
+predicciones = valores$class
 
 MC = confusionMatrix(predicciones, validation$TARGET) 
 
@@ -98,6 +117,11 @@ tabla_lda = MC$table
 rownames(tabla_lda) = c("No moroso","Potencial moroso")
 colnames(tabla_lda) = c("No moroso","Potencial moroso")
 
+```
+
+Antes de analizar los resultados obtenidos por el LDA, cabe destacar que, durante el proceso de entrenamiento del modelo, el accuracy medio obtenido tras un proceso de 5-fold cross validation ha sido del `r av_accuracy`, lo cual muestra unos resultados ciertamente pobres. Seguidamente, se ha validado el modelo contra el conjunto validación, con el cual se ha obtenido los siguientes resultados:
+
+```{r, echo = F, message = F, warning = F}
 kbl(tabla_lda,
     caption = "Matriz de confusión del conjunto de validación",
     booktabs=T)%>% 
@@ -107,7 +131,9 @@ kbl(tabla_lda,
    pack_rows(index=c("Predicción"=2))
 ```
 
+
 Apreciando los resultados obtenidos, se puede ver que la precisión obtenida por el modelo ha sido del `r round(MC$overall["Accuracy"]*100,2)`%, algo baja en comparación con ejemplos en otras áreas. Si desglosamos por sensibilidad y especificidad, vemos que los resultados en estos dos indicadores han sido de `r round(MC$byClass["Sensitivity"]*100,2)`% , pero una especificidad del `r round(MC$byClass["Specificity"]*100,2)`%. Esta gran diferencia entre las dos métricas indica que el algoritmo tiene problemas para detectar la clase minoritaria, en este caso, los clientes morosos. Así pues, será necesario balancear nuestros datos para así conseguir resultados aceptables. Será necesario mejorar el dato de especificidad para así poder aceptar este algoritmo como válido. Adicionalmente, el valor del F-score es de `r round(2/((1/MC$overall["Accuracy"]) + (1/MC$byClass["Sensitivity"])), 4)`. Como otras métricas interesantes, se puede apreciar que el valor predictivo positivo es de `r round(MC$byClass["Pos Pred Value"]*100,2)`% y el valor predictivo negativo es de `r round(MC$byClass["Neg Pred Value"]*100,2)`%.
+
 
 Sin embargo, se sabe que el LDA puede presentar problemas en el momento en el que las variables no presentan normalidad o cuando las matrices de covarianzas son diferentes para cada grupo. Como ya se apreció en la descriptiva post-preprocessing, muchas de nuestras variables no presentaban normalidad, de forma que esto podría ser un problema de cara al uso del LDA. Es por eso por lo que se ha decidido realizar un QDA (Quadratic Discriminant Analysis) con el objetivo de corregir dichos problemas y mejorar la performance del LDA.
 
@@ -135,26 +161,49 @@ train = df_prep_num[ind,]
 validation = df_prep_num[-ind,]
 
 qda_cv = function(df_train, k){
+  set.seed(345)
+  folds = createFolds(1:nrow(df_train), k)
   
   resultado = array(dim = c((ncol(df_train)-1), (ncol(df_train)-1), 2))
   
+  accuracy_acumulada = NULL
   
-  ind = c(1,nrow(df_train)/k)
-  test = df_train[c(ind[1]:ind[2]),]
-  train_cv = df_train[-c(ind[1]:ind[2]),]
+  individuos_test = folds[[1]]
+    
+  test = df_train[individuos_test, ]
+  train_cv = df_train[-individuos_test, ]
+  
   qda_inicial = qda(reformulate(x,y), data = train_cv)
+  
+  valores = predict(qda_inicial, test)
+
+  predicciones = valores$class
+
+  MC = confusionMatrix(predicciones, test$TARGET) 
+    
+  accuracy_acumulada[1] = MC$overall["Accuracy"]
 
   resultado_final = qda_inicial$scaling
   
   for(i in 2:k){
     
-    ind = c(1+((i-1)*(nrow(df_train)/k)),(nrow(df_train)/k)*i)
-    test = df_train[c(ind[1]:ind[2]),]
-    train_cv = df_train[-c(ind[1]:ind[2]),]
+    individuos_test = folds[[i]]
+    
+    test = df_train[individuos_test, ]
+    train_cv = df_train[-individuos_test, ]
+    
     qda_cv = qda(reformulate(x,y), data = train_cv)
+    
+    valores = predict(qda_cv, test)
+
+    predicciones = valores$class
+
+    MC = confusionMatrix(predicciones, test$TARGET) 
+    
+    accuracy_acumulada[i] = MC$overall["Accuracy"]
 
     resultado_loop = qda_cv$scaling
-    
+
     for(j in 1:(ncol(df_train)-1)){
       for(k in 1:(ncol(df_train)-1)){
         resultado_final[j,k,1] = resultado_final[j,k,1]*((i-1)/i) + resultado_loop[j,k,1]*(1/i)
@@ -167,17 +216,22 @@ qda_cv = function(df_train, k){
   rownames(resultado_final[,,1]) = colnames(df_train)[1:(ncol(df_train)-1)]
   rownames(resultado_final[,,2]) = colnames(df_train)[1:(ncol(df_train)-1)]
   
-  return(resultado_final)
+  objeto_return = list(resultado_final, accuracy_acumulada)
+  
+  return(objeto_return)
 }
 
+results_function = qda_cv(train, 5)
+
+av_accuracy = mean(results_function[[2]])
+
 qda = qda(reformulate(x,y), data = train)
-qda$scaling = qda_cv(train, 5)
+
+qda$scaling = results_function[[1]]
 
 valores = predict(qda, validation)
 
-prob = valores$posterior[,2]
-
-predicciones = factor(ifelse(prob>0.5, 1, 0))
+predicciones = valores$class
 
 MC = confusionMatrix(predicciones, validation$TARGET) 
 
@@ -185,7 +239,11 @@ tabla_qda = MC$table
 
 rownames(tabla_qda) = c("No moroso","Potencial moroso")
 colnames(tabla_qda) = c("No moroso","Potencial moroso")
+```
 
+Antes de analizar los resultados obtenidos por el QDA, cabe destacar que, durante el proceso de entrenamiento del modelo, el accuracy medio obtenido tras un proceso de 5-fold cross validation ha sido del `r av_accuracy`, lo cual muestra unos resultados ciertamente pobres, pero mejores que LDA. Seguidamente, se ha validado el modelo contra el conjunto validación, con el cual se ha obtenido los siguientes resultados:
+
+```{r}
 kbl(tabla_qda,
     caption = "Matriz de confusión del conjunto de validación",
     booktabs=T)%>% 
@@ -205,7 +263,7 @@ Tras haber estudiado los resultados, se ha concluido que, si bien es cierto que 
 
 ## LDA (usando datos balanceados con undersampling)
 
-En primer lugar, estandarizamos los datos usando la función de R `scale()` para así hacer que todos las variables tengan el mismo peso. Una vez los datos han sido normalizados y tienen todas las variables el mismo peso en el modelo, aplicamos ROSE:
+En primer lugar, estandarizamos los datos usando la función de R `scale()` para así hacer que todos las variables tengan el mismo peso. Una vez los datos han sido normalizados y tienen todas las variables el mismo peso en el modelo, aplicamos undersampling:
 
 ```{r, warning = F, echo = F}
 x = c("CNT_FAM_MEMBERS", "log_AMT_INCOME_TOTAL", "log_AMT_CREDIT", "AGE_YEARS", "RATIO_CREDIT_INCOME", "RATIO_ANNUITY_CREDIT", "DTI_RATIO")
@@ -222,7 +280,7 @@ pred_vars = df_prep_num[,x]
 response_vars = df_preprocessed[,y]
 undersampled_data <- ubBalance(pred_vars, 
                                response_vars, 
-                               type='ubUnder',         # Option for undersampling
+                               type='ubUnder',        
                                verbose = F)
 data_x = undersampled_data$X
 data_balanced = cbind(data_x, factor(undersampled_data$Y))
@@ -242,10 +300,14 @@ train = data_balanced[ind,]
 validation = data_balanced[-ind,]
 
 
+
+results_function = lda_cv(train, 5)
+
+av_accuracy = mean(results_function[[2]])
+
 a = lda(reformulate(x,y), data = train)
 
-
-a$scaling = lda_cv(train, 5)
+a$scaling = results_function[[1]]
 
 valores = predict(a, validation)
 
@@ -270,6 +332,17 @@ kbl(tabla_lda,
    pack_rows(index=c("Predicción"=2))
 ```
 
+Antes de analizar los resultados obtenidos por el QDA, cabe destacar que, durante el proceso de entrenamiento del modelo, el accuracy medio obtenido tras un proceso de 5-fold cross validation ha sido del `r av_accuracy`, lo cual muestra unos resultados ciertamente pobres, pero mejores que LDA. Seguidamente, se ha validado el modelo contra el conjunto validación, con el cual se ha obtenido los siguientes resultados:
+
+```{r, echo = F}
+kbl(tabla_lda,
+    caption = "Matriz de confusión del conjunto de validación",
+    booktabs=T)%>% 
+  kable_styling(position = "center", 
+                latex_options = c("HOLD_position")) %>%
+    add_header_above(c("","Realidad" = 2)) %>%
+   pack_rows(index=c("Predicción"=2))
+```
 
 Esta vez, los resultados son más consistentes: los resultados obtenidos son muy diferentes a cuando los datos estaban desbalanceados. En este caso, la precisión obtenida ha sido del `r round(MC$overall["Accuracy"]*100,2)`%, dividido en una sensibilidad del `r round(MC$byClass["Sensitivity"]*100,2)`% y una especificidad del `r round(MC$byClass["Specificity"]*100,2)`%. Esta vez, se puede comprobar que los valores proporcionados por los datos de sensibilidad y especificidad están más balanceados, de forma que estos resultados parecen mucho más fiables.
 
@@ -282,22 +355,39 @@ Así pues, repitiendo el procedimiento seguido anteriormente en el LDA, toca rep
 
 
 ```{r, echo = F}
+library(unbalanced)
+
+pred_vars = df_prep_num[,x]
+response_vars = df_preprocessed[,y]
+undersampled_data <- ubBalance(pred_vars, 
+                               response_vars, 
+                               type='ubUnder',        
+                               verbose = F)
+data_x = undersampled_data$X
+data_balanced = cbind(data_x, factor(undersampled_data$Y))
+data_balanced = data.frame(data_balanced)
+
+names(data_balanced) = c(x, "TARGET")
+data_balanced$TARGET = factor(data_balanced$TARGET)
+
+
 set.seed(123)
 ind = createDataPartition(data_balanced$TARGET, times=1, p=.8, list=FALSE)
 
 train = data_balanced[ind,]
 validation = data_balanced[-ind,]
 
+results_function = qda_cv(train, 5)
 
+av_accuracy = mean(results_function[[2]])
 
-def = qda(reformulate(x,y), data = train)
-def$scaling = qda_cv(train, 4)
+a = qda(reformulate(x,y), data = train)
 
-valores = predict(def, validation)
+a$scaling = results_function[[1]]
 
-prob = valores$posterior[,2]
+valores = predict(a, validation)
 
-predicciones = factor(ifelse(prob>0.5, 2, 1))
+predicciones = valores$class
 
 MC = confusionMatrix(predicciones, validation$TARGET) 
 
@@ -305,7 +395,11 @@ tabla_qda = MC$table
 
 rownames(tabla_qda) = c("No moroso","Potencial moroso")
 colnames(tabla_qda) = c("No moroso","Potencial moroso")
+```
 
+Antes de analizar los resultados obtenidos por el QDA, cabe destacar que, durante el proceso de entrenamiento del modelo, el accuracy medio obtenido tras un proceso de 5-fold cross validation ha sido del `r av_accuracy`, lo cual muestra unos resultados ciertamente pobres, pero mejores que LDA. Seguidamente, se ha validado el modelo contra el conjunto validación, con el cual se ha obtenido los siguientes resultados:
+
+```{r}
 kbl(tabla_qda,
     caption = "Matriz de confusión del conjunto de validación",
     booktabs=T)%>% 
