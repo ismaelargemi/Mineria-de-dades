@@ -1,0 +1,180 @@
+---
+title: "Anexo"
+author: "Mireia Bohils Tenas"
+date: "2023-11-09"
+output: html_document
+---
+
+ANEXO DE GRAFICOS DEL PROFILING FUZZY
+
+```{r}
+ggplot(data = dades, aes(x = cluster, y = dades$OWN_CAR_AGE)) + 
+  geom_bar(stat = "summary", fun = "mean", fill= colores) +
+  geom_hline(yintercept = mean(dades$OWN_CAR_AGE)) +
+  labs(title = "Medias de la Edad en años del coche del cliente por clúster respecto la media global" , y = "Media", x = "Clúster") 
+```
+
+```{r}
+ggplot(data = dades, aes(x = cluster, y = dades$CNT_FAM_MEMBERS)) +
+  geom_bar(stat = "summary", fun = "mean", fill= colores) +
+  geom_hline(yintercept = mean(dades$CNT_FAM_MEMBERS)) +
+  labs(title = "Medias del Número de familiares del cliente por clúster respecto la media global" , y = "Media", x = "Clúster")
+```
+
+```{r}
+ggplot(data = dades, aes(x = cluster, y = dades$log_AMT_INCOME_TOTAL)) +
+  geom_bar(stat = "summary", fun = "mean", fill= colores) +
+  geom_hline(yintercept = mean(dades$log_AMT_INCOME_TOTAL)) +
+  labs(title = "Medias del logaritmo de los Ingresos totales del cliente por clúster respecto la media global" , y = "Media", x = "Clúster") 
+```
+
+```{r}
+ggplot(data = dades, aes(x = cluster, y = dades$log_AMT_CREDIT)) +
+  geom_bar(stat = "summary", fun = "mean", fill= colores) +
+  geom_hline(yintercept = mean(dades$log_AMT_CREDIT)) +
+  labs(title = "Medias del Importe de crédito del préstamo por clúster respecto la media global" , y = "Media", x = "Clúster")
+
+```
+
+```{r}
+ggplot(data = dades, aes(x = cluster, y = dades$AGE_YEARS)) +
+  geom_bar(stat = "summary", fun = "mean", fill= colores) +
+  coord_cartesian(ylim=c(35,50)) +
+  geom_hline(yintercept = mean(dades$AGE_YEARS)) +
+  labs(title = "Medias de la Edad por clúster respecto la media global" , y = "Media", x = "Clúster")
+
+```
+
+```{r}
+ggplot(data = dades, aes(x = cluster, fill = dades$CODE_GENDER)) +
+  geom_bar(position = "dodge") +
+  labs(title = "Gráfico de la distribución del Género respecto el Clúster", y = "Freq", x = "Clúster") +
+  theme(legend.position = "top") + guides(fill = guide_legend(title = NULL))
+```
+
+```{r}
+ggplot(data = dades, aes(x = cluster, fill = dades$NAME_INCOME_TYPE)) +
+  geom_bar(position = "dodge") +
+  labs(title = "Gráfico de la distribución del Tipo de ingresos respecto el Clúster", y = "Freq", x = "Clúster") +
+  theme(legend.position = "top") + guides(fill = guide_legend(title = NULL))
+```
+
+```{r}
+ggplot(data = dades, aes(x = cluster, fill = dades$NAME_EDUCATION_TYPE)) +
+  geom_bar(position = "dodge") +
+  labs(title = "Gráfico de la distribución del Nivel de estudios del cliente respecto el Clúster", y = "Freq", x = "Clúster") +
+  theme(legend.position = "top") + guides(fill = guide_legend(title = NULL))
+```
+
+```{r}
+ggplot(data = dades, aes(x = cluster, fill = dades$NAME_FAMILY_STATUS)) +
+  geom_bar(position = "dodge") +
+  labs(title = "Gráfico de la distribución del Estado civil respecto el Clúster", y = "Freq", x = "Clúster") +
+  theme(legend.position = "top") + guides(fill = guide_legend(title = NULL))
+```
+
+```{r}
+ggplot(data = dades, aes(x = cluster, fill = dades$OCCUPATION_TYPE)) +
+  geom_bar(position = "dodge") +
+  labs(title = "Gráfico de la distribución de la Actividad laboral respecto el Clúster", y = "Freq", x = "Clúster") +
+  theme(legend.position = "top") + guides(fill = guide_legend(title = NULL))
+```
+
+```{r}
+ggplot(data = dades, aes(x = cluster, fill = dades$ORGANIZATION_TYPE)) +
+  geom_bar(position = "dodge") +
+  labs(title = "Gráfico de la distribución del Tipo de organización donde trabaja el cliente respecto el Clúster", y = "Freq", x = "Clúster") +
+  theme(legend.position = "top") + guides(fill = guide_legend(title = NULL))
+```
+
+```{r}
+ggplot(data = dades, aes(x = cluster, fill = dades$REGION_RATING_CLIENT)) +
+  geom_bar(position = "dodge") +
+  labs(title = "Gráfico de la distribución de la Calificación de la región donde vive el cliente respecto el Clúster", y = "Freq", x = "Clúster") +
+  theme(legend.position = "top") + guides(fill = guide_legend(title = NULL))
+```
+
+
+ANEXO PROFILING K-MEANS
+
+```{r}
+ggplot(data = dades, aes(x = cluster, y = dades$CNT_FAM_MEMBERS)) +
+  geom_bar(stat = "summary", fun = "mean", fill= colores) +
+  coord_cartesian(ylim=c(2,2.5))+
+  geom_hline(yintercept = mean(dades$CNT_FAM_MEMBERS)) +
+  labs(title = "Medias del Número de familiares del cliente por clúster respecto la media global" , y = "Media", x = "Clúster")
+```
+
+```{r}
+ggplot(data = dades, aes(x = cluster, y = dades$log_AMT_INCOME_TOTAL)) +
+  geom_bar(stat = "summary", fun = "mean", fill= colores) +
+  geom_hline(yintercept = mean(dades$log_AMT_INCOME_TOTAL)) +
+  labs(title = "Medias del logaritmo de los Ingresos totales del cliente por clúster respecto la media global" , y = "Media", x = "Clúster") 
+```
+
+```{r}
+ggplot(data = dades, aes(x = cluster, y = dades$log_AMT_CREDIT)) +
+  geom_bar(stat = "summary", fun = "mean", fill= colores) +
+  geom_hline(yintercept = mean(dades$log_AMT_CREDIT)) +
+  labs(title = "Medias del Importe de crédito del préstamo por clúster respecto la media global" , y = "Media", x = "Clúster")
+```
+
+```{r}
+ggplot(data = dades, aes(x = cluster, y = dades$AGE_YEARS)) +
+  geom_bar(stat = "summary", fun = "mean", fill= colores) +
+  geom_hline(yintercept = mean(dades$AGE_YEARS)) +
+  labs(title = "Medias de la Edad por clúster respecto la media global" , y = "Media", x = "Clúster")
+
+```
+
+```{r}
+ggplot(data = dades, aes(x = cluster, fill = dades$CODE_GENDER)) +
+  geom_bar(position = "dodge") +
+  labs(title = "Gráfico de la distribución del Género respecto el Clúster", y = "Freq", x = "Clúster") +
+  theme(legend.position = "top") + guides(fill = guide_legend(title = NULL))
+```
+
+```{r}
+ggplot(data = dades, aes(x = cluster, fill = dades$NAME_INCOME_TYPE)) +
+  geom_bar(position = "dodge") +
+  labs(title = "Gráfico de la distribución del Tipo de ingresos respecto el Clúster", y = "Freq", x = "Clúster") +
+  theme(legend.position = "top") + guides(fill = guide_legend(title = NULL))
+```
+
+```{r}
+ggplot(data = dades, aes(x = cluster, fill = dades$NAME_EDUCATION_TYPE)) +
+  geom_bar(position = "dodge") +
+  labs(title = "Gráfico de la distribución del Nivel de estudios del cliente respecto el Clúster", y = "Freq", x = "Clúster") +
+  theme(legend.position = "top") + guides(fill = guide_legend(title = NULL))
+```
+
+```{r}
+ggplot(data = dades, aes(x = cluster, fill = dades$NAME_FAMILY_STATUS)) +
+  geom_bar(position = "dodge") +
+  labs(title = "Gráfico de la distribución del Estado civil respecto el Clúster", y = "Freq", x = "Clúster") +
+  theme(legend.position = "top") + guides(fill = guide_legend(title = NULL))
+```
+
+```{r}
+ggplot(data = dades, aes(x = cluster, fill = dades$OCCUPATION_TYPE)) +
+  geom_bar(position = "dodge") +
+  labs(title = "Gráfico de la distribución de la Actividad laboral respecto el Clúster", y = "Freq", x = "Clúster") +
+  theme(legend.position = "top") + guides(fill = guide_legend(title = NULL))
+```
+
+```{r}
+ggplot(data = dades, aes(x = cluster, fill = dades$ORGANIZATION_TYPE)) +
+  geom_bar(position = "dodge") +
+  labs(title = "Gráfico de la distribución del Tipo de organización donde trabaja el cliente respecto el Clúster", y = "Freq", x = "Clúster") +
+  theme(legend.position = "top") + guides(fill = guide_legend(title = NULL))
+```
+
+```{r}
+ggplot(data = dades, aes(x = cluster, fill = dades$REGION_RATING_CLIENT)) +
+  geom_bar(position = "dodge") +
+  labs(title = "Gráfico de la distribución de la Calificación de la región donde vive el cliente respecto el Clúster", y = "Freq", x = "Clúster") +
+  theme(legend.position = "top") + guides(fill = guide_legend(title = NULL))
+```
+
+
+

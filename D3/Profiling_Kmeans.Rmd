@@ -9,7 +9,7 @@ output: pdf_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-
+Cargamos los datos:
 ```{r}
 #Lectura de los datos
 load("Dades preprocessades.Rdata")
@@ -24,7 +24,7 @@ load("todoslosdatosclustjer.Rdata")
 cluster <- resultado$cluster
 ```
 
-CATEGORICAS
+Variables categóricas:
 ```{r}
 indices_categoricas <- sapply(dades, is.factor)
 p_values <- numeric(length(dades))
@@ -46,7 +46,8 @@ p_values_categoricas <- data.frame(
 print(p_values_categoricas)
 
 ```
-NUMERICAS
+
+Variables numéricas:
 ```{r}
 library(car)
 # Identifica las variables categóricas (factores)
@@ -71,7 +72,8 @@ for (i in 1:ncol(variables_numericas)) {
 # Muestra el objeto con los p-valores de la ANOVA
 print(p_values_numericas)
 ```
-SIGNIFICATIVAS
+
+Variables significativas:
 ```{r}
 # Función para evaluar significancia de p-valores
 evaluate_p_values <- function(p_values, alpha = 0.05) {
@@ -83,6 +85,7 @@ evaluate_p_values <- function(p_values, alpha = 0.05) {
 significance_numericas <- evaluate_p_values(p_values_numericas)
 significance_categoricas <- evaluate_p_values(p_values_categoricas[,2])
 
+# Resultados:
 print("Significancia de p-valores para variables numéricas:")
 print(significance_numericas)
 
@@ -117,7 +120,7 @@ ggplot(data = dades, aes(x = cluster, y = dades$OWN_CAR_AGE)) +
   labs(title = "Medias de la Edad en años del coche del cliente por clúster respecto la media global" , y = "Media", x = "Clúster") 
 ```
 
-El clúster 2 tiene los coches mas nuevos
+A partir del gráfico se puede observar como el clúster 2 es el que tiene los coches más nuevos.
 
 
 ```{r}
@@ -127,7 +130,7 @@ ggplot(data = dades, aes(x = cluster, y = dades$RATIO_CREDIT_INCOME)) +
   labs(title = "Medias del Ratio del Importe del préstamo por clúster respecto la media global" , y = "Media", x = "Clúster")
 ```
 
-Vemos como el cluster 1 es el que menos años tarda en devolver el prestamo, en concreto 2 años y con mas de 7 años el cluster 3 es el que mas tarda en devolverlo.
+Se ve como el clúster 1 es el que menos años tarda en devolver el préstamo, en concreto dos años. Por el contrario, el clúster 3 es el que más tarda en devolverlo, alrededor de 7 años.
 
 
 
@@ -139,7 +142,7 @@ ggplot(data = dades, aes(x = cluster, y = dades$RATIO_ANNUITY_CREDIT)) +
 
 ```
 
-El cluster 1 es el que tiene una anualidad mas alta, por otro lado el 3 es el que menos. Esto puede explicar lo que tardan en devolver el prestamo cada cluster.
+Como se ha visto anteriormente, el clúster 1 es el que tiene una anualidad más alta, por otro lado el 3 es el que menos. Esto puede explicar el tiempo que se demoran en devolver el préstamo los individuos de cada clúster.
 
 
 
@@ -150,15 +153,15 @@ ggplot(data = dades, aes(x = cluster, y = dades$DTI_RATIO)) +
   labs(title = "Medias de la Capacidad de cliente para pagar la annuity con sus ingresos por clúster respecto la media global" , y = "Media", x = "Clúster")
 ```
 
-Vemos como el cluster 3 tiene menos capacidad para pagar el prestamo.
+El clúster 3 tiene menos capacidad para pagar el préstamo.
 
 Conclusiones
 
-cluster 1: Anualidad mas alta, menos tarda en devolver el prestamo
-cluster 2: Coches nuevos
-cluster 3: Mas tarda para devolver el prestamo, Menor capacidad de devolver el credito
+Clúster 1: Anualidad más alta, menos demora en devolver el préstamo.
+Clúster 2: Coches más nuevos.
+Clúster 3: Más tarda en devolver el préstamo y menor capacidad para ello.
 
-nota: Todas los clusters segun las categoricas se comportan igual, seguramente debio porq kmean solo usa datos numericos. Los graficos usados pero sin interpretacion informativa sobre los clusters se encuentran en el anexo.
+Nota: Los clústeres según las variables categóricas se comportan de igual manera a la descrita. Seguramente, debido a causa de que k-mean solo usa datos numéricos. Los gráficos usados, pero sin interpretación informativa sobre los clústeres se encuentran en el anexo.
 
 
 Anexo
@@ -193,20 +196,12 @@ ggplot(data = dades, aes(x = cluster, y = dades$AGE_YEARS)) +
 
 ```
 
-
-
-
 ```{r}
 ggplot(data = dades, aes(x = cluster, fill = dades$CODE_GENDER)) +
   geom_bar(position = "dodge") +
   labs(title = "Gráfico de la distribución del Género respecto el Clúster", y = "Freq", x = "Clúster") +
   theme(legend.position = "top") + guides(fill = guide_legend(title = NULL))
 ```
-
-
-
-
-
 
 ```{r}
 ggplot(data = dades, aes(x = cluster, fill = dades$NAME_INCOME_TYPE)) +
@@ -215,22 +210,12 @@ ggplot(data = dades, aes(x = cluster, fill = dades$NAME_INCOME_TYPE)) +
   theme(legend.position = "top") + guides(fill = guide_legend(title = NULL))
 ```
 
-
-
-
-
-
 ```{r}
 ggplot(data = dades, aes(x = cluster, fill = dades$NAME_EDUCATION_TYPE)) +
   geom_bar(position = "dodge") +
   labs(title = "Gráfico de la distribución del Nivel de estudios del cliente respecto el Clúster", y = "Freq", x = "Clúster") +
   theme(legend.position = "top") + guides(fill = guide_legend(title = NULL))
 ```
-
-
-
-
-
 
 ```{r}
 ggplot(data = dades, aes(x = cluster, fill = dades$NAME_FAMILY_STATUS)) +
@@ -239,11 +224,6 @@ ggplot(data = dades, aes(x = cluster, fill = dades$NAME_FAMILY_STATUS)) +
   theme(legend.position = "top") + guides(fill = guide_legend(title = NULL))
 ```
 
-
-
-
-
-
 ```{r}
 ggplot(data = dades, aes(x = cluster, fill = dades$OCCUPATION_TYPE)) +
   geom_bar(position = "dodge") +
@@ -251,23 +231,12 @@ ggplot(data = dades, aes(x = cluster, fill = dades$OCCUPATION_TYPE)) +
   theme(legend.position = "top") + guides(fill = guide_legend(title = NULL))
 ```
 
-
-
-
-
-
-
 ```{r}
 ggplot(data = dades, aes(x = cluster, fill = dades$ORGANIZATION_TYPE)) +
   geom_bar(position = "dodge") +
   labs(title = "Gráfico de la distribución del Tipo de organización donde trabaja el cliente respecto el Clúster", y = "Freq", x = "Clúster") +
   theme(legend.position = "top") + guides(fill = guide_legend(title = NULL))
 ```
-
-
-
-
-
 
 ```{r}
 ggplot(data = dades, aes(x = cluster, fill = dades$REGION_RATING_CLIENT)) +

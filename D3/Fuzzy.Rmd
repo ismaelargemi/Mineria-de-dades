@@ -11,6 +11,7 @@ library(cluster)
 library(ggplot2)
 ```
 
+Cargamos los datos:
 ```{r, include=FALSE}
 #Lectura de los datos
 load("Dades preprocessades.Rdata")
@@ -32,21 +33,18 @@ dd <- mydata[,Numeriques]
 
 # Fuzzy Clustering
 
-La principal diferencia del Fuzzy Clustering al resto de algoritmos, es que es permite que una obzervación pertenezca a más de una agrupación. Es decir, permite que los elementos (individuos) tengan grados de pertenencia  a varios grupos simultáneamente.
+La principal diferencia del Fuzzy Clustering al resto de algoritmos, es que es permite que una observación pertenezca a más de una agrupación, es decir, permite que los elementos o individuos tengan grados de pertenencia  a varios grupos simultáneamente.
 
-En esta parte 
-
-FKM nos ejecuta el Fuzzy para las K especificadas y automaticamente escoge la k optima
+En esta parte, la función FKM() nos ejecuta el Fuzzy para las K especificadas y automáticamente escoge la k óptima.
 ```{r, include=FALSE}
 fclust2 <- FKM(dd,k=2:10,stand = 1)
 #head(round(fclust2$U,2))
 ```
 
 
-La propia función FKM guarda los valores Silhouette fuzzy para cada k. Es un indice especifico del Fuzzy.
-Cuanto mayor sea este indice mejor
+La propia función FKM guarda los valores Silhouette fuzzy para cada k. Este es un índice específico del Fuzzy y cuanto mayor sea el índice del Silhouette mejor.
 
-Hacemos el grafico de los valores SIL.F para cada k
+A continuación, hacemos el gráfico de los valores SIL.F para cada k:
 ```{r}
 silf <- fclust2$criterion
 silf <- as.data.frame(silf)
@@ -61,9 +59,9 @@ ggplot(silf, aes(x, silf)) +
   theme(plot.title = element_text(hjust = 0.5))
 ```
 
-Como se puede ver en el gráfico, k=2 es la k optima para nuestro fuzzy.
+Como se puede ver en el gráfico anterior, k=2 es la k óptima para el fuzzy.
 
-Visualizamos los clusters en el grafico factorial de las dos primeras dimensiones.
+Acto seguido, visualizamos los clústeres en el gráfico factorial de las dos primeras dimensiones:
 
 
 ```{r, include=FALSE}
@@ -97,21 +95,20 @@ ggplot(dd,
 
 
 
+## Predicción de un individuo aleatorio en el fuzzy 
 
-## Predicción de un individuo inventado en el fuzzy (pots canviar el titol)
+En este apartado se genera un posible individuo y aplicamos el Fuzzy C-means con el objetivo de conocer a qué clúster sería asignado y con qué probabilidad.Acto seguido, se muestra la información del individuo que se ha creado:
 
-En este apartado se genera un posible individuo y aplicamos el Fuzzy C-means con el objetivo de conocer a que cluster seria asignado y con que probabilidad.
-
-A continuación 
-
-Señor de 56
-ingresos: 100k
-cnt fam: 4
+Señor de 56 años.
+ingresos: 100k.
+cnt fam: 4.
 car: 7 añitos
 amt credit: 12000
 ratio_credit:0,12
 ratio annuity: 0.05
 dti ratio: 0.15
+
+A continuación, se carga la información:
 ```{r,include=FALSE}
 df_preprocessed[,c("AMT_INCOME_TOTAL","AMT_CREDIT","AMT_ANNUITY","AMT_GOODS_PRICE",
           "DAYS_BIRTH","TARGET","log_AMT_GOODS_PRICE","log_AMT_ANNUITY",
@@ -129,7 +126,7 @@ library(kableExtra)
 kable(dd2[nrow(dd2),])
 ```
 
-Aplicamos Fuzzy C-Means a la base de datos con el nuevo individuo
+Aplicamos Fuzzy C-Means a la base de datos con el nuevo individuo:
 
 ```{r,inlcude}
 dd2 <- scale(dd2)
@@ -166,7 +163,7 @@ ggplot(dd2,
 ```
 
 
-En azul se resaltan las coordenadas del individuo en el plano factorial del PCA
+En azul se han resaltado las coordenadas del individuo en el plano factorial del PCA.
 
 
 ```{r,include=FALSE}
@@ -174,7 +171,7 @@ fobj$U[5001,]  #Probabilitats de pertanyer al cluster 1
 ```
 
 
-Como se puede ver a pesar de ser un punto alejado de los puntos identificados como Cluster 1, tiene una alta probabilidad de ser identificado como parte de ese cluster.
+Como se puede ver, a pesar de ser un punto alejado de los puntos identificados en el Clúster 1, tiene una alta probabilidad de ser asignado en dicho clúster.
 
 
 
