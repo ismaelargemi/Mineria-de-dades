@@ -21,7 +21,7 @@ setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 load('dades_post_pca.Rdata')
 ```
 
-Transformem les variables numèriques en categòriques aplicant la funció `discretizeDF`.
+Transformamos las variables numéricas en categóricas aplicando la función `discretizeDF`.
 
 ```{r}
 data$CNT_FAM_MEMBERS <- (cut(data$CNT_FAM_MEMBERS, breaks = c(-Inf, 1.1,2.1,3.1,Inf), labels = c("1", "2", "3", ">=4")))
@@ -41,12 +41,16 @@ levels(dcat$AGE_YEARS) <- c( "Menys de 26", "[26,30]", "[31,35]", "[36,39]", "[4
 # }
 ```
 
-Transformem les transaccions 
+Cabe resaltar que, ahora la base de datos que utilizaremos es "dcat" con las variables numéricas como categoricas.
+
+Seguidamente, se transformará "dcat" en un data transactions para poder aplicar el Basket Market Analysis. 
 
 ```{r}
 tr <- as(dcat, "transactions") # tendra tantas columnas como categorias
 tr
 ```
+
+Con el siguiente summary, se verá más a fondo que tenemos:
 
 ```{r}
 summary(tr)
@@ -54,7 +58,7 @@ summary(tr)
 
 ##  Apriori 
 
-Especifiquem els paràmetres 
+El primer paso consiste en especificar los parámetros: 
 
 ```{r}
 soporte_minimo <- 10/nrow(data) # Support 10/n
@@ -62,21 +66,21 @@ confianza_mínima <- 0.8 # Confiance
 tamanyo_conjunto <- 10  # Tamaño máximo del conjunto
 ```
 
-Creem les regles d'associació.
+El siguiente paso es crear las reglas de asociación:
 
 ```{r}
 reglas.asociacion <- apriori(tr, parameter = list(supp = soporte_minimo, conf = confianza_mínima, 
-												  maxlen = tamanyo_conjunto)) # rhs = és la variable output
+												  maxlen = tamanyo_conjunto)) # rhs = es la variable output
 ```
 
-Dividim les nostres regles d'associació segons el consequent que és la variable resposta. La variable resposta és `TARGET` que pren valors de 1 o 0.  
+Dividimos nuestras reglas de asociación según lo consecuente que es la variable respuesta. La variable respuesta es `TARGET` que toma valores de 1 o 0.
 
 ```{r}
 target1 <- subset(reglas.asociacion, subset = rhs%in%"TARGET=1" & lift > 1.2)
 target0 <- subset(reglas.asociacion, subset = rhs%in%"TARGET=0" & lift > 1.2)
 ```
 
-Treiem les regles redundants en els dos casos. 
+Sacamos las reglas redundantes en ambos casos:
 
 ```{r}
 subconjunto.reglas <- which(colSums(is.subset(target0, target0)) > 1)
@@ -110,22 +114,31 @@ summary(testFisher)
 ```{r, include=FALSE, echo=FALSE}
 # Visualización per a target = 0 
 plot(subconjunto.target0, measure = c("support", "lift"), shading = "confidence")
-plot(subconjunto.target0, method = "two-key plot")
-# plot(subconjunto.target0, method = "grouped") # no s'enten res
-# plot(subconjunto.target0, method = "paracoord") # aquest no s'executa 
-# plot(subconjunto.target0, method = "graph") # no s'entèn rés
+plot(subconjunto.target0, method = "two-key plot", main= "Two-key plot")
+#plot(subconjunto.target0, method = "grouped") 
+#plot(subconjunto.target0, method = "paracoord") # no ejecutable
+plot(subconjunto.target0, method = "graph") 
 ``` 
+
+Como podemos ver, el primer gráfico muestra la matriz de puntos de las reglas de asociación filtrada respecto la métrica lift. La reglas de asociación de interés corresponden a los puntos con un color rojo de mayor intensidad (confianza que supere la mínima, 0.8) y como vemos, estas reglas se situan en el gráfico con un soporte mayor al mínimo (0.002)
+
+En el último gráfico se ve algo parecido, aquí las reglas de asociación que interesan corresponden a los puntos con una intensidad roja mayor y los puntos más grandes, que corresponderan a las reglas que tienen un suporte superior al mínimo (0.002).
 
 ```{r, include=FALSE, echo=FALSE}
 # Visualización per a target = 1 
 plot(subconjunto.target1, measure = c("support", "lift"), shading = "confidence")
-plot(subconjunto.target1, method = "two-key plot")
-# plot(subconjunto.target1, method = "grouped") #no s'enten res
-# plot(subconjunto.target0, method = "paracoord") # aquest no s'executa 
-# plot(subconjunto.target0, method = "graph") # no s'entèn rés
+plot(subconjunto.target1, method = "two-key plot", main= "Two-key plot")
+plot(subconjunto.target1, method = "grouped") 
+# plot(subconjunto.target0, method = "paracoord") # no ejecutable
+plot(subconjunto.target0, method = "graph") 
 ``` 
 
-Con target = 0 obtenemos `r subconjunto.target0` y con tagret = 1 `r subconjunto.target1`. Vemos las 10 primeras reglas en cada caso con mayor lift. 
+Estos gráficos se interpretan de manera igual a los anteriores vistos. 
+
+
+Con target = 0 obtenemos `r subconjunto.target0` y con tagret = 1 `r subconjunto.target1`. 
+
+Vemos las 10 primeras reglas en cada caso con mayor lift, es decir, van ordenadas de forma decreciente siendo la primera la que tiene una mayor asociación encontrada con la variable respuesta. 
 
 ```{r}
 subconjunto.target0<-subconjunto.target0[order(quality(subconjunto.target0)[,"lift"], decreasing = TRUE)]
@@ -141,7 +154,7 @@ inspect(top)
 
 ## ECLAT
 
-En este caso creamos las reglas de asocioacion con eclat. 
+Para este apartado, se crearán las reglas de asocioación con ECLAT.
 
 ```{r}
 eclattr<-eclat(tr, parameter = list(support=soporte_minimo, minlen=1, maxlen=tamanyo_conjunto))
@@ -161,12 +174,12 @@ rm(subconjunto.reglas)
 subconjunto.reglas <- which(colSums(is.subset(target12, target12)) > 1)
 subconjunto.target12 <- target12[-subconjunto.reglas]
 
-# inspeccionem les deu regles amb major lift per a target = 0
+# inspeccionamos las diez reglas con mayor lift para target = 0
 subconjunto.target02<-subconjunto.target02[order(quality(subconjunto.target02)[,"lift"], decreasing = TRUE)]
 top <- subconjunto.target02[1:10]
 inspect(top)
 
-# inspeccionem les deu regles amb major lift per a target = 1
+# inspeccionamos las diez reglas con mayor lift para target = 1
 subconjunto.target12<-subconjunto.target12[order(quality(subconjunto.target12)[,"lift"], decreasing = TRUE)]
 top <- subconjunto.target12[1:10]
 inspect(top)
