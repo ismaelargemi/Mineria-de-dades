@@ -1,12 +1,24 @@
 ---
-title: "Knn_Validation"
-author: "Oscar"
-date: "2023-11-05"
 output: pdf_document
+header-includes:
+  - \usepackage{fullpage} 
+  - \usepackage[spanish]{babel}
+  - \usepackage{fancyhdr}
+  - \setlength{\headsep}{7mm} 
+  - \usepackage[linktoc=page]{hyperref}
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+```{=tex}
+\setlength{\headheight}{13.6pt}
+\setlength{\topmargin}{-10mm}
+
+\rhead{Minería de Datos}
+\lhead{Entrega D3}
+```
+\pagestyle{fancy}
+```{=tex}
+\cfoot{\thepage}
+\setcounter{page}{5}
 ```
 
 ```{r, include=FALSE}
@@ -18,6 +30,7 @@ library(VIM)
 library(scales)
 library(tidyverse)
 library(ggplot2)
+library(kableExtra)
 
 #devtools::install_github('bbc/bbplot')
 
@@ -47,37 +60,36 @@ mydata[,Numeriques] <- scale(mydata[,Numeriques])
 dd <- mydata[,Numeriques]
 ```
 
-En el proceso de preparación de los datos, se dividen los datos en dos conjuntos: un conjunto de entrenamiento y un conjunto de prueba. El conjunto de entrenamiento se utiliza para entrenar el modelo KNN, mientras que el conjunto de prueba se emplea para evaluar su rendimiento.
+## k-Nearest Neighbors
 
+Con objeto de ajustar el modelo a nuestra base de datos para predecir la variable respuesta, se usará el método kNN. Para poder ajustar el modelo de manera óptima se sigue un proceso de preparación de los datos, donde se dividen los en dos conjuntos: un conjunto de entrenamiento y un conjunto de prueba. El primer grupo que se utilizará para entrenar el modelo kNN estará compuesto por el 80% de la base de datos original. Asimismo, el conjunto de prueba se empleará para evaluar el rendimiento y precisión del modelo.
 
-Para la generación del conjunto de train 
-```{r, include=FALSE}
+A continuación, en el siguiente codigo aparece la generación del conjunto de train y test:
+
+```{r}
 set.seed(12345)
 Index <- createDataPartition(y, p = 0.8, list = F)
-# Index <- sample(1:nrow(mydata),0.8*nrow(mydata))
-# dist <- daisy(mydata, metric = "gower")^2
-# dist <- as.matrix(dist)
+```
 
-
-#Train <- cbind(mydata[Index,],y[Index])
-#Test <- cbind(mydata[-Index,],y[-Index])
+```{r,include=FALSE}
 Train <- mydata[Index,]
 Test <- mydata[-Index,]
 
 Traincl <- y[Index]
 Testcl <- y[-Index]
-
-#Para usar solo numericas
-# Train <- cbind(dd[Index,],y[Index])
-# Test <- cbind(dd[-Index,],y[-Index])
 ```
 
-La selección de un valor de K se considera un paso crucial, ya que K es un hiperparámetro en KNN que representa el número de vecinos más cercanos a considerar. Se recomienda realizar pruebas con diferentes valores de K y utilizar la validación cruzada para determinar el valor óptimo.
+La selección de un valor de K se considera un paso crucial, ya que K es un hiperparámetro en kNN que representa el número de vecinos más cercanos a considerar. Se recomienda realizar pruebas con diferentes valores de K y utilizar la validación cruzada para determinar el valor óptimo. La validación cruzada se usará dentro del conjunto de datos de entrenamiento para encontrar el valor óptimo de k. 
 
-Crosvalidación para obtener el mejor valor de k
+En este caso, la realización de la Cross-validación se realiza a partir de folds. Esto consiste en dividir la base de datos perteneciente al entrenamiento en un número determinado de subgrupos aleatorios y ejecutar el algoritmo considerando como test un fold distinto en cada una de las iteraciones. 
+En cada una de las iteraciones se calcula la precisión del algoritmo, para posteriormente calcular la media de estas precisiones.
+
+El número de vecinos que haya tenido una media de las precisiones mayor, será el escogido.
+
+Para el proceso de Cross-Validación se han fijado unos valores de k del 1 al 20. En cuanto al número de folds, se ha considerado oportuno utilizar una cantidad de 10 folds, lo que supone ejecutar el kNN 10 veces para cada uno de los valores de k propuestos. Esto hace que durante el proceso de Cross-Validación el kNN sea ejecutado una totalidad de 200 veces. 
 
 ```{r,include=FALSE}
-k <- c(1:15) # las k que queremos probar
+k <- c(1:20) # Son las k que queremos probar.
 f <- 10 # Numero de capas que queremos en el  CRVAl podriem posar tant 5 com 10
 media_acc <-rep(0,length(k)) # Preparamos vect para las medias del accuracy
 d <- 1
@@ -92,9 +104,9 @@ for(i in k){
     
     train_ind <- unlist(folds[-j])
     
-    tcl[-train_ind] <- NA   #posem com a NA el TARGET del test
+    tcl[-train_ind] <- NA   #Ponemos como NA el TARGET del test.
     
-    tclreal <- Traincl[-train_ind]   #Guardem el TARGET real del test per fer la taula després i calcular l'accuracy
+    tclreal <- Traincl[-train_ind]   #Guardanis ek TARGET reak del test para hacer la tabla después y calcular la accuracy.
     
     data_cv <- cbind(Train,TARGET = tcl)
     
@@ -115,18 +127,22 @@ for(i in k){
 ```
 
 
-A continuación se muestra una tabla en la que se recoge la media del accuracy para cada una de las k utilitzadas en el proceso de cross-validación.
+Acto seguido, se muestra una tabla en la que se recoge la media del accuracy para cada una de las k utilitzadas en el proceso de Cross-Validación.
 
 ```{r,echo=FALSE, warning=FALSE}
 names(media_acc) <- paste(rep("k=",length(k)),k)
 
 data_acc <- data.frame(k=k, mean_acc = media_acc)
+mat_data_acc <- as.matrix(data_acc)
+kbl(mat_data_acc, 
+    caption = "Medias de Accuracy para cada k en la CV", align = "c")%>% 
+  kable_styling(position = "center", 
+                latex_options = c("HOLD_position"))
 ```
 
-Con el fin de facilitar la interpretación se reproduce un gráfico de la tabla anterior. En este, se resalta la k con la que se ha conseguido un Accuracy más elevado y seguidamente se muestra su valor.
+Con el fin de facilitar la interpretación se reproduce un gráfico de la tabla anterior. En este se resalta la k con la que se ha conseguido un Accuracy más elevado y seguidamente se muestra su valor.
 
 ```{r, echo=FALSE, warning=FALSE}
-print(data_acc)
 
 opt <- data_acc[which.max(data_acc$mean_acc),]
 
@@ -141,129 +157,138 @@ ggplot(data_acc, aes(x = k, y = mean_acc)) +
   geom_point(data= opt, aes(x=k, y=mean_acc),color="red", size=3)
 ```
 
-Como se puede ver, la k que ha conseguido una Accuracy más elevada és:
+Como se puede ver, la k que ha conseguido una Accuracy más elevada es la siguiente:
 
 ```{r, echo=FALSE}
-print(opt)
+kbl(opt, 
+    caption = "Accuracy de la k optima en la CV", align = "c")%>% 
+  kable_styling(position = "center", 
+                latex_options = c("HOLD_position"))
 
 k_opt <- opt$k
 ```
 
-El siguiente paso implica el entrenamiento del modelo KNN utilizando el conjunto de entrenamiento, donde el modelo almacena los datos de entrenamiento y calcula las distancias entre puntos.
+Una vez terminado el proceso de Cross-Validación y habiendo encontrado la k óptima, el siguiente paso implica la implementación del algoritmo (con la k seleccionada) para predecir la categoría de la variable respuesta de los individuos del test mediante la información que proporiconan los individuos del train.
 
-```{r}
+Una vez ejecutado el kNN se muestra en una tabla la matriz de confusión y se calcula la precisión con la que el algoritmo ha predicho la variable Target en la población del test.
+
+```{r, echo=FALSE}
 cl <- y
 cl[-Index] <- NA
 
 dades <- cbind(mydata, cl)
-```
 
-```{r}
-#model <- knn(train = Train[,-ncol(Train)], test=Test[,-ncol(Test)], cl=Train[,ncol(Train)], k=k_opt)
 model <- kNN(dades, variable = "cl", metric = "gower", k=k_opt)
+
+conff <- table(Real=Testcl, Predicted=model$cl[-Index])
+acc <- sum(diag(conff))/sum(conff)
+
+
+conf_matrix <- confusionMatrix(factor(model$cl[-Index]), factor(Testcl))
+
+conf_matrix
 ```
 
-Evaluación del modelo
+La anterior salida nos muestra la matriz de confusión junto con diversos estadísticos que tratan de explicar como de bien o mal ha predicho el algoritmo de kNN.
 
-```{r}
-(conff <- table(Real=Testcl, Predicted=model$cl[-Index]))
-(acc <- sum(diag(conff))/sum(conff))
-```
+De entre estos cabe destacar la Accuracy, que en este caso a sido de `r conf_matrix$overall["Accuracy"]`, por lo que el agloritmo ha predicho correctamente el `r conf_matrix$overall["Accuracy"]*100`% de los individuos de Test.
 
+La "Sensitivity" mide la proporción de individuos de TARGET=0 que han sido clasificacdos correctamente, que en este caso ha sido de `r conf_matrix$overall["Sensitivity"]`.
 
-```{r}
-decisionplot <- function(model, x, cl = NULL, predict_type = "class",
-                         resolution = 100) {
-  
-  if(!is.null(cl)) {
-    x_data <- x %>% dplyr::select(-all_of(cl))
-    cl <- x %>% pull(cl)
-  } else cl <- 1
-  k <- length(unique(cl))
-  
-  # resubstitution accuracy
-  prediction <- predict(model, x_data, type = predict_type)
-  if(is.list(prediction)) prediction <- prediction$class
-  if(is.numeric(prediction))
-    prediction <-  factor(prediction, labels = levels(cl))
-  else
-    prediction <- factor(prediction, levels = levels(cl))
-  
-  cm <- confusionMatrix(data = prediction, reference = cl)
-  acc <- cm$overall["Accuracy"]
-  
-  # evaluate model on a grid
-  r <- sapply(x[, 1:2], range, na.rm = TRUE)
-  xs <- seq(r[1,1], r[2,1], length.out = resolution)
-  ys <- seq(r[1,2], r[2,2], length.out = resolution)
-  g <- cbind(rep(xs, each = resolution), rep(ys, time = resolution))
-  colnames(g) <- colnames(r)
-  g <- as_tibble(g)
-  
-  ### guess how to get class labels from predict
-  ### (unfortunately not very consistent between models)
-  prediction <- predict(model, g, type = predict_type)
-  if(is.list(prediction)) prediction <- prediction$class
-  if(is.numeric(prediction))
-    prediction <-  factor(prediction, labels = levels(cl))
-  else
-    prediction <- factor(prediction, levels = levels(cl))
-  
-  g <- g %>% add_column(prediction)
-  
-  ggplot(g, mapping = aes_string(
-    x = colnames(g)[1],
-    y = colnames(g)[2])) +
-    geom_tile(mapping = aes(fill = prediction)) +
-    geom_point(data = x, mapping =  aes_string(
-      x = colnames(x)[1],
-      y = colnames(x)[2],
-      shape = colnames(x)[3]), alpha = .5) +
-    labs(subtitle = paste("Training accuracy:", round(acc, 2)))
-}
-```
+Y finalmente la "Specificity" mide la proporción de individuos de TARGET=1 que han sido clasificados correctamente, que ha dado `r conf_matrix$overall["Specificity"]`
 
+<!-- ```{r} -->
+<!-- decisionplot <- function(model, x, cl = NULL, predict_type = "class", -->
+<!--                          resolution = 100) { -->
 
+<!--   if(!is.null(cl)) { -->
+<!--     x_data <- x %>% dplyr::select(-all_of(cl)) -->
+<!--     cl <- x %>% pull(cl) -->
+<!--   } else cl <- 1 -->
+<!--   k <- length(unique(cl)) -->
 
-```{r}
-Train2 <- cbind(Train,Traincl)
+<!--   # resubstitution accuracy -->
+<!--   prediction <- predict(model, x_data, type = predict_type) -->
+<!--   if(is.list(prediction)) prediction <- prediction$class -->
+<!--   if(is.numeric(prediction)) -->
+<!--     prediction <-  factor(prediction, labels = levels(cl)) -->
+<!--   else -->
+<!--     prediction <- factor(prediction, levels = levels(cl)) -->
 
-knnfit <- train(Traincl~.,method="knn",data=Train2,tuneLength=5, tuneGrid=data.frame(k=1:15), trControl=trainControl(method="cv", indexOut = folds))
+<!--   cm <- confusionMatrix(data = prediction, reference = cl) -->
+<!--   acc <- cm$overall["Accuracy"] -->
 
-knnfit$finalModel
-knnfit$bestTune
+<!--   # evaluate model on a grid -->
+<!--   r <- sapply(x[, 1:2], range, na.rm = TRUE) -->
+<!--   xs <- seq(r[1,1], r[2,1], length.out = resolution) -->
+<!--   ys <- seq(r[1,2], r[2,2], length.out = resolution) -->
+<!--   g <- cbind(rep(xs, each = resolution), rep(ys, time = resolution)) -->
+<!--   colnames(g) <- colnames(r) -->
+<!--   g <- as_tibble(g) -->
 
-```
+<!--   ### guess how to get class labels from predict -->
+<!--   ### (unfortunately not very consistent between models) -->
+<!--   prediction <- predict(model, g, type = predict_type) -->
+<!--   if(is.list(prediction)) prediction <- prediction$class -->
+<!--   if(is.numeric(prediction)) -->
+<!--     prediction <-  factor(prediction, labels = levels(cl)) -->
+<!--   else -->
+<!--     prediction <- factor(prediction, levels = levels(cl)) -->
+
+<!--   g <- g %>% add_column(prediction) -->
+
+<!--   ggplot(g, mapping = aes_string( -->
+<!--     x = colnames(g)[1], -->
+<!--     y = colnames(g)[2])) + -->
+<!--     geom_tile(mapping = aes(fill = prediction)) + -->
+<!--     geom_point(data = x, mapping =  aes_string( -->
+<!--       x = colnames(x)[1], -->
+<!--       y = colnames(x)[2], -->
+<!--       shape = colnames(x)[3]), alpha = .5) + -->
+<!--     labs(subtitle = paste("Training accuracy:", round(acc, 2))) -->
+<!-- } -->
+<!-- ``` -->
 
 
 
+<!-- ```{r} -->
+<!-- Train2 <- cbind(Train,Traincl) -->
+
+<!-- knnfit <- train(Traincl~.,method="knn",data=Train2,tuneLength=5, tuneGrid=data.frame(k=1:15), trControl=trainControl(method="cv", indexOut = folds)) -->
+
+<!-- knnfit$finalModel -->
+<!-- knnfit$bestTune -->
+<!-- knnfit -->
+
+<!-- ``` -->
 
 
 
 
+<!-- ```{r} -->
+<!-- pca <- prcomp(dd, scale = TRUE) -->
+<!-- CP1 <- pca$x[Index,1] -->
+<!-- CP2 <- pca$x[Index,2] -->
 
-```{r}
-pca <- prcomp(dd, scale = TRUE)
-CP1 <- pca$x[Index,1]
-CP2 <- pca$x[Index,2]
+<!-- data_pca <- cbind(CP1,CP2) -->
+<!-- data_pca <- as.data.frame(data_pca) -->
 
-data_pca <- cbind(CP1,CP2)
-data_pca <- as.data.frame(data_pca)
-
-data_pca$cl <- Traincl
-
-
-
-set.seed(123)
-folds <- createFolds(Traincl, k=f,list=FALSE)
-knnfit <- train(Traincl~.,method="knn",data=Train2,tuneLength=5, tuneGrid=data.frame(k=1:15), trControl=trainControl(method="cv", indexOut = folds))
-
-
-decisionplot(knnfit$finalModel,Train2, cl="cl")
-knnfit$finalModel
+<!-- data_pca$cl <- Traincl -->
 
 
 
-ggplot(data_pca, aes(x = CP1, y = CP2, color = cl)) + geom_point()
-```
+<!-- set.seed(123) -->
+<!-- folds <- createFolds(Traincl, k=f,list=FALSE) -->
+<!-- knnfit <- train(Traincl~.,method="knn",data=Train2,tuneLength=5, tuneGrid=data.frame(k=1:15), trControl=trainControl(method="cv", indexOut = folds)) -->
+
+
+<!-- decisionplot(knnfit$finalModel,Train2, cl="cl") -->
+<!-- knnfit$finalModel -->
+
+
+
+<!-- ggplot(data_pca, aes(x = CP1, y = CP2, color = cl)) + geom_point() -->
+<!-- ``` -->
+
+
 
