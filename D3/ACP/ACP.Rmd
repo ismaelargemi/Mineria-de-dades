@@ -8,7 +8,6 @@ output:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
-
 ```
 
 ```{r, warning=FALSE, echo=FALSE}
@@ -17,7 +16,7 @@ data <- get (load('Dades preprocessades.Rdata'))
 rm(df_preprocessed)
 library("factoextra")
 library("kableExtra")
-summary(data)
+# summary(data)
 ```
 
 Se observa que la base de datos tiene un total de 11 columnas numéricas. Por tanto, el análisis de componentes principales tendrá como máximo 11 componentes.
@@ -360,3 +359,71 @@ kbl(pc1$rotation[,1:4],
 - **PC3**: Para este tercer plano factorial, las variables más significativas son **CNT_FAM_MEMBERS** de forma negativa y **AGE_YEARS** de forma positiva. Así pues, aquellos individuos que cumplen estas características son clientes con familias poco numerosas y mayores (si su año de nacimiento es un valor alto, significa que son más mayores, dado a la correlación positiva con la variable de edad). Podría decirse que el tercer plano factorial (**PC3**) representa la "**Edad y grandaria familiar**".
 
 - **PC4**: Para el cuarto plano factorial, se puede ver que la variable con mayor contribución en gran diferencia a las demás es **OWN_CAR_AGE**, correlacionada de forma negativa. Es decir, los clientes con valores de proyección en PC4 más grandes seran aquellos con coches más nuevos. Por lo tanto, el cuarto plano factorial (**PC4**) podría recibir el nombre de "**Edad vehículo **".
+
+Una vez se han establecido los planos factoriales gracias a las variables nunéricas, es necesario representar también las variables categóricas para así acabar de hacer un estudio completo usando toda la base de datos de nuestra variable. De esta forma, se han representado los centroides de las coordenadas de cada nivel de cada variable categórica y se han obtenido los siguientes resultados:
+
+## Representación de las variables categoricas en los planos factoriales del PCA
+
+```{r}
+var_categoriques = which(sapply(data, is.factor))
+```
+
+
+```{r, echo=FALSE}
+plot(Psi[,eje1],Psi[,eje2],type="n",xlim=c(-1.6,1.6), ylim=c(-1,1), 
+     xlab = "CP1", ylab = "CP2")
+axis(side=1, pos= 0, labels = F, col="cyan")
+axis(side=3, pos= 0, labels = F, col="cyan")
+axis(side=2, pos= 0, labels = F, col="cyan")
+axis(side=4, pos= 0, labels = F, col="cyan")
+#nominal qualitative variables
+dcat<-c(1:8)
+#divide categoricals in several graphs if joint representation saturates
+#build a palette with as much colors as qualitative variables 
+#colors<-c("blue","red","green","orange","darkgreen")
+#alternative
+colors<-rainbow(length(var_categoriques))
+c<-1
+for(k in var_categoriques){
+  seguentColor<-colors[c]
+  varcat <- as.factor(data[,k])
+  fdic1 <- tapply(Psi[,eje1], varcat, mean)
+  fdic2 <- tapply(Psi[,eje2], varcat, mean) 
+  text(fdic1, fdic2, levels(varcat), col=seguentColor, cex=0.8, font=3)
+c<-c+1
+}
+legend("topright",names(var_categoriques)[dcat],pch=1,col=colors, cex=0.6)
+```
+
+En este primer gráfico no se puede ver nada con claredad, por eso vamos a representar cada una de las variables categoricas en un gráfico distinto:
+
+```{r, out.width="95%"}
+col <- rainbow(length(var_categoriques))
+c <- 1
+X <- Phi[, eje1]
+Y <- Phi[, eje2]
+for(k in var_categoriques){
+  par(cex.main=1, cex.lab=1)
+  plot(Psi[,1],Psi[,2],type="n",
+    xlab=paste0("PC",1," (",round(pinerEix[1],4),"%)"),
+    ylab=paste0("PC",2," (",round(pinerEix[2],4),"%)"),
+    xlim=c(-1.5,1.5), ylim=c(-1,1),
+    main="Projeccions sobre el pla factorial de variables categòriques")
+  axis(side=1, pos=0, at=seq(-70, 70, by=0.5), labels = F, col="black")
+  axis(side=2, pos=0, at=seq(-70, 70, by=0.5), labels = F, col="black")
+  axis(side=3, pos=0, at=seq(-70, 70, by=0.5), labels = F, col="black")
+  axis(side=4, pos=0, at=seq(-70, 70, by=0.5), labels = F, col="black")
+  arrows(ze, ze, X, Y, length = 0.05, col=c("aquamarine3","aquamarine4"))
+  text(X,Y,labels=etiq,col=c("aquamarine3","aquamarine4"), cex=0.85, font=3)
+  
+  varcat <- as.factor(data[,k])
+  fdic1 <- tapply(Psi[,1], varcat, mean)
+  fdic2 <- tapply(Psi[,2], varcat, mean) 
+  text(fdic1, fdic2, levels(varcat), col=seguentColor, cex=0.85, font=3)
+  
+  legend("bottomleft", legend = names(var_categoriques)[c], fill=seguentColor,
+         text.font=2, cex=1, ncol=1, bty="n")
+  
+  c <- c+1
+}
+```
