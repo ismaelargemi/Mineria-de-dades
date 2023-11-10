@@ -370,6 +370,8 @@ var_categoriques = which(sapply(data, is.factor))
 
 
 ```{r, echo=FALSE}
+eje1 <- 1
+eje2 <- 2
 plot(Psi[,eje1],Psi[,eje2],type="n",xlim=c(-1.6,1.6), ylim=c(-1,1), 
      xlab = "CP1", ylab = "CP2")
 axis(side=1, pos= 0, labels = F, col="cyan")
