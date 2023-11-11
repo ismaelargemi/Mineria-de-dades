@@ -8,21 +8,33 @@ output:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
+
 ```
 
 ```{r, warning=FALSE, echo=FALSE}
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
-data <- get (load('Dades preprocessades.Rdata'))
+data <- get(load('prepro_dades.Rdata'))
 rm(df_preprocessed)
 library("factoextra")
 library("kableExtra")
-# summary(data)
+library("ggfortify")
+#library("FactoMineR")
+# library("Factoshiny")
+
+clases <- lapply(data,class)
+clases <- t(as.data.frame(clases))
+
+kbl(clases, 
+    caption = "Clase de cada variable", align = "c")%>% 
+  kable_styling(position = "center", 
+                latex_options = c("HOLD_position"))
 ```
 
 Se observa que la base de datos tiene un total de 11 columnas numéricas. Por tanto, el análisis de componentes principales tendrá como máximo 11 componentes.
 
 ## Selección de variables numéricas
 
+Se proceden a eliminar, primeramente, aquellas variables para las cuales ya existe su transformación logarítmica. Esto se hace para no contar con variables que contengan la misma capacidad explicativa (y así evitar colinealidad). También se elimina la variable DAYS_BIRTH, ya que se cuenta con AGE_YEARS, que es una transformación de la inicial, debido a que DAYS_BIRTH no tenia una clara interpretación.
 ```{r, echo=F, include=FALSE}
 # Eliminamos las variables a las que se les ha realizado la transformación log
 
@@ -35,12 +47,10 @@ data_numeric <- data[, numeric]
 # sapply(data_numeric, class)
 ```
 
-
 ## PCA
 
-A partir de aquí, se procede con el análisis de componentes principales:
-
-```{r}
+A partir de aquí, se procede con el análisis de componentes principales.
+```{r, echo=FALSE, include=FALSE}
 pc1 <- prcomp(data_numeric, scale=TRUE)
 inerProj<- pc1$sdev^2 
 totalIner<- sum(inerProj)
@@ -62,7 +72,7 @@ p <- p +
   theme_minimal()
 ```
 
-```{r, echo = F, fig.cap = "Inercia explicada por cada PF", out.height="75%",out.width="75%"}
+```{r, echo = F, out.height="75%", out.width="75%"}
 p
 ```
 
@@ -88,7 +98,7 @@ for(i in 1:nrow(combn)){
 }
 ```
 
-```{r, echo = F, fig.cap = "Gráfico de PF", out.height="75%",out.width="75%"}
+```{r, echo = F, out.height="75%",out.width="75%"}
 grafic[[1]]
 ```
 
@@ -121,8 +131,7 @@ kbl(pc1$rotation[,1:5],
 ```
 
 En el grafico vemos que las flechas de **log_AMT_GOODS_PRICE** y **log_AMT_CREDIT** se solapan entre ellas, eso queire decir que las dos variables explican el mismo plano factorial. Vemos en la tabla de rotaciones que **log_AMT_CREDIT** contribuye más a explicar el primer plano factorial, y además las correlaciones entra cada una de las variables y cada dimensión son muy similares. Por esta razón eliminamos **log_AMT_GOODS_PRICE**.
-
-```{r}
+```{r, echo=FALSE, include=FALSE}
 data_numeric <- data_numeric[ , -which(names(data_numeric) %in% c("log_AMT_GOODS_PRICE"))]
 pc1 <- prcomp(data_numeric, scale = TRUE)
 ```
@@ -130,7 +139,6 @@ pc1 <- prcomp(data_numeric, scale = TRUE)
 Nos quedamos con una variable menos, por tanto tenemos `r ncol(data_numeric)` variables numéricas. 
 
 De vuelta, verificamos el porcentaje de inercia por cada componente principal y la acumulada:
-
 ```{r, echo=F, include = F}
 inerProj<- pc1$sdev^2 
 totalIner<- sum(inerProj)
@@ -150,7 +158,7 @@ p <- p +
   ggtitle("Explained inertia by each dimension") + theme_minimal()
 ```
 
-```{r, echo = F, fig.cap = "Inercia explicada por cada PF corregido", out.height="75%",out.width="75%"}
+```{r, echo = F, out.height="75%",out.width="75%"}
 p
 ```
 
@@ -165,7 +173,7 @@ ze <- rep(0,length(etiq))
 Phi <- cor(data_numeric,Psi)
 ```
 
-```{r, echo = F}
+```{r, echo = FALSE, include = FALSE}
 combn <- as.data.frame(t(combn(1:nd,2))) 
 grafic = c()
 for(i in 1:nrow(combn)){
@@ -175,7 +183,7 @@ for(i in 1:nrow(combn)){
 }
 ```
 
-```{r,echo = F, fig.cap="Gráfico de PF corregido", out.height="75%",out.width="75%"}
+```{r,echo = F, out.height="75%",out.width="75%"}
 grafic[[1]]
 ```
 
@@ -191,8 +199,7 @@ kbl(pc1$rotation[,1:5],
 Por ejemplo, en el caso de **OWN CAR AGE** se puede ver en la tabla anterior que, se podría decir que no es la que mejor explica las primeras componentes, pero vemos que explica casi toda la componente 5.
 
 Otra observación se podria hacer de las variables **log_AMT_CREDIT** y **log_AMT_ANNUITY**, donde se puede apreciar que tienen correlaciones similares con la primera y segunda dimensión. Teniendo en cuenta que esas dos primeras dimensiones (PC1 y PC2) són las más importantes, ya que acumulan la mayoría de la inercia (en total un 52.2%), parece una decisión sensata eliminar una de ellas, en este caso **log_AMT_ANNUITY**.
-
-```{r}
+```{r, echo=FALSE, include=FALSE}
 data_numeric <- data_numeric[ , -which(names(data_numeric) %in% c("log_AMT_ANNUITY"))]
 pc1 <- prcomp(data_numeric, scale = TRUE)
 ```
@@ -200,7 +207,6 @@ pc1 <- prcomp(data_numeric, scale = TRUE)
 Ahora conservamos `r ncol(data_numeric)` variables numéricas.
 
 De forma igual que anteriormente, comprobamos el porcentaje de inercia para cada componente principal y la acumulada:
-
 ```{r, echo=F, include = F}
 inerProj<- pc1$sdev^2 
 totalIner<- sum(inerProj)
@@ -220,7 +226,7 @@ p <- p +
   ggtitle("Explained inertia by each dimension") + theme_minimal()
 ```
 
-```{r, echo = F, fig.cap = "Inercia explicada por cada PF corregido", out.height="75%",out.width="75%"}
+```{r, echo = F, out.height="75%",out.width="75%"}
 p
 ```
 
@@ -235,7 +241,7 @@ ze <- rep(0,length(etiq))
 Phi <- cor(data_numeric,Psi)
 ```
 
-```{r, echo = F}
+```{r, echo = F, include = FALSE}
 combn <- as.data.frame(t(combn(1:nd,2))) 
 grafic = c()
 for(i in 1:nrow(combn)){
@@ -245,7 +251,7 @@ for(i in 1:nrow(combn)){
 }
 ```
 
-```{r,echo = F, fig.cap="Gráfico de PF corregido", out.height="75%",out.width="75%"}
+```{r,echo = F, out.height="75%",out.width="75%"}
 grafic[[1]]
 ```
 
@@ -260,8 +266,7 @@ kbl(pc1$rotation[,1:5],
 ```
 
 Si nos fijamos en el gráfico que incluye los dos primeros planos factoriales (PC1 y PC2), resulta fácil ver que **log_AMT_CREDIT** y **DIFF_CREDIT_GOODS** se solapan en su proyección, teniendo **log_AMT_CREDIT** más contribución dado que el vector es más largo. De aquí se entiende que las correlaciones de ambas variables en los dos primeros planos factoriales son muy similares, motivo por el cual solapan. En la tabla de correlaciones anterior se puede comprobar como efectivamente, estas correlaciones son similares. Incluso la correlación en ambas variables con la tercera dimensión (PC3) es baja, de forma parecida. Por tanto, se procede a eliminar aquella con menos contribución en PC1 y PC2, esta siendo **DIFF_CREDIT_GOODS**.
-
-```{r}
+```{r, echo=FALSE, include=FALSE}
 data_numeric <- data_numeric[ , -which(names(data_numeric) %in% c("DIFF_CREDIT_GOODS"))]
 pc1 <- prcomp(data_numeric, scale = TRUE)
 ```
@@ -269,7 +274,6 @@ pc1 <- prcomp(data_numeric, scale = TRUE)
 Ahora se conservan `r ncol(data_numeric)` variables numéricas.
 
 Se vuelven a ejecutar todos los pasos anteriores para volver a verificar si hace falta eliminar más variables:
-
 ```{r, echo=F, include = F}
 inerProj<- pc1$sdev^2 
 totalIner<- sum(inerProj)
@@ -289,7 +293,7 @@ p <- p +
   ggtitle("Explained inertia by each dimension") + theme_minimal()
 ```
 
-```{r, echo = F, fig.cap = "Inercia explicada por cada PF corregido", out.height="75%",out.width="75%"}
+```{r, echo = F, out.height="75%",out.width="75%"}
 p
 ```
 
@@ -304,7 +308,7 @@ ze <- rep(0,length(etiq))
 Phi <- cor(data_numeric,Psi)
 ```
 
-```{r, echo = F}
+```{r, echo = F, include = FALSE}
 combn <- as.data.frame(t(combn(1:nd,2))) 
 grafic = c()
 for(i in 1:nrow(combn)){
@@ -314,7 +318,7 @@ for(i in 1:nrow(combn)){
 }
 ```
 
-```{r,echo = F, fig.cap="Gráfico de PF corregido", out.height="75%",out.width="75%"}
+```{r,echo = F, out.height="75%",out.width="75%"}
 grafic[[1]]
 ```
 
@@ -338,7 +342,6 @@ Las variables eliminadas han sido:
 ## Interpretación de planos factoriales
 
 Para ayudar a dar nombre a las diferentes dimensiones, aparte de utilizar las herramientas gráficas, también podemos fijarnos en las correlaciones entre las variables y los componentes principales. 
-
 ```{r, echo=F}
 # kable(Phi)
 # Aixo pendent perque en teoria les dues formes son correctes perque mostren les correlacions entre variables originals i PCs, pero donen numeros diferents. S'ha de preguntar pero fem servir la segona forma per ara.
@@ -352,7 +355,7 @@ kbl(pc1$rotation[,1:4],
                 latex_options = c("HOLD_position"))
 ```
 
-- **PC1**: Las variables más fuertemente correlacionadas con esta dimensión son **RATIO_CREDIT_INCOME**, **log_AMT_CREDIT** y **DTI_RATIO**, todas correlacionadas de forma negativa y en este respectivo orden. Con ello, podemos pensar que el primer plano factorial (**PC1**) tiene relación con "**Nivel monetario según prestamos**". Puede entenderse que valores más elevados en la proyección sobre el primer plano factorial (**PC1**) indican individuos con unas diferencias entre lo que pagan anualmente y lo que ingresan menor y con préstamos más bajos a nivel monetario.
+- **PC1**: Las variables más fuertemente correlacionadas con esta dimensión son **RATIO_CREDIT_INCOME**, **log_AMT_CREDIT** y **DTI_RATIO**, todas correlacionadas de forma negativa y en este respectivo orden. Con ello, podemos pensar que el primer plano factorial (**PC1**) tiene relación con "**Nivel monetario según prestamos**". Puede entenderse que valores más elevados en la proyección sobre el primer plano factorial (**PC1**) indican individuos con unas diferencias menores entre el credito pedido y lo que ingresan anualmente, y con préstamos más bajos a nivel monetario.
 
 - **PC2**: Las variables con mayor correlación con la segunda dimensión, en orden decreciente, son **log_AMT_INCOME_TOTAL** con correlación negativa, y **log_AMT_CREDIT** con correlación negativa y **DTI_RATIO** con correlación positiva. Se puede intuir que los individuos con valores más altos en la proyección del **PC2** serán aquellos con unos ingresos totales menores y creditos concedidos menores. Por lo tanto, el segundo plano factorial (**PC2**)  podría quedar definido por "**Nivel de ingresos según créditos**"
 
@@ -360,14 +363,39 @@ kbl(pc1$rotation[,1:4],
 
 - **PC4**: Para el cuarto plano factorial, se puede ver que la variable con mayor contribución en gran diferencia a las demás es **OWN_CAR_AGE**, correlacionada de forma negativa. Es decir, los clientes con valores de proyección en PC4 más grandes seran aquellos con coches más nuevos. Por lo tanto, el cuarto plano factorial (**PC4**) podría recibir el nombre de "**Edad vehículo **".
 
-Una vez se han establecido los planos factoriales gracias a las variables nunéricas, es necesario representar también las variables categóricas para así acabar de hacer un estudio completo usando toda la base de datos de nuestra variable. De esta forma, se han representado los centroides de las coordenadas de cada nivel de cada variable categórica y se han obtenido los siguientes resultados:
+## Representación de individuos
 
-## Representación de las variables categoricas en los planos factoriales del PCA
-
-```{r}
-var_categoriques = which(sapply(data, is.factor))
+A continuación se representan los individuos en los dos primeros planos factoriales.
+```{r, echo=FALSE}
+autoplot(pc1)
 ```
 
+Como se puede observar, no se aprecian grupos diferenciados a partir de la proyección de los individuos. Hay una gran cantidad de estos que se concentran alrededor del origen de coordenadas, dando a entender que són individuos "ordinarios". Sí se observan algunos puntos alejados de la nube principal, estos perteneciendo a la representación de algunos individuos con características más extrañas a las del conjunto central de individuos.
+
+## Representación de variables categóricas en primeros planos factoriales
+
+Una vez se han establecido los planos factoriales gracias a las variables nunéricas, es necesario representar también las variables categóricas para así acabar de hacer un estudio completo usando toda la base de datos de la variable estudiada. De esta forma, se han representado los centroides de las coordenadas de cada nivel de cada variable categórica y se han obtenido los siguientes resultados:
+```{r, include=FALSE}
+#autoplot(pc1, data = data, loadings = TRUE, loadings.colour = 'blue', 
+#         loadings.label = TRUE, loadings.label.size = 3)
+
+# data_cat <- data[, -numeric]
+# data_cat$TARGET <- NULL
+# 
+# 
+# data <- cbind(data_cat, apply(data_numeric, MARGIN = 2,as.numeric))
+# 
+# data <- as.matrix(data)
+# res.PCA = PCA(data, quanti.sup = c(1:7), graph=FALSE)
+# plot.PCA(res.PCA, choix='var')
+# 
+# PCAshiny(data)
+```
+
+```{r, include=FALSE}
+var_categoriques = which(sapply(data, is.factor))
+var_categoriques <- var_categoriques[-8]
+```
 
 ```{r, echo=FALSE}
 eje1 <- 1
@@ -379,7 +407,7 @@ axis(side=3, pos= 0, labels = F, col="cyan")
 axis(side=2, pos= 0, labels = F, col="cyan")
 axis(side=4, pos= 0, labels = F, col="cyan")
 #nominal qualitative variables
-dcat<-c(1:8)
+dcat<-c(1:7)
 #divide categoricals in several graphs if joint representation saturates
 #build a palette with as much colors as qualitative variables 
 #colors<-c("blue","red","green","orange","darkgreen")
@@ -392,14 +420,15 @@ for(k in var_categoriques){
   fdic1 <- tapply(Psi[,eje1], varcat, mean)
   fdic2 <- tapply(Psi[,eje2], varcat, mean) 
   text(fdic1, fdic2, levels(varcat), col=seguentColor, cex=0.8, font=3)
+  
+  legend("topright", legend = names(var_categoriques)[dcat],pch=1,col=colors, cex=0.6)
+  
 c<-c+1
 }
-legend("topright",names(var_categoriques)[dcat],pch=1,col=colors, cex=0.6)
 ```
 
-En este primer gráfico no se puede ver nada con claredad, por eso vamos a representar cada una de las variables categoricas en un gráfico distinto:
-
-```{r, out.width="95%"}
+En este primer gráfico no se puede ver nada con claredad, por eso se ha decidido representar cada una de las variables categóricas en un gráfico distinto:
+```{r, echo=FALSE, out.width="95%"}
 col <- rainbow(length(var_categoriques))
 c <- 1
 X <- Phi[, eje1]
@@ -410,7 +439,7 @@ for(k in var_categoriques){
     xlab=paste0("PC",1," (",round(pinerEix[1],4),"%)"),
     ylab=paste0("PC",2," (",round(pinerEix[2],4),"%)"),
     xlim=c(-1.5,1.5), ylim=c(-1,1),
-    main="Projeccions sobre el pla factorial de variables categòriques")
+    main="Proyecciones sobre el plano factorial de variables categóricas")
   axis(side=1, pos=0, at=seq(-70, 70, by=0.5), labels = F, col="black")
   axis(side=2, pos=0, at=seq(-70, 70, by=0.5), labels = F, col="black")
   axis(side=3, pos=0, at=seq(-70, 70, by=0.5), labels = F, col="black")
@@ -429,3 +458,9 @@ for(k in var_categoriques){
   c <- c+1
 }
 ```
+
+Algunos de los gráficos anteriores són interesantes de comentar. En el caso del gráfico que representa **NAME_EDUCATION_TYPE**, y de acuerdo con las descripciones establecidas de las dimensiones, se puede observar como los individuos con una educación "Lower secondary" són los que cuentan con unos ingresos totales menores y créditos concedidos de menor valor. Por otro lado, los individuos con una educación "Higher education" parecen ser los que piden crédito prestado de mayor valor monetario, y para los cuales sus ingresos totales son mayores. Uno de los motivos por los que se podria dar esto es por los préstamos solicitados para pagar la educación superior, y teniendo en cuenta que la base de datos es tomada en los Estados Unidos, se sabe que el precio de estos estudios es muy caro.
+
+Observando el gráfico que incluye **CODE_GENDER**, se puede apreciar como los dos sexos presentan diferencias en la primera dimensión. De acuerdo con la explicación de la dimensión, los hombres són los que, en general, piden préstamos de menor valor monetario, y para los cuales la diferencia entre el crédito del préstamo y los ingresos anuales es menor. Es decir, que los hombres cuentan con menos años para pagar las deudas de los préstamos. Por el lado contrario, las mujeres presentan las características opuestas, préstamos más grandes y diferencias más significativas entre ingresos anuales y valor del crédito.
+
+Por último, en el gráfico que representa la variable **NAME_INCOME_TYPE**, se pueden analizar las dos dimensiones por separado. Primero, si se comprueba la primera dimensión, es interesante ver que tanto los pensionistas como los funcionarios tienden a pedir préstamos de mayor valor, y ambos presentan diferencias entre ingresos anuales y el valor de dicho préstamo solicitado. Segundo, si se observa en función de la segunda dimensión, se aprecia que los pensionistas són los que presentan unos ingresos totales menores, mientras que las personas con ingresos derivados de puestos de trabajo comerciales són las que tienen ingresos totales mayores.
