@@ -13,7 +13,7 @@ knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
 
 ```{r, warning=FALSE, echo=FALSE}
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
-data <- get(load('prepro_dades.Rdata'))
+data <- get(load('Dades preprocessades.Rdata'))
 rm(df_preprocessed)
 library("factoextra")
 library("kableExtra")
@@ -366,8 +366,17 @@ kbl(pc1$rotation[,1:4],
 ## Representación de individuos
 
 A continuación se representan los individuos en los dos primeros planos factoriales.
+
 ```{r, echo=FALSE}
-autoplot(pc1)
+eje1 <- 1
+eje2 <- 2
+plot(Psi[,eje1],Psi[,eje2],ylab = "PC2",xlab="PC1",main="Proyección de observaciones entre PC1 i PC2")
+# autoplot(pc1)
+text(Psi[,eje1],Psi[,eje2],labels=iden, cex=0.5)
+axis(side=1, pos=0, at=seq(-70, 70, by=0.5), labels = F, col="aquamarine4")
+axis(side=2, pos=0, at=seq(-70, 70, by=0.5), labels = F, col="aquamarine4")
+axis(side=3, pos=0, at=seq(-70, 70, by=0.5), labels = F, col="aquamarine4")
+axis(side=4, pos=0, at=seq(-70, 70, by=0.5), labels = F, col="aquamarine4")
 ```
 
 Como se puede observar, no se aprecian grupos diferenciados a partir de la proyección de los individuos. Hay una gran cantidad de estos que se concentran alrededor del origen de coordenadas, dando a entender que són individuos "ordinarios". Sí se observan algunos puntos alejados de la nube principal, estos perteneciendo a la representación de algunos individuos con características más extrañas a las del conjunto central de individuos.
@@ -375,6 +384,7 @@ Como se puede observar, no se aprecian grupos diferenciados a partir de la proye
 ## Representación de variables categóricas en primeros planos factoriales
 
 Una vez se han establecido los planos factoriales gracias a las variables nunéricas, es necesario representar también las variables categóricas para así acabar de hacer un estudio completo usando toda la base de datos de la variable estudiada. De esta forma, se han representado los centroides de las coordenadas de cada nivel de cada variable categórica y se han obtenido los siguientes resultados:
+
 ```{r, include=FALSE}
 #autoplot(pc1, data = data, loadings = TRUE, loadings.colour = 'blue', 
 #         loadings.label = TRUE, loadings.label.size = 3)
@@ -428,6 +438,7 @@ c<-c+1
 ```
 
 En este primer gráfico no se puede ver nada con claredad, por eso se ha decidido representar cada una de las variables categóricas en un gráfico distinto:
+
 ```{r, echo=FALSE, out.width="95%"}
 col <- rainbow(length(var_categoriques))
 c <- 1
