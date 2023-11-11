@@ -1,15 +1,30 @@
 ---
-title: "profiling"
-author: "oskar"
-date: "2023-10-17"
 output: pdf_document
+header-includes:
+  - \usepackage{fullpage} 
+  - \usepackage[spanish]{babel}
+  - \usepackage{fancyhdr}
+  - \setlength{\headsep}{7mm} 
+  - \usepackage[linktoc=page]{hyperref}
 ---
+
+```{=tex}
+\setlength{\headheight}{13.6pt}
+\setlength{\topmargin}{-10mm}
+
+\rhead{Minería de Datos}
+\lhead{Entrega D3}
+```
+\pagestyle{fancy}
+```{=tex}
+\cfoot{\thepage}
+\setcounter{page}{5}
+```
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-Cargamos los datos:
 ```{r}
 #Lectura de los datos
 load("Dades preprocessades.Rdata")
@@ -24,7 +39,10 @@ load("todoslosdatosclustjer.Rdata")
 cluster <- resultado$cluster
 ```
 
-Variables categóricas:
+Con el objetivo de perfilar los grupos conseguidos mediante el algoritmo K-means primero veremos la significación de las variables para los grupos y después se graficarán para identificar las características definitorias de cada grupo.
+
+A continuación se muestran los p-valores para evaluar la significación de cada variable. Primeramente de las variables categóricas y seguidamente las numéricas.
+
 ```{r}
 indices_categoricas <- sapply(dades, is.factor)
 p_values <- numeric(length(dades))
@@ -47,7 +65,6 @@ print(p_values_categoricas)
 
 ```
 
-Variables numéricas:
 ```{r}
 library(car)
 # Identifica las variables categóricas (factores)
@@ -73,7 +90,9 @@ for (i in 1:ncol(variables_numericas)) {
 print(p_values_numericas)
 ```
 
-Variables significativas:
+Elaboramos una tabla donde se indica con 1 si se considera variable significativa para el clúster y 0 en caso contrario.
+
+
 ```{r}
 # Función para evaluar significancia de p-valores
 evaluate_p_values <- function(p_values, alpha = 0.05) {
@@ -94,19 +113,21 @@ print("Significancia de p-valores para variables categóricas:")
 print(significance_categoricas)
 ```
 
-
+Vemos como solo nos descarta 1 variable, pero gráficamente muy pocas aportan información que muestren diferencias grandes entre clúster.
 
 
 
 ```{r}
 # install.packages("FactoMineR")
-library(FactoMineR)
-dadesc <- cbind(dades,factor(cluster))
-resul <- catdes(dadesc,num.var=16,proba=0.05)
-resul$test.chi2 # Da el mismo resultado que lo anterior
-# resul$quanti # Sign de la var num por cada clúster. Todos Signif 
+# library(FactoMineR)
+# dadesc <- cbind(dades,factor(cluster))
+# resul <- catdes(dadesc,num.var=16,proba=0.05)
+# resul$test.chi2 # Da el mismo resultado que lo anterior
+# # resul$quanti # Sign de la var num por cada clúster. Todos Signif 
 # resul$category #Solo util para saber si el nivel explica el cluster
 ```
+
+Se grafican las variables según clúster. Para las variables numéricas se mostrará la media grupal y la media global; para las variables categóricas se mostrarán las cantidades de cada nivel de la variable categórica por clúster.
 
 ```{r}
 library(ggplot2)
@@ -153,103 +174,15 @@ ggplot(data = dades, aes(x = cluster, y = dades$DTI_RATIO)) +
   labs(title = "Medias de la Capacidad de cliente para pagar la annuity con sus ingresos por clúster respecto la media global" , y = "Media", x = "Clúster")
 ```
 
-El clúster 3 tiene menos capacidad para pagar el préstamo.
+Vemos como el clúster 3 tiene menos capacidad para pagar el préstamo.
 
 Conclusiones
 
-Clúster 1: Anualidad más alta, menos demora en devolver el préstamo.
-Clúster 2: Coches más nuevos.
-Clúster 3: Más tarda en devolver el préstamo y menor capacidad para ello.
+Clúster 1 se distingue por tener la anualidad más elevada y una menor demora en la devolución del préstamo.
 
-Nota: Los clústeres según las variables categóricas se comportan de igual manera a la descrita. Seguramente, debido a causa de que k-mean solo usa datos numéricos. Los gráficos usados, pero sin interpretación informativa sobre los clústeres se encuentran en el anexo.
+Clúster 2 se caracteriza por incluir individuos con los coches más recientes.
 
+Clúster 3 presenta una tendencia a tardar más en devolver el préstamo y exhibe una menor capacidad para hacerlo.
 
-Anexo
-
-```{r}
-ggplot(data = dades, aes(x = cluster, y = dades$CNT_FAM_MEMBERS)) +
-  geom_bar(stat = "summary", fun = "mean", fill= colores) +
-  coord_cartesian(ylim=c(2,2.5))+
-  geom_hline(yintercept = mean(dades$CNT_FAM_MEMBERS)) +
-  labs(title = "Medias del Número de familiares del cliente por clúster respecto la media global" , y = "Media", x = "Clúster")
-```
-
-```{r}
-ggplot(data = dades, aes(x = cluster, y = dades$log_AMT_INCOME_TOTAL)) +
-  geom_bar(stat = "summary", fun = "mean", fill= colores) +
-  geom_hline(yintercept = mean(dades$log_AMT_INCOME_TOTAL)) +
-  labs(title = "Medias del logaritmo de los Ingresos totales del cliente por clúster respecto la media global" , y = "Media", x = "Clúster") 
-```
-
-```{r}
-ggplot(data = dades, aes(x = cluster, y = dades$log_AMT_CREDIT)) +
-  geom_bar(stat = "summary", fun = "mean", fill= colores) +
-  geom_hline(yintercept = mean(dades$log_AMT_CREDIT)) +
-  labs(title = "Medias del Importe de crédito del préstamo por clúster respecto la media global" , y = "Media", x = "Clúster")
-```
-
-```{r}
-ggplot(data = dades, aes(x = cluster, y = dades$AGE_YEARS)) +
-  geom_bar(stat = "summary", fun = "mean", fill= colores) +
-  geom_hline(yintercept = mean(dades$AGE_YEARS)) +
-  labs(title = "Medias de la Edad por clúster respecto la media global" , y = "Media", x = "Clúster")
-
-```
-
-```{r}
-ggplot(data = dades, aes(x = cluster, fill = dades$CODE_GENDER)) +
-  geom_bar(position = "dodge") +
-  labs(title = "Gráfico de la distribución del Género respecto el Clúster", y = "Freq", x = "Clúster") +
-  theme(legend.position = "top") + guides(fill = guide_legend(title = NULL))
-```
-
-```{r}
-ggplot(data = dades, aes(x = cluster, fill = dades$NAME_INCOME_TYPE)) +
-  geom_bar(position = "dodge") +
-  labs(title = "Gráfico de la distribución del Tipo de ingresos respecto el Clúster", y = "Freq", x = "Clúster") +
-  theme(legend.position = "top") + guides(fill = guide_legend(title = NULL))
-```
-
-```{r}
-ggplot(data = dades, aes(x = cluster, fill = dades$NAME_EDUCATION_TYPE)) +
-  geom_bar(position = "dodge") +
-  labs(title = "Gráfico de la distribución del Nivel de estudios del cliente respecto el Clúster", y = "Freq", x = "Clúster") +
-  theme(legend.position = "top") + guides(fill = guide_legend(title = NULL))
-```
-
-```{r}
-ggplot(data = dades, aes(x = cluster, fill = dades$NAME_FAMILY_STATUS)) +
-  geom_bar(position = "dodge") +
-  labs(title = "Gráfico de la distribución del Estado civil respecto el Clúster", y = "Freq", x = "Clúster") +
-  theme(legend.position = "top") + guides(fill = guide_legend(title = NULL))
-```
-
-```{r}
-ggplot(data = dades, aes(x = cluster, fill = dades$OCCUPATION_TYPE)) +
-  geom_bar(position = "dodge") +
-  labs(title = "Gráfico de la distribución de la Actividad laboral respecto el Clúster", y = "Freq", x = "Clúster") +
-  theme(legend.position = "top") + guides(fill = guide_legend(title = NULL))
-```
-
-```{r}
-ggplot(data = dades, aes(x = cluster, fill = dades$ORGANIZATION_TYPE)) +
-  geom_bar(position = "dodge") +
-  labs(title = "Gráfico de la distribución del Tipo de organización donde trabaja el cliente respecto el Clúster", y = "Freq", x = "Clúster") +
-  theme(legend.position = "top") + guides(fill = guide_legend(title = NULL))
-```
-
-```{r}
-ggplot(data = dades, aes(x = cluster, fill = dades$REGION_RATING_CLIENT)) +
-  geom_bar(position = "dodge") +
-  labs(title = "Gráfico de la distribución de la Calificación de la región donde vive el cliente respecto el Clúster", y = "Freq", x = "Clúster") +
-  theme(legend.position = "top") + guides(fill = guide_legend(title = NULL))
-```
-
-
-
-
-
-
-
-
+Es relevante notar que los patrones observados en los clústeres según las variables categóricas siguen la misma dinámica descrita. Esto podría deberse, en gran medida, a que el método k-means se centra exclusivamente en datos numéricos. Los gráficos asociados, aunque incluidos en el anexo, carecen de interpretación informativa directa sobre las características específicas de cada clúster.
 

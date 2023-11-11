@@ -33,11 +33,11 @@ library(ggplot2)
 
 # Clustering
 
-En este apartado se aplicarán diferentes algoritmos de clasificación, en concreto el k-means y el Jerárquico. Todo ello, con el objetivo de determinar a qué grupo pertenece cada observación, para poder realizar un Profiling en el que se terminará etiquetando a cada uno de estos grupos con sus características más relevantes.
+En esta sección, se emplearán diversos algoritmos de clasificación, específicamente el k-means y el Jerárquico. El propósito es asignar cada observación a un grupo correspondiente con el fin de llevar a cabo un perfilado. Este proceso implica etiquetar cada grupo con sus características más significativas, proporcionando así una descripción detallada y distintiva de cada perfil dentro de nuestros datos.
 
 ## K-means
 
-Primero se cargan los datos y se separan las variables numéricas:
+
 
 ```{r, include=FALSE}
 #Lectura de los datos
@@ -59,7 +59,9 @@ dd <- mydata[,Numeriques]
 ```
 
 
-El algoritmo K-means solamente permitirá utilizar las variables numéricas. Antes de aplicar el propio algoritmo, se necesita seleccionar el número óptimo de clústeres. Para realizar esto, existen múltiples métodos, uno de ellos es el método del codo. Este consiste en aplicar el K-means para un rango de valores k y luego graficar la suma de los cuadrados de las distancias intraclúster en función de k. Para encontrar el óptimo con este método, sencillamente hace falta encontrar el "codo" del gráfico.
+El algoritmo K-means solamente permitirá utilizar las variables numéricas. Por ello se separarán los datos numéricos de la base de datos preprocesada. 
+
+Antes de aplicar el propio algoritmo, se necesita seleccionar el número óptimo de clústeres. Para realizar esto, existen múltiples métodos, uno de ellos es el método del codo. Este consiste en aplicar el K-means para un rango de valores k y luego graficar la suma de los cuadrados de las distancias intraclúster en función de k. Para encontrar el óptimo con este método, sencillamente hace falta encontrar el "codo" del gráfico.
 
 
 ```{r, warning=FALSE,echo=FALSE}
@@ -73,9 +75,7 @@ points(2, wss[2], col="red",pch = 16)
 
 Como se puede apreciar en el gráfico, según el método del codo, el número óptimo de clústeres para el K-means de nuestra base de datos seria k=2.
 
-Por lo que sigue, como existen muchos otros criterios para la selección de la k óptima, se usará la función NbClust, que permite aplicar una cantidad de 26 criterios para la selección de k, de esta manera se sabrá con mayor seguridad cuál es el óptimo real.
-
-
+Por lo que sigue, como existen muchos otros criterios para la selección de la k óptima, se usará la función NbClust, que permite aplicar una cantidad de 26 criterios para la selección de k, de esta manera se sabrá con mayor seguridad cuál es el óptimo real. Se grafican los resultados obtenidos por NbClust.
 
 ```{r,include=FALSE}
 set.seed(1234)
@@ -99,7 +99,7 @@ Como se puede apreciar en el histograma, tras haber utilizado todos los criterio
 
 Como el óptimo se encuentra en k=`r tmax`, el siguiente paso es realizar el K-means con esa k.
 
-A continuación, se muestra el gráfico de los individuos pintados según su clase en el plano factorial de las dimensiones 1 y 2 del PCA, acompañado de cada una de las elipses de las clases.
+Después de aplicar el algoritmo y conseguir el grupo de cada individuo, se muestra el gráfico de los individuos pintados según su clase en el plano factorial de las dos primeras dimensiones del PCA, acompañado de cada una de las elipses de las clases.
 
 ```{r}
 k <- 3
@@ -130,11 +130,13 @@ ggplot(numer,
 
 ```
 
-Ahora bien, como se puede ver en el gráfico anterior, no se distinguen muy bien las tres clases, ya que están unas encima de las otras. Esto puede ser consecuencia de que la clasificación se ha hecho considerando solamente las variables numéricas, es por eso que es necesario realizar un clustering jerárquico.
+Ahora bien, como se puede ver en el gráfico, no se distinguen muy bien las tres clases, ya que están unas encima de las otras. Esto puede ser consecuencia de que la clasificación se ha hecho considerando solamente las variables numéricas, es por eso que es necesario realizar un clustering jerárquico.
 
 ## Clustering jerárquico
 
-En primera instancia, para realizar el clustering jerárquico se debe hacer primeramente un dendograma con el método de Ward con la distancia de $$Gower^2$$. En el k-means solo se puede trabajar con las variables numéricas y en la base de datos hay variables tanto numéricas como cualitativas. La distancia de $$Gower^2$$ nos permitirá calcular las distancias tanto de las variables numéricas como de las categóricas.
+En primera instancia, para realizar el clustering jerárquico se debe hacer primeramente un dendrograma con el método de Ward con la distancia de $$Gower^2$$. En el k-means solo se puede trabajar con las variables numéricas y en la base de datos hay variables tanto numéricas como cualitativas. La distancia de $$Gower^2$$ nos permitirá calcular las distancias tanto de las variables numéricas como de las categóricas.
+
+Así, se calcula dicha distancia y se grafica un dendrograma:
 
 ```{r}
 # Se calcula la distancia de Gower:
@@ -193,7 +195,7 @@ ggplot(tabl, aes(x = vec, y = Freq)) +
 plot(h1)
 ```
 
-Con el dendograma anterior, se confirma que el mejor corte (después de k = 2) es k = 3 y k = 5.
+Con el dendrograma anterior, se confirma que el mejor corte (después de k = 2) es k = 3 y k = 5. Se divide el mismo dendrograma en k = 5 grupos:
 
 ```{r}
 objecto2 <- cutree(h1, 5)
@@ -204,15 +206,10 @@ colors_dend <- color_branches(h1, labels = objecto2, k = 5, col = colors)
 plot(colors_dend)
 ```
 
-Finalmente, se guardan los datos preprocesadas con los clústeres hechos. 
+Se escoge k=5 para hacer un perfilamiento de grupos detallado.
+
 
 ```{r}
 save(mydata, file = 'data_clust.Rdata')
 ```
-
-
-
-revisar nbclust
-a malas con las numericas que si que funciona
-standaritzar
 

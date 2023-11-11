@@ -5,7 +5,7 @@ date: "2023-11-09"
 output: html_document
 ---
 
-ANEXO DE GRAFICOS DEL PROFILING FUZZY
+ANEXO PROFILING FUZZY
 
 ```{r}
 ggplot(data = dades, aes(x = cluster, y = dades$OWN_CAR_AGE)) + 
@@ -39,7 +39,6 @@ ggplot(data = dades, aes(x = cluster, y = dades$log_AMT_CREDIT)) +
 ```{r}
 ggplot(data = dades, aes(x = cluster, y = dades$AGE_YEARS)) +
   geom_bar(stat = "summary", fun = "mean", fill= colores) +
-  coord_cartesian(ylim=c(35,50)) +
   geom_hline(yintercept = mean(dades$AGE_YEARS)) +
   labs(title = "Medias de la Edad por clúster respecto la media global" , y = "Media", x = "Clúster")
 

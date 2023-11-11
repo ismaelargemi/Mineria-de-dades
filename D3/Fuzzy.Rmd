@@ -1,9 +1,26 @@
 ---
-title: "Untitled"
-author: "Ismael Argemí Fernández, Iván Martínez Yates"
-date: "`r Sys.Date()`"
-output: html_document
+output: pdf_document
+header-includes:
+  - \usepackage{fullpage} 
+  - \usepackage[spanish]{babel}
+  - \usepackage{fancyhdr}
+  - \setlength{\headsep}{7mm} 
+  - \usepackage[linktoc=page]{hyperref}
 ---
+
+```{=tex}
+\setlength{\headheight}{13.6pt}
+\setlength{\topmargin}{-10mm}
+
+\rhead{Minería de Datos}
+\lhead{Entrega D3}
+```
+\pagestyle{fancy}
+```{=tex}
+\cfoot{\thepage}
+\setcounter{page}{5}
+```
+
 ```{r}
 #install.packages("fclust")
 library(fclust)
@@ -11,7 +28,6 @@ library(cluster)
 library(ggplot2)
 ```
 
-Cargamos los datos:
 ```{r, include=FALSE}
 #Lectura de los datos
 load("Dades preprocessades.Rdata")
@@ -33,18 +49,18 @@ dd <- mydata[,Numeriques]
 
 # Fuzzy Clustering
 
-La principal diferencia del Fuzzy Clustering al resto de algoritmos, es que es permite que una observación pertenezca a más de una agrupación, es decir, permite que los elementos o individuos tengan grados de pertenencia  a varios grupos simultáneamente.
+La característica distintiva del Fuzzy Clustering en comparación con otros algoritmos radica en su capacidad para permitir que una observación pertenezca a más de una agrupación. En otras palabras, posibilita que los elementos o individuos tengan grados de pertenencia a varios grupos simultáneamente.
 
-En esta parte, la función FKM() nos ejecuta el Fuzzy para las K especificadas y automáticamente escoge la k óptima.
+En el contexto de la ejecución del algoritmo, la función FKM() se encarga de realizar el Fuzzy Clustering para las K especificadas y, de manera automática, selecciona el valor óptimo de k.
+
 ```{r, include=FALSE}
 fclust2 <- FKM(dd,k=2:10,stand = 1)
 #head(round(fclust2$U,2))
 ```
 
 
-La propia función FKM guarda los valores Silhouette fuzzy para cada k. Este es un índice específico del Fuzzy y cuanto mayor sea el índice del Silhouette mejor.
+La propia función FKM guarda los valores Silhouette fuzzy para cada k. Este es un índice específico del Fuzzy y cuanto mayor sea el índice del Silhouette mejor. Se grafican los valores SIL.F para cada k:
 
-A continuación, hacemos el gráfico de los valores SIL.F para cada k:
 ```{r}
 silf <- fclust2$criterion
 silf <- as.data.frame(silf)
@@ -59,10 +75,9 @@ ggplot(silf, aes(x, silf)) +
   theme(plot.title = element_text(hjust = 0.5))
 ```
 
-Como se puede ver en el gráfico anterior, k=2 es la k óptima para el fuzzy.
+Como se puede ver en el gráfico, k=2 es la k óptima para el algoritmo fuzzy.
 
 Acto seguido, visualizamos los clústeres en el gráfico factorial de las dos primeras dimensiones:
-
 
 ```{r, include=FALSE}
 pc1 <- prcomp(dd, scale = TRUE)
@@ -93,22 +108,23 @@ ggplot(dd,
 ```
 
 
-
-
 ## Predicción de un individuo aleatorio en el fuzzy 
 
-En este apartado se genera un posible individuo y aplicamos el Fuzzy C-means con el objetivo de conocer a qué clúster sería asignado y con qué probabilidad.Acto seguido, se muestra la información del individuo que se ha creado:
 
-Señor de 56 años.
-ingresos: 100k.
-cnt fam: 4.
-car: 7 añitos
-amt credit: 12000
-ratio_credit:0,12
-ratio annuity: 0.05
-dti ratio: 0.15
+En esta sección, creamos un individuo hipotético y aplicamos el algoritmo Fuzzy C-means con el propósito de determinar a qué clúster se asignaría y con qué probabilidad. A continuación, se presenta la información detallada del individuo recién creado:
 
-A continuación, se carga la información:
+Individuo:
+
+Sexo: Masculino
+Edad: 56 años
+Ingresos: $100,000
+Número de personas en la familia: 4
+Años de posesión del automóvil: 7
+Monto del crédito: $12,000
+Proporción de crédito: 0.12
+Proporción de anualidad: 0.05
+Proporción de deuda a ingresos: 0.15
+
 ```{r,include=FALSE}
 df_preprocessed[,c("AMT_INCOME_TOTAL","AMT_CREDIT","AMT_ANNUITY","AMT_GOODS_PRICE",
           "DAYS_BIRTH","TARGET","log_AMT_GOODS_PRICE","log_AMT_ANNUITY",
@@ -126,7 +142,7 @@ library(kableExtra)
 kable(dd2[nrow(dd2),])
 ```
 
-Aplicamos Fuzzy C-Means a la base de datos con el nuevo individuo:
+En este apartado, aplicamos el algoritmo Fuzzy C-means a la base de datos, incorporando el individuo recién añadido. Después de la ejecución del algoritmo, visualizamos los resultados mediante la representación gráfica en el plano factorial del PCA, resaltando el individuo en cuestión con un tono azul.
 
 ```{r,inlcude}
 dd2 <- scale(dd2)
@@ -163,15 +179,12 @@ ggplot(dd2,
 ```
 
 
-En azul se han resaltado las coordenadas del individuo en el plano factorial del PCA.
-
-
 ```{r,include=FALSE}
 fobj$U[5001,]  #Probabilitats de pertanyer al cluster 1
 ```
 
 
-Como se puede ver, a pesar de ser un punto alejado de los puntos identificados en el Clúster 1, tiene una alta probabilidad de ser asignado en dicho clúster.
+Vemos como, a pesar de su ubicación distante de los puntos identificados en el Clúster 1, a este individuo se le asigna a este grupo debido a una alta probabilidad de pertenencia. Esto resalta la capacidad del algoritmo para reconocer patrones y adaptarse a la variabilidad de los datos.
 
 
 
