@@ -1,0 +1,1662 @@
+---
+output: pdf_document
+header-includes:
+  - \usepackage{fullpage} 
+  - \usepackage[spanish]{babel}
+  - \setlength{\headsep}{7mm} 
+  - \usepackage[linktoc=page]{hyperref}
+  - \usepackage{fancyhdr}
+  - \usepackage{floatrow}
+  - \floatsetup[figure]{capposition=top}
+  - \floatsetup[table]{style=plaintop}
+  - \usepackage{float}
+  - \floatplacement{figure}{H}
+params:
+  file1: "Dades seleccionades.RData"
+  path: "C:/Users/iker1/Downloads"
+---
+
+<!-- estructura del documento -->
+
+```{r, include=FALSE}
+library(limma)
+library(edgeR)
+
+setwd(params$path)
+file1 <- file.path(params$path,params$file1)
+load(file1)
+library(kableExtra)
+
+```
+
+\pagenumbering{arabic}
+
+```{=tex}
+\begin{titlepage}
+\centering
+\graphicspath{{directori}}
+\includegraphics[width=19cm, height=2cm]{logo3.png}
+
+\begin{center}
+\vspace*{3cm}
+
+\Huge
+    \textbf{Mineria de Datos}
+
+\Huge
+\textbf{Análisis Exploratorio de Datos y Predicción de Incumplimiento de
+Préstamos}
+
+\vspace{0.75cm}
+
+\large
+    \textbf{Aina Llaneras Casas, Alejandro Arcas Alberti,  Alessandro Natali Vilamú, Berta Moyano Núñez, Blanca Romero Sainz, Iker Meneses Sales, Ismael Argemí Fernández, Iván Martínez Yates, Marta Gomez de la Tia Privat, Mireia Bohils Tenas, Mireia Bolívar Rubia, Oscar Arroyo Luque, Arnaut Goethals}
+   
+\vspace{0.5cm}
+  \text{GRUPO 1: Aina Llaneras, Blanca Romero, Iván Martínez}
+\vspace{0.02cm}
+  \text{GRUPO 2: Alejandro Arcas Alberti, Alessandro Natali, Iker Meneses, Arnaut Goethals}
+\vspace{0.02cm}
+  \text{GRUPO 3: Ismael Argemí, Mireia Bohils, Oscar Arroyo}
+\vspace{0.02cm}
+  \text{GRUPO 4: Berta Moyano, Marta Gómez, Mireia Bolívar}
+
+    
+\vspace{0.5cm}
+
+\large
+  \textit{14 de Noviembre del 2023}
+
+\end{center}
+\end{titlepage}
+```
+
+\newpage
+
+```{=tex}
+\setlength{\headheight}{13.6pt}
+\setlength{\topmargin}{-10mm}
+```
+
+\pagestyle{fancy}
+
+\fancyhf{}
+
+```{=tex}
+\rhead{Mineria de Datos}
+\lhead{Entrega D1}
+\newpage
+```
+```{=tex}
+\cfoot{\thepage}
+\setcounter{page}{1}
+```
+
+\pagebreak
+
+# Definición del proyecto y asignación
+
+El objetivo principal de este trabajo es permitir a las instituciones financieras o analistas de riesgos realizar un análisis exploratorio de datos completo para evaluar la probabilidad de que un prestatario incumpla con sus obligaciones financieras. Para un mejor funcionamiento del equipo y una correcta distribución de tareas, se ha separado el conjunto de los integrantes en 4 subgrupos mencionados previamente, cada uno constando de 3 integrantes, para poder efectuar las tareas con mayor asertividad e independencia.
+
+## Fuente de obtención de los datos
+
+Los datos se han extraído del repositorio de bases de datos Kaggle. El enlace de la página web es el siguiente: <https://www.kaggle.com/datasets/gauravduttakiit/loan-defaulter?select=application_data.csv>
+
+## Descripción de los datos
+
+Esta base de datos está diseñada para abordar el desafío de identificar posibles incumplimientos de préstamos en un entorno empresarial real. El conjunto de datos contiene información relacionada con préstamos otorgados a diversos prestatarios, junto con detalles financieros y personales de los solicitantes.
+
+## Estructura e información de la matriz de datos
+
+| **Filas (individuos)** | **Columnas (variables)** |         **Nro. variables numéricas**         |       **Nro. variables categóricas**        | **Nro. variables respuesta u objetivo** |
+|:-------------:|:-------------:|:-------------:|:-------------:|:-------------:|
+|   `r nrow(df_final)`   |    `r ncol(df_final)`    | `r sum(unlist(lapply(df_final,is.numeric)))` | `r sum(unlist(lapply(df_final,is.factor)))` |                    1                    |
+
+**VARIABLES EXPLICATIVAS**
+
+| **Nombre**              | **Descripción**                                                                             | **Tipo**   | **Diccionario y dominio**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+|:----------------|:----------------|:----------------|:--------------------|
+| CODE_GENDER             | Género del cliente                                                                          | Categórica | M---Male, F---Female                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| NAME \_INCOME \_TYPE    | Tipo de ingresos                                                                            | Categórica | 1-Businessman, 2-Commercial associate, 3-Pensioner, 4-State servant, 5-Working                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| NAME \_EDUCATION \_TYPE | Nivel de estudios del cliente                                                               | Categórica | 1-Academic degree, 2-Higher education, 3-Incomplete higher, 4-Lower secondary, 5-Secondary special                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| NAME \_FAMILY \_STATUS  | Estado civil                                                                                | Categórica | 1-Married, 2-Single/not married, 3-Civil marriage, 4-Separated, 5-Widow                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| OCCUPATION \_TYPE       | Actividad laboral                                                                           | Categórica | 1-Laborers, 2-Sales staff, 3-Core staff, 4-Managers, 5-Drivers, 6-Accountants, 7-Cleaning staff, 8- High skill tech staff, 9-HR staff, 10-IT staff, 11-Cooking staff, 12-Low-skill Laborers, 13-Medicine staff, 14-Private service staff, 15-Realty agents, 16-Security staff, 17-Secretaries, 18-Waiters/barmen staff                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| ORGANIZATION \_TYPE     | Tipo de organización donde trabaja el cliente                                               | Categórica | 1-Advertising, 2-Agriculture, 3-Bank, 4-Business Entity Type 1, 5-Business Entity Type 2, 6-Business Entity Type 3, 7-Cleaning, 8-Construction, 9-Culture, 10-Electricity, 11-Emergency, 12-Government, 13-Hotel, 14-Housing, 15-Industry: type 1, 16-Industry: type 10, 17-Industry: type 11, 18-Industry: type 12, 19-Industry: type 13, 20-Industry: type 2, 21-Industry: type 3, 22-Industry: type 4, 23-Industry: type 5, 24-Industry: type 6, 25-Industry: type 7, 26-Industry: type 9, 27-Insurance, 28-Kindergarten, 29-Legal Services, 30-Medicine, 31-Military, 32-Mobile, 33-Other, 34-Police, 35-Postal, 36-Realtor, 37-Restaurant, 38-School, 39-Security, 40-Security Ministries, 41-Self-employed, 42-Services, 43-Telecom, 44-Trade: type 1, 45-Trade: type 2, 46-Trade: type 3, 47-Trade: type 4, 48-Trade: type 6, 49-Trade: type 7, 50-Transport: type 1, 51-Transport: type 2, 52-Transport: type 3, 53-Transport: type 4, 54-University, 55-XNA |
+| REGION_RATING \_CLIENT  | Nuestra calificación de la región donde vive el cliente                                     | Categórica | 1, 2, 3                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| AMT_INCOME \_TOTAL      | Ingresos totales del cliente                                                                | Numérica   | [29250, 2250000]                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| AMT_CREDIT              | Importe de crédito del préstamo                                                             | Numérica   | [45000, 3375000]                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| AMT_ANNUITY             | Anualidad del préstamo                                                                      | Numérica   | [2673, 177827]                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| DAYS_BIRTH              | Edad del cliente en número de días en el momento de pedir el préstamo                       | Numérica   | [-25159, -7711]                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| OWN_CAR_AGE             | Edad en años del coche del cliente                                                          | Numérica   | [0, 65]                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| AMT_GOODS \_PRICE       | Para préstamos al consumo, es el precio de los bienes para los cuales se otorga el préstamo | Numérica   | [45000, 3375000]                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| CNT_FAM \_MEMBERS       | Número de familiares del cliente                                                            | Numérica   | [1, 8]                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+
+**VARIABLE OUTPUT**
+
+| **Nombre** | **Descripción** | **Tipo**   | **Diccionario y dominio**                                                                                                                                                               |
+|:----------------|:----------------|:----------------|:--------------------|
+| Target     | Target          | Categórica | 1 - Cliente con dificultades de pago: él/ella tuvo pagos atrasados de más de X días en al menos una de las primeras Y cuotas del préstamo en nuestra muestra. 0 - Todos los demás casos |
+
+**VARIABLES MISSINGS**
+
+|          **Nro. de casillas missings**          |                           **Respeto del total de la matriz datos**                           |
+|:------------------------:|:--------------------------------------------:|
+| `` `r sum(is.na(df_final) | df_final == "")` `` | `` `r round(sum(is.na(df_final)| df_final == "")/(nrow(df_final)*ncol(df_final))*100,2)` ``% |
+
+Porcentaje de missings por variable (tabla y histograma):
+
+```{r, echo=FALSE}
+#Percentatge missing per variable:
+taula1 <- data.frame(Nro_de_missings = colSums(is.na(df_final)| df_final == ""),Porcentaje=round(colSums(is.na(df_final)| df_final == "")/nrow(df_final)*100,2))
+
+```
+
+|                 | **Nro. de missings**                             | **Porcentaje de missings**                    |
+|------------------|-------------------|-----------------------------------|
+| OWN_CAR_AGE     | `r taula1["OWN_CAR_AGE", "Nro_de_missings"]`     | `r taula1["OWN_CAR_AGE", "Porcentaje"]`%      |
+| AMT_GOODS_PRICE | `r taula1["AMT_GOODS_PRICE", "Nro_de_missings"]` | `r taula1["AMT_GOODS_PRICE", "Porcentaje"]` % |
+| OCCUPATION_TYPE | `r taula1["OCCUPATION_TYPE", "Nro_de_missings"]` | `r taula1["OCCUPATION_TYPE", "Porcentaje"]`%  |
+
+```{r, echo=FALSE, warning=FALSE}
+library(ggplot2)
+
+missings <- taula1[,"Porcentaje"]!=0
+
+m <- data.frame(Porcentaje=taula1$Porcentaje[missings])
+rownames(m)<- c('OWN_CAR_AGE','AMT_GOODS_PRICE','OCCUPATION_TYPE')
+
+ggplot(data = m, aes(x = rownames(m), y = Porcentaje), fill = rownames(m)) +
+  geom_bar(stat="identity", fill="#5299E3", color="#5299E3") +
+  labs(
+    title = "Gráfico de porcentaje de missings",
+    x = "Variables",
+    y = "Porcentaje de missings"
+  ) +
+  theme_minimal() + 
+  ylim(0,100)
+
+
+```
+
+Únicamente se han representado las variables que tienen algún valor faltante.
+
+\pagebreak
+
+# Plan de trabajo
+
+```{=tex}
+\vspace{1cm}
+\begin{center}
+\textbf{Diagrama de Gantt}
+\end{center}
+```
+
+```{=tex}
+\begin{center}
+```
+
+![](gantt.PNG)
+
+```{=tex}
+\end{center}
+```
+
+\newpage
+
+## Análisis de riesgos
+
+Se han identificado los siguientes riesgos que podrían afectar al
+correcto desarrollo del trabajo:
+
++------------------------+--------------+---------------------------+
+| Posible problema       | Probabilidad | Solución                  |
+|                        | de suceso    |                           |
+|                        |              |                           |
++========================+==============+===========================+
+| Tarea crítica no       | Baja         | Establecer una fecha      |
+| finalizada a tiempo    |              | límite previa para tener  |
+|                        |              | margen de maniobra        |
++------------------------+--------------+---------------------------+
+| Falta y/o errores de   | Alta         | Canales de comunicación   |
+| comunicación entre los |              | claros y efectivos y      |
+| miembros del grupo     |              | designar un líder por     |
+|                        |              | equipo                    |
++------------------------+--------------+---------------------------+
+| Error en una tarea     | Media        | Tareas iniciales          |
+| inicial que impida la  |              | revisadas por miembros de |
+| correcta evolución     |              | otros grupos              |
+|                        |              |                           |
+|                        |              | Asignar a dos grupos para |
+|                        |              | que trabajen de forma     |
+|                        |              | simultánea                |
++------------------------+--------------+---------------------------+
+| Ausencia temporal de   | Alta         | Un subgrupo dará soporte  |
+| algun membro del       |              | para la finalización de   |
+| equipo                 |              | la tarea a tiempo         |
+|                        |              |                           |
+|                        |              | Correcta explicación del  |
+|                        |              | avance realizado al       |
+|                        |              | integrante que ha faltado |
+|                        |              | temporalmente             |
++------------------------+--------------+---------------------------+
+| Ausencia permanente de | Baja         | Reasignación de los       |
+| algun mienbro del      |              | integrantes del subgrupo  |
+| equipo                 |              | en otro y redistribución  |
+|                        |              | de las tareas.            |
++------------------------+--------------+---------------------------+
+| Falta de conocimiento  | Alta         | Revisar todos los avances |
+| de tareas anteriores   |              | que se han realizado en   |
+|                        |              | cada uno de los grupos    |
+|                        |              |                           |
+|                        |              | Asegurar que todos los    |
+|                        |              | miembros de cada grupo    |
+|                        |              | entiendan el proyecto     |
++------------------------+--------------+---------------------------+
+| Falta de comprensión   | Baja         | Asegurar que los miembros |
+| del proyecto           |              | del grupo se reúnan       |
+|                        |              | regularmente              |
++------------------------+--------------+---------------------------+
+| Dificultad a la hora   | Media        | Asegurar que todos los    |
+| de interpretar las     |              | miembros entienden la     |
+| conclusiones obtenidas |              | totalidad de los          |
+|                        |              | resultados así como sus   |
+|                        |              | interpretaciones e        |
+|                        |              | implicaciones.            |
++------------------------+--------------+---------------------------+
+
+## Análisis Univariante
+
+Con la intención de realizar un buen análisis descriptivo univariante de los datos previo al pre-procesamiento se ha decidido integrar conjuntamente gráficos y tablas con resultados numéricos para lograr el mejor entendimiento de estos.
+
+### Análisis Univariante Numérico
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, results='asis'}
+library(kableExtra)
+library(naniar)
+library(tidyverse)
+library(scales)
+library(dplyr)
+library(psych)
+library(labelled)
+library(gridExtra)
+library(ggplot2)
+library(compareGroups)
+library(lessR)
+library(ggcorrplot)
+library(class)
+
+data = df_final
+
+kable(describe(select_if(data, is.numeric)),
+      caption ="Descripción Univariante Variables Numéricas",
+      
+      align = "c",digits=2,booktabs = T) %>% 
+  kable_styling(position = "center", 
+                latex_options = c("HOLD_position","scale_down"),  font_size = 9)
+```
+
+Para comenzar, hemos creado una tabla que muestra varios estadísticos de todas las variables numéricas que hemos analizado. Además de los estadísticos más comunes, como la media o la desviación estándar, también hemos incluido otros estadísticos menos conocidos relacionados con la dispersión y centralización de los datos:
+
+-   `Trimmed mean`: Este es un estimador que calcula un estadístico para la variable al eliminar los valores más extremos de su distribución. En el caso de la trimmed mean', calcula la media de cada variable utilizando solo los datos que se encuentran en el intervalo [5%, 95%]. Al usar la trimmed mean, observamos que la variable `AMT_CREDIT` tiene una media similar a la mediana, lo que indica un alto grado de simetría.
+
+-   `Skew`: Este estadístico mide el grado de asimetría de la distribución. Toma valores positivos si la asimetría está hacia la derecha y negativos si está hacia la izquierda (es decir, si la media es menor que la mediana). Un alto grado de asimetría puede indicar la presencia de valores atípicos. Las variables `AMT_ANNUITY` y `AMT_GOODS_PRICE` muestran una asimetría positiva.
+
+-   `Kurtosis`: La curtosis es una medida que determina cuán concentrados están los valores de una variable alrededor del centro de la distribución de frecuencias. Un valor de 3 es considerado como el nivel central de curtosis. Una distribución mesocúrtica tiene un cociente de asimetría igual a 3, leptocúrticas por encima de 3 y las platicúrticas por debajo de 3. Las variables `AMT_ANNUITY`, `OWN_CAR_AGE` y sobre todo `AMT_INCOME_TOTAL` tienen coeficientes de curtosis muy elevados, lo que indica distribuciones con colas muy pesadas.
+
+-   `SE`: El error estándar es la desviación estándar de la distribución muestral de un estadístico muestral. Es decir, es la desviación típica dividida por la raíz cuadrada del tamaño de la muestra (n). Tanto las variables `ATM_CREDIT` como `AMT_GOODS_PRICE` muestran una variabilidad muy alta.
+
+Así pues, tras hacer un análisis general, se procede a realizar un análisi más particular. Para ello, analizaremos cada variable una a una, de formaa gráfica:
+
+```{r, echo = F, message=F,warning=F,fig.show='hide'}
+data_n <- select_if(data, is.numeric)
+q <- NULL
+h <- NULL
+s <- NULL
+for(i in 1:ncol(data_n)){
+  
+ q[[i]] <- ggplot(data_n, aes_string(sample=names(data_n[i]))) + 
+   stat_qq(col="#DCF0F8", na.rm = T) + 
+   stat_qq_line(col="#8B3E2F",lwd=1, na.rm = T) + theme_bw() +
+   xlab("Normal Theoretical Quantiles") + 
+   ylab("Variable Data") + 
+   ggtitle("Normal Q-Q Plot") + 
+   theme(plot.title = element_text(hjust = 0.5))
+ 
+  h[[i]] <- ggplot(data_n, aes_string(x = data_n[,i])) + 
+    geom_histogram(aes(y = after_stat(density)), color = "#53868B", fill = "#DCF0F8", na.rm = T) +
+    geom_density(color = "#8B3E2F",lwd=1, na.rm = T) + 
+    theme_bw() + xlab("") + ylab("Density") + 
+    ggtitle(paste0("Histograma ", names(data_n)[i])) + 
+    theme(plot.title = element_text(hjust = 0.5))
+  
+  s[[i]] <- shapiro.test(data_n[,i])$p.value[[1]]
+}
+```
+
+```{r, echo = F, fig.cap = "Análisis Gráfico Variable AMT INCOME TOTAL", fig.show='hold', out.height="75%",out.width="75%", message=F, warning = F}
+grid.arrange(h[[1]],q[[1]],ncol = 2)
+```
+
+Estos gráficos muestran que los datos de la variable `AMT_INCOME_TOTAL` no siguen una distribución normal y parecen seguir una distribución exponencial. Esto tiene sentido, ya que la distribución de los ingresos totales de los individuos en una población generalmente no sigue una distribución normal. Además, al observar los resultados del test de normalidad Shapiro-Wilk, se confirma la hipótesis anterior sobre la no normalidad de los datos, ya que el p-valor obtenido es `r s[[1]]`.
+
+```{r, echo = F, fig.cap = "Análisis Gráfico Variable AMT CREDIT", fig.show='hold', out.height="75%",out.width="75%", message=F, warning = F}
+grid.arrange(h[[2]],q[[2]],ncol = 2)
+```
+
+Al igual que en el caso anterior, la variable tampoco sigue una distribución normal, lo cual se confirma además por el test de Shapiro-Wilk con un p-valor de `r s[[2]]`. Parece que sigue una distribución exponencial.
+
+```{r, echo = F, fig.cap = "Análisis Gráfico Variable AMT ANNUITY",fig.show='hold',out.height="75%", out.width="75%", message=F, warning = F}
+grid.arrange(h[[3]],q[[3]],ncol = 2)
+```
+
+Como en el caso interior, la variable sigue aparenta exponencial, con p-valor `r s[[3]]` del test de Shapiro Wilk.
+
+```{r, echo = F, fig.cap = "Análisis Gráfico Variable DAYS BIRTH", fig.show='hold',out.height="75%",out.width="75%", message=F, warning = F}
+grid.arrange(h[[4]],q[[4]],ncol = 2)
+```
+
+Como se puede apreciar en el histograma, la variable "Days Birth" presenta valores negativos. Esto se debe a que los datos indican la cantidad de días transcurridos desde el nacimiento del individuo hasta el momento en que solicitó el crédito. Por lo tanto, es necesario transformar los datos para que sean positivos y modificar la variable de manera que represente las edades de los sujetos en años, lo que facilitará un mejor tratamiento y comprensión de los resultados.
+
+```{r, echo = F, fig.cap = "Análisis Gráfico Variable OWN CAR AGE", fig.show='hold',out.height="75%",out.width="75%", message=F, warning = F}
+grid.arrange(h[[5]],q[[5]],ncol = 2)
+```
+
+En la variable 'Own car age', también se observa que no sigue una distribución normal, como lo demuestra el test de Shapiro-Wilk con un p-valor de `r s[[5]]`. Se puede notar una alta concentración de datos alrededor de los 10 años, lo que muestra una estructura similar a una distribución exponencial. Por otro lado, también se observa una fuerte concentración de datos en los 60 años.
+
+```{r, echo = F, fig.cap = "Análisis Gráfico Variable AMT GOODS PRICE",           fig.show='hold',out.height="75%",out.width="75%", message=F, warning = F}
+grid.arrange(h[[6]],q[[6]],ncol = 2)
+```
+
+Al igual que en el caso anterior, la variable parece seguir una distribución exponencial, y la normalidad se rechaza con un p-valor de `r s[[6]]`. Aunque el Q-Q Plot y el histograma muestran una concentración de datos de forma periódica, una posible explicación podría ser que los bienes de alto costo tienden a tener precios redondeados o cantidades enteras en lugar de valores precisos. Por ejemplo, la moda podría ser `r names(sort(table(data$AMT_GOODS_PRICE), decreasing = TRUE)[1])`.
+
+```{r, echo = F, fig.cap = "Análisis Gráfico Variable CNT FAM MEMBERS", fig.show='hold',out.height="75%",out.width="75%", message=F, warning = F}
+grid.arrange(h[[7]],q[[7]],ncol = 2)
+```
+
+La variable que representa el número de hijos, al ser discreta, no debe evaluarse como si siguiera una distribución normal. Aun así, es importante tener en cuenta que la mayoría de los clientes viven en pareja.
+
+### Análisis Univariante Categórico
+
+Tras haber completado el análisis univariante numérico se procede a hacer el análisis categórico. En la siguiente tabla se presenta un resumen general sobre ellas:
+
+```{r,echo=F, fig.cap = "Tabla Summary Variables Categóricas", message=F, warning = F}
+data$OCCUPATION_TYPE<- as.factor(data$OCCUPATION_TYPE)
+data$ORGANIZATION_TYPE<- as.factor(data$ORGANIZATION_TYPE)
+
+export2md(createTable(compareGroups(select_if(data,is.factor)), show.ratio=TRUE), position = "center")
+```
+
+Por lo tanto, en la tabla se presentan tanto la frecuencia absoluta como la frecuencia relativa de cada valor posible en cada variable categórica, ya sean dicotómicas o politómicas. Esto facilita la identificación de la moda de manera sencilla.
+
+Una vez se ha realizado un resumen general, se ha procedido a analizar cada variable una a una:
+
+```{r, warning = F}
+data_f = select_if(data, is.factor)
+p <- vector("list", length = ncol(data_f))
+for (i in 1:ncol(data_f)) {
+  var <- names(data_f)[i]
+  freq_table <- table(data[[var]])
+  num_classes <- length(freq_table)
+  
+  if (num_classes <= 4) {
+    p[[i]] <- ggplot(data, aes(x = factor(1), fill = .data[[var]])) +
+      geom_bar() +
+      coord_polar(theta = "y") +
+      labs(x = NULL, y = NULL, fill = var, title = var) + 
+      theme_void() +
+      theme(legend.position = "bottom") +
+      scale_fill_brewer(palette = "muted")
+  } else {
+    p[[i]] <- ggplot(data, aes(x = .data[[var]])) +
+      geom_bar(fill = "skyblue") +
+      labs(x = var, y = "Frecuencia", title = var) +  
+      theme_minimal() +
+      theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  }
+}
+```
+
+```{r, echo = F, fig.cap= "Pie Chart Variable CODE GENDER",fig.show='hold',out.width="75%",out.height="75%"}
+p[[1]]
+```
+
+Para empezar, analizamos la variable referida al género. Como se puede apreciar, la gran mayoría de individuos de la base de datos son mujer, con un porcentaje del 61.96%. Todo el resto de individuos son hombres.
+
+```{r, echo = F, fig.cap= "Pie Chart Variable NAME INCOME TYPE",fig.show='hold',out.width="75%",out.height="75%"}
+p[[2]]
+```
+
+Seguidamente, analizamos la variable `NAME_INCOME_TYPE`. Gracias al gráfico superior, se puede apreciar que la gran mayoría de clientes son trabajadores, seguido de comerciales aunque bastante lejano. Únicamente disponemos de un empresario y un grupo numeroso de pensionistas.
+
+
+```{r, echo = F, fig.cap= "Pie Chart Variable NAME EDUCATION TYPE",fig.show='hold',out.width="75%",out.height="75%"}
+p[[3]]
+```
+
+Como podemos apreciar, la gran mayoría de los clientes tienen la secundaria como nivel educativo (74.92%), seguido de los universitarios (20.36%). En general, se podría decir que hay pocos clientes con un nivel educativo bajo.
+
+```{r, echo = F, fig.cap= "Pie Chart Variable NAME FAMILY STATUS",fig.show='hold',out.width="75%",out.height="75%"}
+p[[4]]
+```
+
+Si pasamos a hablar sobre el estado civil de los clientes, se puede apreciar que la gran mayoría están casados (61.9%), seguido de los solteros o no casados (15.96%). El resto de subgrupos es más minoritario.
+
+```{r, echo = F, fig.cap= "Pie Chart Variable OCCUPATION TYPE",fig.show='hold',out.width="75%",out.height="75%"}
+p[[5]]
+```
+
+Seguidamente, si analizamos el tipo de puesto que ocupa cada cliente, vemos que la mayoría son trabajadores en empresas. Sin embargo, esta variable será necesario retocarla, ya que el hecho de que haya tantos NA complica el análisis en general.
+
+```{r, echo = F, fig.cap= "Pie Chart Variable ORGANIZATION TYPE",fig.show='hold',out.width="75%",out.height="75%"}
+p[[6]]
+```
+
+Sobre el tipo de empresa en el que trabajan los clientes, se puede apreciar que tenemos muchos tipos. Con este nivel de categorías es muy complicado trabajar, así que será necesario agrupar para poder hacer un análisis correcto.
+
+
+```{r, echo = F, fig.cap= "Pie Chart Variable REGION RATING CLIENT", fig.show='hold', out.width="75%", out.height="75%"}
+p[[7]]
+```
+
+Acabando con las variables categóricas, pasamos a hablar de la variable `REGION_RATING_CLIENT`, la cual muestra el nivel de confianza que tiene la empresa sobre la región en la que vive el cliente. Así pues, en general, los clientes viven en áreas con un nivel de confianza medio, con un porcentaje de 72.82% que habitan en estas regiones. Respecto a las otras dos categorías, el 18.5% vive en áreas con mucha confianza y el 8.68%, en áreas con poca confianza.
+
+```{r, echo = F, fig.cap= "Pie Chart Variable TARGET",fig.show='hold',out.width="75%",out.height="75%"}
+p[[8]]
+```
+
+Por último, se analiza la variable respuesta de nuestra base de datos: `TARGET`. Como se puede apreciar, un 57.3% de los clientes no tienen problemas de solvencia, mientras que un 43.7% los podría presentar.
+
+
+
+### Análisis Bivariante Numérico
+
+Con el propósito de identificar las relaciones más significativas entre las variables numéricas, se ha creado un gráfico de correlación utilizando la técnica de HeatMap. En este gráfico, los colores indican el grado de dependencia entre las variables numéricas. Cuanto más intenso sea el color, mayor será la relación, y se prestará una mayor atención a estas relaciones en nuestro análisis.
+
+```{r, echo = F, fig.cap="Matriz de Correlaciones para las Variables Numéricas", fig.show='hold'}
+ corr <- round(cor(select_if(data,is.numeric),use="complete.obs"), 1)
+ ggcorrplot(corr, hc.order = T,type = "lower",lab=T)
+```
+
+Tras analizar el gráfico, se destacan notables correlaciones entre las variables `AMT_CREDIT` y `AMT_GOODS_PRICE`. Esta correlación tiene sentido, ya que los prestamistas suelen otorgar créditos en función del valor del activo que el prestatario desea adquirir. En caso de impago, el prestamista retiene dicho activo como garantía. Además, se observa una alta correlación entre las variables `AMT_ANNUITY` y `AMT_CREDIT`. Esto se debe a que un mayor monto de crédito conlleva, de manera directa, una anualidad más elevada, especialmente cuando se busca un período de reembolso similar. También se aprecia una fuerte relación entre las variables `AMT_GOODS_PRICE` y `AMT_ANNUITY`, reflejando la conexión entre el crédito y el valor del activo.
+
+```{r, echo=F,fig.cap = "Gráfico de dispersión AMT CREDIT vs AMT GOODS PRICE", fig.show='hold',out.width="75%",out.height="75%"}
+plot(data$AMT_GOODS_PRICE,data$AMT_CREDIT,  pch = 19, col = "black",
+     xlab="AMT_GOODS_PRICE", ylab="AMT_CREDIT")
+abline(lm(data$AMT_CREDIT ~ data$AMT_GOODS_PRICE), col = "red", lwd = 3)
+```
+
+En este gráfico se evidencia una fuerte correlación entre el valor del bien que el prestatario desea adquirir y la cantidad solicitada para el crédito. Es importante resaltar que los créditos de mayor cuantía muestran una correlación menor con el valor del bien, un aspecto que se explorará con mayor detalle en el transcurso del proyecto.
+
+```{r, echo=F,fig.cap = "Gráfico de dispersión Gasto Total en Pescado vs Gasto Total en Fruta", fig.show='hold',out.width="75%",out.height="75%"}
+plot(data$AMT_ANNUITY, data$AMT_GOODS_PRICE, pch = 19, col = "black",
+     xlab="AMT_ANNUITY", ylab="AMT_GOODS_PRICE")
+abline(lm(data$AMT_GOODS_PRICE~data$AMT_ANNUITY ), col = "red", lwd = 3)
+```
+
+De manera similar, la correlación entre el valor de los bienes y la anualidad también es bastante alta. Es importante señalar que los clientes que posean una relación entre la anualidad y el valor del bien que compren (teniendo en cuenta que el precio del bien es igual al valor del préstamo) serán aquellos que deban destinar una proporción menor de sus ingresos al reembolso de la deuda.
+
+### Análisis Bivariante Categórico
+
+Para concluir el análisis descriptivo antes de proceder al procesamiento de los datos, es necesario examinar la relación entre las variables categóricas y las numéricas. Para este propósito, utilizaremos la creación de varios boxplots, lo que nos permitirá presentar nuestras conclusiones de manera precisa y concisa.
+
+```{r, include = F}
+q <- list()
+
+currelas <- c("CODE_GENDER", "NAME_INCOME_TYPE", "NAME_EDUCATION_TYPE", "NAME_FAMILY_STATUS", "OCCUPATION_TYPE", "ORGANIZATION_TYPE", "TARGET")
+
+for (i in 1:length(currelas)){
+  q[[i]] <- ggplot(data, aes(x = .data[[currelas[i]]], fill = CODE_GENDER)) +
+    geom_bar(position = "fill") +  
+    labs(title = paste("Grouped Bar Chart:", currelas[i], "vs. CODE_GENDER"),
+         x = currelas[i], y = "Proportion") +
+    theme_minimal() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    scale_fill_manual(values = c("M" = "blue", "F" = "pink"))
+}
+
+```
+
+```{r, echo=F,fig.cap = "Stacked bar chart TARGET vs CODE GENDER", fig.show='hold',out.width="75%",out.height="75%"}
+q[[7]]
+```
+
+En el primer gráfico, se observa que la mayoría de los sujetos son mujeres, sin importar cuál fue el resultado. Sin embargo, existe una diferencia en las proporciones. Menos del`r round((sum(data$TARGET == 1 & data$CODE_GENDER == 'F') * 100) / (sum(data$TARGET == 1)), 2)`% de los sujetos que tuvieron dificultades para pagar a tiempo son mujeres, en comparación con el `r round(sum(data$TARGET == 0 & data$CODE_GENDER == 'F') * 100 / sum(data$TARGET == 1), 2)`% de los individuos que no tuvieron problemas con el pago de sus deudas.
+
+A pesar de que hay más mujeres en la base de datos, un análisis inicial de los datos revela que los hombres han tenido más dificultades para cumplir con los pagos en comparación con las mujeres.
+
+```{r, echo=F,fig.cap = "Stacked bar chart NAME INCOME TYPE vs CODE GENDER", fig.show='hold',out.width="75%",out.height="75%"}
+q[[2]]
+```
+
+En este gráfico de barras apiladas, se compara la relación entre las variables 'género' y 'tipo de ingreso'. Es evidente que la mayoría de los sujetos del estudio son mujeres, representando el `r round(sum(data$CODE_GENDER == 'F') * 100 / length(data$CODE_GENDER), 2)`% de los datos. Como se observa en el gráfico, la mayoría de los pensionistas son mujeres, mientras que hay una proporción mayor de hombres en las categorías 'Commercial associate' o 'Working'. Es importante mencionar que la categoría 'Businessman' no es relevante debido a que solo contiene un dato, y este corresponde a una mujer.
+
+```{r, echo=F,fig.cap = "Stacked bar chart NAME EDUCATION TYPE vs CODE GENDER", fig.show='hold',out.width="75%",out.height="75%"}
+q[[3]]
+```
+
+En el tercer gráfico, se puede observar que la mayoría de las personas con estudios académicos son hombres, representando el `r round(sum(data$CODE_GENDER == 'M' & data$NAME_EDUCATION_TYPE == 'Academic degree') * 100 / sum(data$CODE_GENDER == 'M'), 2)`% de esta categoría. En contraste, las categorías "Higher education," "Incomplete higher," "Lower secondary," y "Secondary/secondary special" están compuestas mayoritariamente por mujeres, con un porcentaje similar a la cantidad de datos de mujeres que hay en la base de datos.
+
+Cabe señalar que la clase "Academic degree" solo cuenta con tres sujetos, mientras que las categorías "Higher education" y "Secondary/secondary special" concentran el `r round(sum(data$NAME_EDUCATION_TYPE == "Secondary / secondary special" | data$NAME_EDUCATION_TYPE == "Higher education") * 100 / length(data$CODE_GENDER), 2)`% de los datos. Estos porcentajes se mantienen aproximadamente constantes en las diferentes categorías, lo que sugiere que la variable `NAME_EDUCATION_TYPE` no es visualmente relevante para poder entender mejor la estructura de los datos.
+
+```{r, echo=F,fig.cap = "Stacked bar chart NAME FAMILY STATUS vs CODE GENDER", fig.show='hold',out.width="75%",out.height="75%"}
+q[[4]]
+```
+
+Este gráfico nos muestra la distribución del estatus civil con respecto al sexo de la persona. Se aprecia claramente como la gran mayoría de cónyugues supervivientes son mujeres, mientras que hay una menor desproporción en cuanto a la cantidad de personas solteras o no casadas. La clase con mayor frecuencia es la de casados, con un `r round(sum(data$NAME_FAMILY_STATUS == "Married") * 100 / length(data$CODE_GENDER), 2)`% de mujeres, muy similar al porcentaje de mujeres respecto al total de los datos.
+
+```{r, echo=F,fig.cap = "Stacked bar chart OCCUPATION TYPE vs CODE GENDER", fig.show='hold',out.width="75%",out.height="75%"}
+q[[5]]
+```
+
+En este último gráfico respecto al género se observa la relación de esta categoría conjuntamente con el tipo de ocupación laboral. En un primer análisis visual se observa como las clases "Drivers", "IT staff", "Laborers" y "Security staff", mientras que las mujeres predominan en la mayoría del resto de variables. Teniendo en consideración la frecuencia de los datos podemos determinar que el `r sum(data$OCCUPATION_TYPE %in% c("Laborers", "Drivers"))*100/sum(data$CODE_GENDER == "M")`% de los hombres son "Laborers" o "Drivers". Por último cabe destacar que hay el `r sum(is.na(data$OCCUPATION_TYPE))*100 / length(data$CODE_GENDER)`% de los datos son missings, por lo que se imputarán en el preprocessing, ya que no suponen una gran cantidad respecto al total de datos de la variable `OCCUPATION_TYPE`.
+
+```{r, include = F}
+n <- list()
+
+currelas <- c("NAME_EDUCATION_TYPE", "NAME_FAMILY_STATUS", "OCCUPATION_TYPE", "ORGANIZATION_TYPE", "TARGET")
+library(ggplot2)
+for (i in 1:length(currelas)){
+n[[i]]<- ggplot(data, aes(x = .data[[currelas[i]]], fill = NAME_INCOME_TYPE)) +
+  geom_bar(position = "fill") +
+  labs(title = paste("Grouped Bar Chart:", currelas[i], "vs. NAME_INCOME_TYPE"),
+         x = currelas[i], y = "Proportion") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  scale_fill_brewer(palette = "Set1")
+
+}
+```
+
+```{r, echo=F,fig.cap = "Grouped bar chart NAME INCOME TYPE vs NAME EDUCATION TYPE", fig.show='hold',out.width="75%",out.height="75%"}
+n[[1]]
+```
+
+En este gráfico se analiza la relación entre el nivel de educación y el tipo de ingreso. Como se observa, la mayoría de los trabajadores en empleos del sector privado convencional presentan una diversidad de niveles educativos, mientras que aquellos con estudios académicos tienden a trabajar para el sector público. Vale la pena señalar que un porcentaje significativo de los cónyuges sobrevivientes tiene únicamente educación secundaria. Esto podría deberse al hecho de que estos trabajadores son de mayor edad y, en su momento, las oportunidades de acceder a educación superior eran limitadas.
+
+```{r, echo=F,fig.cap = "Grouped bar chart NAME INCOME TYPE vs TARGET", fig.show='hold',out.width="75%",out.height="75%"}
+n[[5]]
+```
+
+En lo que respecta a la variable `TARGET`, se observa una disparidad en la capacidad de pago de los clientes en el sector privado, siendo los pensionistas y los comerciales quienes presentan proporcionalmente menos dificultades.
+
+```{r, include = F}
+m <- list()
+
+currelas <- c("NAME_FAMILY_STATUS", "OCCUPATION_TYPE", "ORGANIZATION_TYPE", "TARGET")
+library(ggplot2)
+for (i in 1:length(currelas)){
+m[[i]]<- ggplot(data, aes(x = .data[[currelas[i]]], fill = NAME_EDUCATION_TYPE)) +
+  geom_bar(position = "fill") +
+  labs(title = paste("Grouped Bar Chart:", currelas[i], "vs. NAME_EDUCATION_TYPE"),
+         x = currelas[i], y = "Proportion") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  scale_fill_brewer(palette = "Set1")
+
+}
+```
+
+```{r, echo=F,fig.cap = "Grouped bar chart NAME EDUCATION TYPE vs OCCUPATION TYPE", fig.show='hold',out.width="75%",out.height="75%"}
+m[[2]]
+```
+
+En este gráfico se confirma la idea de que los trabajadores con niveles educativos más altos tienden a ocupar puestos de trabajo que requieren un mayor nivel de conocimientos técnicos, mientras que aquellos con niveles educativos más bajos suelen desempeñar empleos que demandan menos destrezas técnicas.
+
+```{r, echo=F,fig.cap = "Grouped bar chart NAME EDUCATION TYPE vs TARGET", fig.show='hold',out.width="75%",out.height="75%"}
+m[[4]]
+```
+
+En lo que respecta al nivel de educación, es notable que aquellos trabajadores con un nivel educativo más bajo son quienes enfrentan mayores dificultades para cumplir con sus pagos de manera consistente.
+
+```{r, include = F}
+m <- list()
+
+currelas <- c("OCCUPATION_TYPE", "ORGANIZATION_TYPE", "TARGET")
+library(ggplot2)
+for (i in 1:length(currelas)){
+m[[i]]<- ggplot(data, aes(x = .data[[currelas[i]]], fill = NAME_FAMILY_STATUS)) +
+  geom_bar(position = "fill") +
+  labs(title = paste("Grouped Bar Chart:", currelas[i], "vs. NAME_FAMILY_STATUS"),
+         x = currelas[i], y = "Proportion") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  scale_fill_brewer(palette = "Set1")
+
+}
+```
+
+```{r, echo=F,fig.cap = "Grouped bar chart NAME FAMILY STATUS vs OCCUPATION TYPE", fig.show='hold',out.width="75%",out.height="75%"}
+m[[1]]
+```
+
+En este gráfico se analiza la relación entre la ocupación de los individuos y el estado civil de ellos mismos. Como se observa, la mayoría de los trabajadores de cualquier sector están casados, muchos por la iglesia y unos pocos civilmente. Vale la pena señalar que un porcentaje significativo de los cónyuges sobrevivientes trabajan en recursos humanos. Esto podría deberse al hecho de que estos trabajadores son de mayor edad y, en su momento, las oportunidades de acceder este tipo de empleos eran más altas.
+
+Seguidamente, se hará el preprocessing para corregir muchos de los problemas que se hna presentado.
+
+\pagebreak
+
+# Preprocessing de los datos
+
+```{r, include = F, warning = F, message = F}
+library(ggplot2)
+library(dplyr)
+library(corrplot)
+library(cluster)
+library(naniar)
+library(kableExtra)
+
+load("C:/Users/iker1/Downloads/Dades seleccionades.RData")
+```
+
+Para realizar el preprocesamiento de los datos, será óptimo seguir los pasos propuestos por Karina Gibert con el objetivo de desarrollar correctamente el KDD y, así, obtener conclusiones óptimas a partir de nuestros datos.
+
+Para ello, seguiremos 4 grandes bloques:
+
+-   Limpieza de datos y estandarización de formato
+-   Detección y tratamiento de missings
+-   Detección y tratamiento de outliers
+-   Feature Engineering
+
+## Limpieza de datos y estandarización de formato
+
+Una vez hemos realizado la descriptiva preprocessing y hemos identificado el número de valores missing en nuestra base de datos, es óptimo analizar todas las variables una a una, así como algunas variables categóricas a las cuales se les puede reducir el número de categorías.
+
+Para empezar, se puede apreciar que la variable `OCCUPATION_TYPE` tiene un total de 18 categorías:
+
+```{r, echo = F}
+a = table(df_final$OCCUPATION_TYPE, useNA = "always")
+
+kbl(a, col.names = c("Categoría", "Frecuencia"),
+    caption = "Distribución inicial de la variable OCCUPATION TYPE", align = "c")%>% 
+  kable_styling(position = "center", 
+                latex_options = c("HOLD_position"))
+
+```
+
+
+Una buena idea sería combinar algunas categorías con el objetivo de reducir el número de categorías y, además, aumentar el número de individuos por categoría. Seguidamente, se muestran los cambios realizados, donde se han agrupado todos los individuos en 5 categorías en función del capital humano empleado para su puesto:
+
+-   Low skill laborers: Engloba las categorías de "security staff", "cooking staff", "cleaning staff", "drivers", "low skill laborers", "waiters staff".
+
+-   Low-mid skill laborers: Engloba las categorías de "secretaries", "private service staff" y "laborers".
+
+-   Mid skill laborers: Engloba las categorías de "accountants", "HR staff" y "sales staff".
+
+-   Mid-high skill laborers: Engloba las categorías de "IT staff", "realty agents" y "core staff".
+
+
+-   High skill staff: Engloba las categorías de "high skill tech staff", "managers" y "medicine staff".
+
+```{r, echo = F}
+df_final$OCCUPATION_TYPE = as.character(df_final$OCCUPATION_TYPE)
+
+df_final$OCCUPATION_TYPE[which(df_final$OCCUPATION_TYPE == "Security staff")] = "Low skill laborers"
+df_final$OCCUPATION_TYPE[which(df_final$OCCUPATION_TYPE == "Cooking staff")] = "Low skill laborers"
+df_final$OCCUPATION_TYPE[which(df_final$OCCUPATION_TYPE == "Cleaning staff")] = "Low skill laborers"
+df_final$OCCUPATION_TYPE[which(df_final$OCCUPATION_TYPE == "Drivers")] = "Low skill laborers"
+df_final$OCCUPATION_TYPE[which(df_final$OCCUPATION_TYPE == "Low-skill Laborers")] = "Low skill laborers"
+df_final$OCCUPATION_TYPE[which(df_final$OCCUPATION_TYPE == "Waiters/barmen staff")] = "Low skill laborers"
+
+df_final$OCCUPATION_TYPE[which(df_final$OCCUPATION_TYPE == "Secretaries")] = "Low-mid skill laborers"
+df_final$OCCUPATION_TYPE[which(df_final$OCCUPATION_TYPE == "Private service staff")] = "Low-mid skill laborers"
+df_final$OCCUPATION_TYPE[which(df_final$OCCUPATION_TYPE == "Laborers")] = "Low-mid skill laborers"
+
+df_final$OCCUPATION_TYPE[which(df_final$OCCUPATION_TYPE == "Accountants")] = "Mid skill laborers"
+df_final$OCCUPATION_TYPE[which(df_final$OCCUPATION_TYPE == "HR staff")] = "Mid skill laborers"
+df_final$OCCUPATION_TYPE[which(df_final$OCCUPATION_TYPE == "Sales staff")] = "Mid skill laborers"
+
+df_final$OCCUPATION_TYPE[which(df_final$OCCUPATION_TYPE == "IT staff")] = "Mid-high skill laborers"
+df_final$OCCUPATION_TYPE[which(df_final$OCCUPATION_TYPE == "Realty agents")] = "Mid-high skill laborers"
+df_final$OCCUPATION_TYPE[which(df_final$OCCUPATION_TYPE == "Core staff")] = "Mid-high skill laborers"
+
+df_final$OCCUPATION_TYPE[which(df_final$OCCUPATION_TYPE == "High skill tech staff")] = "High skill laborers"
+df_final$OCCUPATION_TYPE[which(df_final$OCCUPATION_TYPE == "Managers")] = "High skill laborers"
+df_final$OCCUPATION_TYPE[which(df_final$OCCUPATION_TYPE == "Medicine staff")] = "High skill laborers"
+
+df_final$OCCUPATION_TYPE = factor(df_final$OCCUPATION_TYPE)
+
+a = table(df_final$OCCUPATION_TYPE, useNA = "always")
+
+kbl(a, col.names = c("Categoría", "Frecuencia"),
+    caption = "Distribución final de la variable OCCUPATION TYPE", align = "c")%>% 
+  kable_styling(position = "center", 
+                latex_options = c("HOLD_position"))
+
+```
+
+Este proceso lo repetiremos con la variable `ORGANIZATION_TYPE`:
+
+```{r, echo = F}
+a = table(df_final$ORGANIZATION_TYPE, useNA = "always")
+
+kbl(a, col.names = c("Categoría", "Frecuencia"),
+    caption = "Distribución inicial de la variable ORGANIZATION TYPE", align = "c")%>% 
+  kable_styling(position = "center", 
+                latex_options = c("HOLD_position"))
+
+```
+
+Como se puede apreciar, en este caso disponemos de muchísimas categorías, pero es de destacar la categoría XNA, la cual deberíamos sustituir a NA, para después poder imputarle algún valor. Así pues, se ha agrupado cada categoría profesional en función del sector al que se dedica el individuo. Así, la distribución final es la siguiente:
+
+```{r, echo = F}
+a = as.character(df_final$ORGANIZATION_TYPE)
+
+a[which(startsWith(a,"Trade"))] = "Trade and telecom"
+a[which(startsWith(a,"Transp"))] = "Transport"
+a[which(startsWith(a,"Indus"))] = "Industry and construction"
+a[which(startsWith(a, "Business"))] = "Business and bank"
+a[which(startsWith(a,"Transp"))] = "Transport"
+a[which(a == "XNA")] = NA
+
+a[which(a == "Construction")] = "Industry and construction"
+
+a[which(a == "School")] = "Education"
+a[which(a == "University")] = "Education"
+a[which(a == "Kindergarten")] = "Education"
+a[which(a == "Culture")] = "Other"
+
+a[which(a == "Security Ministries")] = "Public services"
+a[which(a == "Police")] = "Public services"
+a[which(a == "Emergency")] = "Public services"
+a[which(a == "Military")] = "Public services"
+
+
+a[which(a == "Postal")] = "Other"
+a[which(a == "Cleaning")] = "Personal services"
+a[which(a == "Restaurant")] = "Other"
+a[which(a == "Advertising")] = "Other"
+a[which(a == "Legal Services")] = "Personal services"
+a[which(a == "Realtor")] = "Personal services"
+a[which(a == "Hotel")] = "Personal services"
+a[which(a == "Insurance")] = "Business and bank"
+a[which(a == "Bank")] = "Business and bank"
+
+
+a[which(a == "Housing")] = "Personal services"
+a[which(a == "Services")] = "Personal services"
+a[which(a == "Security")] = "Personal services"
+
+
+a[which(a == "Mobile")] = "Other"
+a[which(a == "Telecom")] = "Trade and telecom"
+a[which(a == "Religion")] = "Other"
+a[which(a == "Agriculture")] = "Other"
+
+
+a[which(a == "Electricity")] = "Public services"
+a[which(a == "Government")] = "Public services"
+
+
+b = table(a)
+
+kbl(b, col.names = c("Categoría", "Frecuencia"),
+    caption = "Distribución final de la variable ORGANIZATION TYPE", align = "c")%>% 
+  kable_styling(position = "center", 
+                latex_options = c("HOLD_position"))
+
+df_final$ORGANIZATION_TYPE = factor(a)
+```
+
+Ahora, esta variable pasa a tener 10 categorías, las cuales representan los diferentes sectores presentes en la economía presente hoy en día.
+
+Así pues, el resto de variables tienen una uniformidad evidente: se puede apreciar cómo las variables categóricas presentan un número de categorías pequeño y, por parte de las variables numéricas, todas están expresadas en las mismas unidades, de forma que no habrá problemas con la manipulación de éstas.
+
+
+## Detección y tratamiento de missings
+
+Para este apartado, trataremos de identificar aquellos valores desconocidos y valorar sobre su aleatoriedad para, posteriormente, imputar valores. Para empezar, es de destacar cómo hay 47 individuos con un coche de 64 años y 11 con un coche de 65. Si nos fijamos en la distribución de esta variable, es muy extraño que haya tantos individuos con valores atípicos, ya que el siguiente valor máximo es 46. Así, se potará por imputar valores nulos a estos individuos.
+
+```{r, echo = F}
+df_final$OWN_CAR_AGE[which(df_final$OWN_CAR_AGE == 64)] = NA
+df_final$OWN_CAR_AGE[which(df_final$OWN_CAR_AGE == 65)] = NA
+```
+
+Seguidamente, pasaremos a imputar diferentes valores a aquellas variables donde hay observaciones sobre las cuales se desconocen sus valores reales. Este paso es necesario, ya que el hecho de disponer de valores desconocidos (también conocidos como NA) dificulta el análisis posterior de la variable. 
+
+Una vez hemos recategorizado todas aquellas variables que presentaban problemas, el número de NA por variables es el siguiente:
+
+```{r, echo = F}
+a = colSums(is.na(df_final))
+a = matrix(a, nrow = 15, ncol=2)
+a[,1] = names(colSums(is.na(df_final)))
+
+kbl(a, col.names = c("Categoría", "Frecuencia"),
+    caption = "Missings por variable", align = "c")%>% 
+  kable_styling(position = "center", 
+                latex_options = c("HOLD_position"))
+
+```
+
+Una vez tenemos identificados todos los valores missing de nuestra base de datos, será necesario identificar si éstos son completamente aleatorios (MCAR), aleatorios (MAR), o no aleatorios (MNAR). Para ello, realizaremos el test de Little, el cual indica si los missings disponibles en la base de datos son fruto del azar o si siguen un patrón.
+
+Para este test, diremos que los datos no siguen un patrón si no se rechaza hipótesis nula o, alternativamente, si no encuentra patrones entre los missings. Así pues, este es el resultado:
+
+```{r, echo = F}
+little = mcar_test(df_final)
+
+a = matrix(nrow = 2,ncol = 4)
+
+a[1,] = names(data.frame(little))
+a[2,] = unlist(little)
+
+kbl(a,
+    caption = "Test de Little", align = "c")%>% 
+  kable_styling(position = "center", 
+                latex_options = c("HOLD_position"))
+
+
+
+```
+
+Como se puede apreciar, el algoritmo ha detectado 7 patrones entre los valores missing, de forma que no se puede decir que hay un patrón aleatorio, de forma que calificaremos nuestros valores missing como MNAR.
+
+Seguidamente, imputaremos los valores por los tres métodos de imputación conocido, pero antes de imputar los valores numéricos, será necesario pasar los NA a categoría `unknown`.
+
+```{r, echo = F}
+ind = which(is.na(df_final$OCCUPATION_TYPE))
+
+df_final$OCCUPATION_TYPE = as.character(df_final$OCCUPATION_TYPE)
+df_final$OCCUPATION_TYPE[ind] = "Unknown"
+df_final$OCCUPATION_TYPE = factor(df_final$OCCUPATION_TYPE)
+
+
+
+ind = which(is.na(df_final$ORGANIZATION_TYPE))
+
+df_final$ORGANIZATION_TYPE = as.character(df_final$ORGANIZATION_TYPE)
+df_final$ORGANIZATION_TYPE[ind] = "Unknown"
+df_final$ORGANIZATION_TYPE = factor(df_final$ORGANIZATION_TYPE)
+```
+
+Seguidamente, toca imputar los NA disponibles en las variables numéricas de nuestros datos. Para ello, utilizaremos tres métodos distintos: kNN, MiMMi y MICE. Posteriormente, se comparará la imputación entre estos métodos y se seleccionará el método que resulte una distribución más parecida a la original antes de imputar.
+
+```{r, include = F}
+df_est = df_final
+df_knn = df_final
+df_mimmi = df_final
+df_mice = df_final
+```
+
+### Imputación por criterios estadísticos
+
+En este caso, el objetivo será imputar en función de criterios estadísticos básicos. Para ello, se procederá a imputar valores en función de la media estadística o algún otro estadístico central de distribución.
+
+```{r, include = F}
+df_est$OWN_CAR_AGE[which(is.na(df_est$OWN_CAR_AGE))] = mean(df_est$OWN_CAR_AGE, na.rm = T)
+
+df_est$AMT_GOODS_PRICE[which(is.na(df_est$AMT_GOODS_PRICE))] = mean(df_est$AMT_GOODS_PRICE, na.rm = T)
+```
+
+
+### Imputación por kNN
+
+El algoritmo K-Nearest Neighbors (KNN), es un método de clasificación supervisada, que utiliza la proximidad para hacer clasificaciones o predicciones sobre un punto de datos desconocido. El algortimo, utiliza un hiperparámetro llamado "k", que representa el número de vecinos más cercanos y el cual se ha obtenido mediante el cálculo de $k= \sqrt{n}$. 
+
+```{r, message = F, warning = F, include = F}
+df_knn <- select_if(df_final, is.numeric)
+n <- nrow(df_knn)
+
+library(class)
+```
+
+A continuación, se crean dos objetos: `fullVariables`, que corresponde a las variables que no presentan ningún dato faltante y `uncompleteVars`, que guarda las variables con missings.
+
+```{r, include = F}
+fullVariables <- names(df_knn)[which(colSums(is.na(df_knn))==0)] 
+aux <- df_knn[,fullVariables]
+dim(aux)
+names(aux)
+
+uncompleteVars<- names(df_knn)[which(colSums(is.na(df_knn))>0)] 
+
+for (k in uncompleteVars){
+  aux1 <- aux[!is.na(df_knn[,k]),]
+  dim(aux1) 
+  aux2 <- aux[is.na(df_knn[,k]),]
+  dim(aux2)
+  
+  RefValues<- df_knn[!is.na(df_knn[,k]),k]
+  knn.values = knn(aux1,aux2,RefValues, k = round(sqrt(n)) )  
+  df_knn[is.na(df_knn[,k]),k] = as.numeric(as.character(knn.values))
+  fullVariables<-c(fullVariables, k)
+  aux<-df_knn[,fullVariables]
+}
+
+df_preprocessed_knn = data.frame(aux,select_if(df_final, is.factor))
+
+```
+
+Como se puede observar, se obtiene la imputación de los valores faltantes en el dataframe `df_knn` utilizando el algoritmo descrito previamente.
+
+
+### Imputación por MiMMi
+
+La imputación por MiMMi se realiza utilizando un enfoque basado en clústeres y se utiliza la distancia de Gower como métrica de distancia para medir la similitud entre observaciones.
+
+La función uncompleteVar se define para verificar si hay valores faltantes (representados como NA) en un vector dado.
+
+La función Mode se define para calcular la moda de un vector. Esta función se utiliza más adelante para imputar valores faltantes en variables categóricas.
+
+```{r, echo = FALSE, warning = F, message = F}
+# install.packages("StatMatch")
+library(cluster)
+require(StatMatch)
+
+# assume missings represented with NA
+uncompleteVar <- function(vector){any(is.na(vector))}
+
+Mode <- function(x) 
+{
+  x <- as.factor(x)
+  maxV <- which.max(table(x))
+  return(levels(x)[maxV])
+}
+```
+
+
+Se define la función MiMMi.
+
+```{r, echo = FALSE}
+MiMMi <- function(data, priork=-1)
+{
+  # Identify columns without missings
+  colsMiss <- which(sapply(data, uncompleteVar))
+  if(length(colsMiss) == 0){
+    print("Non missing values found")
+    out <- data
+  } else {
+    K <- dim(data)[2]
+    colsNoMiss <- setdiff(c(1:K), as.vector(colsMiss))
+
+    #cluster with complete data
+    dissimMatrix <- daisy(data[ , colsNoMiss], metric = "gower", stand = TRUE)
+    distMatrix <- dissimMatrix^2
+
+    hcdata <- hclust(distMatrix, method = "ward.D2")
+    plot(hcdata)
+
+    if(priork == -1){
+      nk <- readline("See the dendrogramm and enter a high number of clusters (must be a positive integer). k: ")
+      nk <- as.integer(nk)
+    } else {nk <- priork}
+
+    partition <- cutree(hcdata, nk)
+
+    CompleteData <- data
+    # només cal per tenir traça de com s'ha fet la substitució
+    newCol <- K+1
+    CompleteData[ , newCol] <- partition
+    names(CompleteData)[newCol] <- "ClassAux"
+
+    setOfClasses <- as.numeric(levels(as.factor(partition)))
+    imputationTable <- data.frame(row.names = setOfClasses)
+    p <- 1
+
+    for(k in colsMiss)
+    {
+      # Files amb valors utils
+      rowsWithFullValues <- !is.na(CompleteData[,k])
+
+      # Calcular valors d'imputació
+      if(is.numeric(CompleteData[,k]))
+      {
+        imputingValues <- aggregate(CompleteData[rowsWithFullValues,k], by = list(partition[rowsWithFullValues]), FUN = mean)
+      } else {
+        imputingValues <- aggregate(CompleteData[rowsWithFullValues,k], by = list(partition[rowsWithFullValues]), FUN = Mode)
+      }
+
+      # Impute
+      for(c in setOfClasses)
+      {
+        data[is.na(CompleteData[,k]) & partition == c,k] <- round(imputingValues[c,2],0)
+      }
+
+      # Imputation Table
+      imputationTable[,p] <- imputingValues[,2]
+      names(imputationTable)[p] <- names(data)[k]
+      p <- p+1
+    }
+
+    rownames(imputationTable) <- paste0("c", 1:nk)
+    out <- new.env()
+    out$imputedData <-data
+    out$imputation <- imputationTable
+  }
+  return(out)
+}
+```
+
+Se usa la función MiMMi y se obtienen los resultados imputados.
+
+```{r, include = F}
+dimpute<-MiMMi(df_mimmi, priork = 3)
+
+# table of imputation values used
+#dimpute$imputation
+
+# imputed dataset
+df_preprocessed_mimmi <- dimpute$imputedData
+```
+
+### Imputación por MICE
+
+Por último, se recurrirá a imputar a través del MICE como último método de imputación de valores numéricos. El MICE (Multiple Imputation by chained Equations) se basa en un método iterativo a partir del cual se resuelven ecuaciones consecutivamente con el objetivo de imputar valores de la forma más aproximada posible. Así pues, es momento de imputarlo:
+
+
+```{r, include=F, message=F, warning = F}
+library(mice)
+factor_vars = c("CODE_GENDER", "NAME_INCOME_TYPE", "NAME_EDUCATION_TYPE", 
+                "NAME_FAMILY_STATUS", "OCCUPATION_TYPE", "ORGANIZATION_TYPE", 
+                "REGION_RATING_CLIENT", "TARGET")
+
+num_vars = c("AMT_INCOME_TOTAL", "AMT_CREDIT", "AMT_ANNUITY", "DAYS_BIRTH",
+             "OWN_CAR_AGE", "AMT_GOODS_PRICE", "CNT_FAM_MEMBERS")
+
+x = c(factor_vars, num_vars)
+
+dd <- df_mice[, x]
+mice_data = mice(dd, method = "cart")
+df_preprocessed_mice = complete(mice_data,5)
+```
+
+```{r, include = F, echo = F}
+summary(df_preprocessed_mice)
+colSums(is.na(df_preprocessed_mice))
+```
+
+
+### Decisión del método de imputación elegido
+
+Llegados a este punto, en el momento de seleccionar el método de imputación elegido para el método de imputación final. En nuestro caso, como únicamente disponemos de dos variables numéricas con missings, podemos comparar la función de densidad de los datos originales contra los imputados por cada método. Así pues, vamos a mirar variable por variable:
+
+```{r, echo = F, include = F}
+bbc_style = function() 
+{
+  font <- "Helvetica"
+  ggplot2::theme(plot.title = ggplot2::element_text(family = font, 
+                                                    size = 18, face = "bold", color = "#222222"), plot.subtitle = ggplot2::element_text(family = font, 
+                                                                                                                                        size = 15, margin = ggplot2::margin(2, 0, 5, 0)), plot.caption = ggplot2::element_blank(), 
+                 legend.position = "top", legend.text.align = 0, legend.background = ggplot2::element_blank(), 
+                 legend.title = ggplot2::element_blank(), legend.key = ggplot2::element_blank(), 
+                 legend.text = ggplot2::element_text(family = font, size = 12, 
+                                                     color = "#222222"), axis.title = ggplot2::element_blank(), axis.text.y = ggplot2::element_text(margin = ggplot2::margin(0,0,0,2)), 
+                 axis.text = ggplot2::element_text(family = font, size = 10, 
+                                                   color = "#222222"), 
+axis.text.x = ggplot2::element_text(margin = ggplot2::margin(-5, b = 2)), axis.ticks = ggplot2::element_blank(), 
+                 axis.line = ggplot2::element_blank(), panel.grid.minor = ggplot2::element_blank(), 
+                 panel.grid.major.y = ggplot2::element_line(color = "#cbcbcb"), 
+                 panel.grid.major.x = ggplot2::element_blank(), panel.background = ggplot2::element_blank(), 
+                 strip.background = ggplot2::element_rect(fill = "white"), 
+                 strip.text = ggplot2::element_text(size = 10, hjust = 0))
+}
+```
+
+
+```{r, warning = F, message = F, echo = F}
+library(gridExtra)
+
+valors = c(df_final$OWN_CAR_AGE, df_est$OWN_CAR_AGE, df_preprocessed_knn$OWN_CAR_AGE, df_preprocessed_mimmi$OWN_CAR_AGE, df_preprocessed_mice$OWN_CAR_AGE)
+
+etiq = factor(rep(c("Original","Estadísticos", "kNN", "MiMMi", "MICE"), each = 5000))
+
+own_car_age = data.frame(valors, etiq)
+
+p = ggplot(own_car_age, aes(valors, group = etiq, colour = etiq)) +
+  geom_density(aes(fill = etiq), alpha = 0.5) + 
+  geom_hline(yintercept = 0, size = 1, colour="#333333") +
+  bbc_style() +
+  scale_x_continuous(limits = c(0, 50),
+                     breaks = seq(0, 50, by = 10),
+                     labels = c("0", "10", "20", "30", "40", "50")) +
+  theme(axis.title = element_text(size = 14),
+        title = element_text(size = 70)) +
+  labs(title = "Distribución de la variable OWN_CAR_AGE",
+       subtitle = "Por los 4 métodos de imputación",
+       x = "Años",
+       y = "Densidad")
+
+
+valors = c(df_final$AMT_GOODS_PRICE, df_est$AMT_GOODS_PRICE, df_preprocessed_knn$AMT_GOODS_PRICE, df_preprocessed_mimmi$AMT_GOODS_PRICE, df_preprocessed_mice$AMT_GOODS_PRICE)
+
+etiq = factor(rep(c("Original", "Estadísticos", "kNN", "MiMMi", "MICE"), each = 5000))
+
+goods_price = data.frame(valors, etiq)
+
+g = ggplot(goods_price, aes(x = valors, group = etiq, colour = etiq)) +
+  geom_density(aes(fill = etiq), alpha = 0.5) +
+  geom_hline(yintercept = 0, size = 1, colour="#333333") +
+  bbc_style() +
+  scale_x_continuous(limits = c(0, 3500000),
+                     breaks = seq(0, 3500000, by = 500000),
+                     labels = c("0", "500000", "1000000", "1500000", "2000000", "2500000", "3000000", "3500000")) +
+  theme(axis.title = element_text(size = 12),
+        title = element_text(size = 18)) +
+  labs(title = "Distribución de la variable AMT_GOODS_PRICE",
+       subtitle = "Por los 4 métodos de imputación",
+       x = "Cantidad (en $)",
+       y = "Densidad")
+```
+
+**OWN_CAR_AGE**
+
+Esta variable es la que presenta más valores no disponibles en nuestra base de datos, de forma que se acepta un mayor margen de error en cuanto a la imputación de valores se refiere. Así, la densidad resultante para cada método es la siguiente:
+
+```{r, echo = F, warning = F}
+p
+```
+
+
+Como se puede apreciar, hay tres métodos de imputación que claramente se alejan mucho de la distribución inicial de los datos: criterios estadísticos, kNN y MiMMi. Así pues, se puede apreciar como el MICE es el algoritmo que aproxima la densidad de los datos a los originales, de forma que este será el método escogido.
+
+**AMT_GOODS_PRICE**
+
+Como se ha visto previamente en al descriptiva preprocessing, esta variable únicamente presentaba 3 NA, de forma que la densidad en todos los métodos será muy similar:
+
+```{r, warning = F, echo = F}
+g
+```
+
+Como se puede apreciar, todos los métodos retornan una estimación similar de la densidad, por lo que se podría decir que es indiferente escoger un método en concreto. De esta forma, se decide usar el MICE como método de imputación final seleccionado.
+
+He aquí una tabla resumen sobre los resultados obtenidos acerca de cuál es el mejor criterio de imputación:
+
+|              | OWN_CAR_AGE | AMT_GOODS_PRICE |
+|--------------|-------------|-----------------|
+| Estadísticos |      No     |       Yes       |
+| kNN          |      No     |       Yes       |
+| MICE         |     Yes     |       Yes       |
+| MiMMi        |      No     |       Yes       |
+
+```{r, include = F}
+df_preprocessed = df_preprocessed_mice
+```
+
+
+
+## Detección y tratamiento de outliers
+
+En este apartado se tratará de visualizar aquellas observaciones extremas y, además, discernir sobre si deben ser corregidas o no, dependiendo de la naturaleza de la variable. Para ello, se utilizarán métodos multivariantes, como el análisis de componentes principales (PCA). Así, se procede a representar la proyección de los individuos en los primeros planos factoriales para así observar cuáles se alejan del resto de puntos: 
+
+
+```{r, warning = F, message = F, echo = F}
+library(dplyr)
+library(FactoMineR)
+library(factoextra)
+
+df_prep_num = select_if(df_preprocessed, is.numeric)
+
+
+pc1 = prcomp(df_prep_num, scale=TRUE)
+
+pca_var = fviz_pca_var(pc1, repel = T)
+pca_ind = fviz_pca_ind(pc1) +
+  xlim(-20,20) +
+  ylim(-6,6)
+
+grid.arrange(pca_var, pca_ind, ncol = 2)
+
+```
+
+Como se puede apreciar, la combinación de las dos primeras dimensiones del PCA acumulan un total del 60% de la inercia total explicada, de forma que es un método de detección bastante fiable en nuestro caso. Identificamos, especialmente, un punto que sobresale del segundo plano factorial, mientras que podemos catalogar una decena de grupos realmente alejados del grupo en la primera dimensión:
+
+```{r, echo = F}
+pca_ind = fviz_pca_ind(pc1, label = "none") # hide individual labels
+
+pca_ind + 
+  annotate("pointrange", x = 0.75, y = 4.9, ymin = 4.9, ymax = 4.9, colour = "orange", size = 1.5, alpha=0.5) +
+  annotate("pointrange", x = 12, y = -0, ymin = -0.5, ymax = -0.5, colour = "orange", size = 20, alpha=0.5)
+
+```
+
+Procedemos a analizar estos indiviuos, empezando por el que destaca en la dimensión 2. Observamos que, en este caso, la variable que más destaca en este individuo es el número de miembros en su familia: 8. Pese a que este número sea muy elevado, es verosímil pensar que en una vivienda puedan vivir 8 personas, y más si en la base de datos únicamente hay 1 individuo que cumple esta característica. De esta forma, por tanto, este outlier se puede dejar en la base de datos sin sustituir.
+
+```{r, include = F}
+name_outlier = pca_ind$data$name[which(pca_ind$data$y>4.5)]
+
+df_preprocessed[rownames(df_preprocessed)==name_outlier,]
+```
+
+
+Una vez hemos analizado este outlier, podemos pasar a analizar los que son valores extremos por la dimensión 1. Como se puede apreciar, el primer plano factorial viene dado por las variables referidas a cantidad de dinero de nuestra base de datos. Así pues, los outliers presentes son personas con unos ingresos muy altos y que, además, realizaron préstamos por una cantidad de dinero muy superior al que cobran. Así pues, se trata de personas ricas, las cuales existen en nuestra sociedad, de forma que se quedan en la base de datos tal y como aparece. Más adelante, se aplicará alguna transformación que pueda permitir corregir estos valores tan extremos.
+
+```{r, include = F}
+name_outlier = which(pca_ind$data$x>8.5)
+
+df_preprocessed[name_outlier,]
+```
+
+## Feature engineering
+
+Por último, realizaremos la selección de variables final para nuestra base de datos, así como aplicar transformaciones correctas a nuestras variables para que cumplan algunas hipótesis, como normalidad o heteroscedasticidad. Para este apartado se hace una disección de cada variable una a una.
+
+En primer lugar, se resolverán problemas relacionados con las variables numéricas. Como tenemos variables relacionadas con cantidades monetarias (salario, cantidad prestada...), tal vez sería mejor aplicar una transformación logarítmica: 
+
+```{r, include = F}
+df_preprocessed$log_AMT_INCOME_TOTAL = log(df_preprocessed$AMT_INCOME_TOTAL)
+df_preprocessed$log_AMT_CREDIT = log(df_preprocessed$AMT_CREDIT)
+df_preprocessed$log_AMT_ANNUITY = log(df_preprocessed$AMT_ANNUITY)
+df_preprocessed$log_AMT_GOODS_PRICE = log(df_preprocessed$AMT_GOODS_PRICE)
+```
+
+Así pues, esta transformación debería resolver problemas relacionados con la normalidad de estas variables. Otro cambio a realizar es el respectivo a la variable `DAYS_BIRTH`, la cual muestra el número de días que lleva vivo el individuo. Sin embargo, el hecho de que esta variable esté en negativo y expresada en días (cuando normalmente se hace en años) hace que su interpretación sea complicada. De esta forma, se harán los cambios permanentes para encontrar la edad de los clientes, guardándola en una variable llamada `AGE_YEARS`.
+
+```{r, include = F}
+df_preprocessed$AGE_YEARS = floor(-df_preprocessed$DAYS_BIRTH/365)
+```
+
+
+Ahora, vamos a unir aquellas variables ya preprocesadas con el objetivo de tener el dataset preparado para crear nuevas variables.
+
+```{r, include = F}
+factor_vars = c("CODE_GENDER", "NAME_INCOME_TYPE", "NAME_EDUCATION_TYPE", 
+                "NAME_FAMILY_STATUS", "OCCUPATION_TYPE", "ORGANIZATION_TYPE", 
+                "REGION_RATING_CLIENT", "TARGET")
+
+num_vars = c("log_AMT_INCOME_TOTAL", "log_AMT_CREDIT", "log_AMT_ANNUITY", "AGE_YEARS",
+             "OWN_CAR_AGE", "log_AMT_GOODS_PRICE", "CNT_FAM_MEMBERS")
+
+x = c(factor_vars, num_vars)
+```
+
+Antes de avanzar, haremos un correlograma para ver los pares de variables con un mayor coeficiente de correlación de Pearson:
+
+```{r, echo = F}
+corr_mat = cor(df_preprocessed[,num_vars])
+corrplot(corr_mat)
+```
+
+Como se puede apreciar y como era de esperar, hay 3 variables que presentan una gran autocorrelación entre ellas: `log_AMT_CREDIT`, `log_AMT_GOODS_PRICE` y `log_AMT_ANNUITY`. de esta forma, sería ideal nuevas variables a partir de éstas con las cuales se pueda resolver este problema, ya que explican exactamente lo mismo. Para ello, será necesario basarse en la teoría económica y en qué se fijan las entidades de crédito para conceder préstamos. Así, el siguiente objetivo será crear ratios y variables que pretendan controlar y relacionar dinero prestado con capacidad del cliente para retornarlo:
+
+-   DIFF_CREDIT_GOODS: Diferencia entre el crédito pedido y el valor del bien para el que se quiere usar
+-   RATIO_CREDIT_INCOME: Ratio entre el crédito pedido y el salario anual del prestatario. También se puede contar como el número de años que se tarda en devolver el crédito
+-   RATIO_ANNUITY_CREDIT: Ratio entre la anuidad del préstamo y el crédito total solicitado
+-   DTI_RATIO: El DTI (Debt-to-income) ratio mide la capacidad del cliente para pagar la annuity de su préstamo en relación con sus ingresos
+
+```{r, echo = F}
+df_preprocessed$DIFF_CREDIT_GOODS = df_preprocessed$AMT_CREDIT - df_preprocessed$AMT_GOODS_PRICE
+df_preprocessed$RATIO_CREDIT_INCOME = df_preprocessed$AMT_CREDIT / df_preprocessed$AMT_INCOME_TOTAL
+df_preprocessed$RATIO_ANNUITY_CREDIT = df_preprocessed$AMT_ANNUITY / df_preprocessed$AMT_CREDIT
+df_preprocessed$DTI_RATIO = df_preprocessed$AMT_ANNUITY / df_preprocessed$AMT_INCOME_TOTAL
+
+
+
+num_vars = c("log_AMT_INCOME_TOTAL", "log_AMT_CREDIT", "log_AMT_ANNUITY", "AGE_YEARS",
+             "OWN_CAR_AGE", "log_AMT_GOODS_PRICE", "CNT_FAM_MEMBERS", "DIFF_CREDIT_GOODS",
+             "RATIO_CREDIT_INCOME", "RATIO_ANNUITY_CREDIT", "DTI_RATIO")
+
+corr_mat = cor(df_preprocessed[,num_vars])
+corrplot(corr_mat)
+```
+
+Se puede apreciar que, ahora, las nuevas variables creadas no presentan tanta correlación entre ellas como anteriormente había. Se puede apreciar, además, que las correlaciones entre las variables donde había problemas siguen teniéndolos y, como se aprecia en el PCA sencillo realizado antes, será necesario descartar alguna variable, ya que explican cosas similares en las mismas dimensiones. Así, en el PCA se deberá realizar el descarte adecuado de variables en función de su aportación al PCA resultante.
+
+\pagebreak
+
+# Análisis descriptivo post-preprocessing
+
+
+## Análisis Univariante
+
+Con la intención de realizar un buen análisis descriptivo univariante de los datos después al pre-procesamiento se ha decidido integrar conjuntamente gráficos y tablas con resultados numéricos para lograr el mejor entendimiento de estos.
+
+### Análisis Univariante Numérico
+
+```{r, include = F}
+data = df_preprocessed
+```
+
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, results='asis'}
+data[,c(20,21)] <- lapply(data[,c(20,21)],as.numeric)
+#data$Dt_Customer <- dmy(data$Dt_Customer)
+#data$Difference <- as.numeric(rep(Sys.Date(),nrow(data))) - as.numeric(data$Dt_Customer)
+#data$Dt_Customer<-NULL
+kable(describe(data[,c(16:24)]),
+      caption ="Descripción Univariante Variables Numéricas",
+      
+      align = "c",digits=2,booktabs = T) %>% 
+  kable_styling(position = "center", 
+                latex_options = c("HOLD_position","scale_down"),  font_size = 9)
+```
+
+Como parte del análisis descriptivo en la fase del post preprocesamiento, se ha generado una tabla que presenta varios estadísticos de las variables numéricas. Estas estadísticas se han calculado después de aplicar las técnicas estadísticas necesarias para procesar adecuadamente los datos.
+
+-   Media truncada (Trimmed mean): Al igual que antes del preprocesamiento, la media truncada revela que la variable "Amt credit" tiene una media cercana a la mediana, lo que sugiere una alta simetría en esta variable.
+
+-   Asimetría (Skew): Después del procesamiento de datos, se observan cambios en la asimetría de algunas variables. Las variables "Diff_credit_goods," "Ratio_credit_income," "Ratio_annuity_credit," y "DTI_ratio" muestran asimetría positiva, indicando que la mayoría de los valores se concentran a la izquierda de la media y la mediana.
+
+-   Curtosis (Kurtosis): Las variables "Ratio_credit_income" y "DTI_ratio" exhiben coeficientes de curtosis significativamente altos, lo que sugiere distribuciones con colas pesadas, es decir, son variables leptocúrticas con colas más puntiagudas que una distribución normal. Por otro lado, la variable "Age_years" tiene un coeficiente de curtosis negativo, lo que la clasifica como una distribución platicúrtica. Las demás variables muestran curtosis cercanas a 3, considerado el valor neutral que indica una distribución normal.
+
+-   Error estándar (SE): Todas las variables tienen desviaciones estándar pequeñas en relación a sus medias, excepto la variable "Diff_credit_goods," lo que podría sugerir una gran diversidad de datos que no siguen una distribución gaussiana.
+
+En la tabla, se aprecia que las variables han experimentado una normalización en el proceso de preprocesamiento. Sin embargo, algunas de las nuevas variables, en su mayoría ratios derivados de variables que ya no están en la base de datos postprocesada, presentan una variedad de distribuciones diferentes.
+
+```{r, include = F, message=F,warning=F,fig.show='hide'}
+data_n <- data[16:24]
+q <- NULL
+h <- NULL
+s <- NULL
+for(i in 1:ncol(data_n)){
+ q[[i]] <- ggplot(data_n, aes_string(sample=names(data_n[i]))) + 
+    stat_qq(col="#DCF0F8", na.rm = T) + 
+    stat_qq_line(col="#8B3E2F",lwd=1, na.rm = T) + theme_bw() +
+    xlab("Normal Theoretical Quantiles") + 
+    ylab("Variable Data") + 
+    ggtitle("Normal Q-Q Plot") + theme(plot.title = element_text(hjust = 0.5))
+ 
+  h[[i]] <- ggplot(data_n, aes_string(x = data_n[,i])) + 
+    geom_histogram(aes(y = after_stat(density)), color = "#53868B", fill = "#DCF0F8", na.rm = T) +
+    geom_density(color = "#8B3E2F",lwd=1, na.rm = T) + 
+    theme_bw() + xlab("") + ylab("Density") + 
+    ggtitle(paste0("Histograma ", names(data_n)[i])) + 
+    theme(plot.title = element_text(hjust = 0.5))
+  
+  s[[i]] <- shapiro.test(data_n[,i])$p.value[[1]]
+}
+```
+
+```{r, warning = F, message = F, echo = F, fig.cap = "Análisis Gráfico Variable Year Birth", fig.show='hold', out.height="75%",out.width="75%"}
+grid.arrange(h[[1]],q[[1]],ncol = 2)
+```
+
+Como se observa en el análisis previo, la variable "Amt_income_total" no presenta una distribución gaussiana. Sin embargo, tras el proceso de eliminación e imputación de valores atípicos (outliers) y datos faltantes (NA), esta variable ha logrado una mayor similitud con una distribución normal en lugar de parecerse a una exponencial.
+
+El gráfico Q-Q Plot muestra una notable mejora en la similitud de los cuantiles con los cuantiles teóricos, lo que sugiere una distribución más próxima a la normal. A pesar de este acercamiento visual a la normalidad, los resultados del test de normalidad "Shapiro-Wilk" confirman la hipótesis previa de que los datos no siguen una distribución normal, ya que el p-valor obtenido es 'r s[[1]]'.
+
+```{r, warning = F, message = F, echo = F, fig.cap = "Análisis Gráfico Variable Income", fig.show='hold', out.height="75%",out.width="75%"}
+grid.arrange(h[[2]],q[[2]],ncol = 2)
+```
+
+La variable "Log_Amt_credit" presenta una transformación logarítmica realizada con el propósito de lograr una distribución más simétrica y una curtosis más próxima a la normalidad. Sin embargo, como indica el test de Shapiro-Wilk con un valor de 'r s[[2]]', esta variable aún no sigue una distribución normal.
+
+```{r, warning = F, message = F, echo = F, fig.cap = "Análisis Gráfico Variable Year Birth", fig.show='hold', out.height="75%",out.width="75%"}
+grid.arrange(h[[3]],q[[3]],ncol = 2)
+```
+
+En este caso, se está analizando la variable "Amt_annuity". A simple vista y según el gráfico Q-Q Plot, parece que esta variable sigue una distribución normal, en contraste con lo que se observó en el análisis descriptivo previo al procesamiento de datos. Sin embargo, el test de Shapiro-Wilk arroja un valor de 'r s[[3]]', indicando que la variable no sigue una distribución normal.
+
+
+```{r, warning = F, message = F, echo = F, fig.cap = "Análisis Gráfico Variable Year Birth", fig.show='hold', out.height="75%",out.width="75%"}
+grid.arrange(h[[4]],q[[4]],ncol = 2)
+```
+
+La variable "Amt_goods_price" ha sido transformada logarítmicamente. De igual forma que la variable anterior, los reslutados del test de "Shapiro-Wilk" demuestran que esta variable no sigue una distribución gaussiana, teniendo un resultado del test de 'r s[[4]]'.
+
+```{r, warning = F, message = F, echo = F, fig.cap = "Análisis Gráfico post Variable AGE YEARS", fig.show='hold', out.height="75%",out.width="75%"}
+grid.arrange(h[[5]],q[[5]],ncol = 2)
+```
+
+La variable "age_years" no sigue una distribución normal debido a las restricciones naturales inherentes. Esta variable está limitada tanto inferiormente, ya que las personas solo pueden legalmente solicitar un crédito a partir de los 18 años, momento en el que su situación financiera suele ser menos sólida, como superiormente, dado que los créditos suelen ser a medio o largo plazo, lo que implica un crecimiento exponencial del riesgo crediticio relacionado con la edad.
+
+Las limitaciones legales y financieras imponen una clara sesgación en la distribución de edades de los solicitantes de crédito, lo que se refleja en la falta de normalidad en la variable "age_years". Además, la calidad crediticia y el riesgo crediticio varían significativamente a lo largo de la vida de una persona, lo que también contribuye a la no conformidad con una distribución normal.
+
+```{r, warning = F, message = F, echo = F, fig.cap = "Análisis Gráfico Variable DIFF GOODS PRICE", fig.show='hold', out.height="75%",out.width="75%"}
+grid.arrange(h[[6]],q[[6]],ncol = 2)
+```
+
+La variable "Diff_credit_goods" presenta un valor mínimo de 0, dado que la diferencia mínima entre el monto del crédito obtenido y el valor del activo que se desea adquirir siempre es positiva. Por lo tanto, esta variable tiende a asemejarse más a una distribución exponencial que a una distribución normal. En este contexto, realizar un análisis gaussiano de esta variable resulta redundante debido a la naturaleza de los datos.
+
+```{r, warning = F, message = F, echo = F, fig.cap = "Análisis Gráfico Variable RATIO CREDIT INCOME", fig.show='hold', out.height="75%",out.width="75%"}
+grid.arrange(h[[7]],q[[7]],ncol = 2)
+```
+
+De manera similar a la variable anterior, el ratio entre el crédito concedido y el ingreso presenta una limitación en su valor mínimo de 0. Por lo tanto, no parece necesario llevar a cabo un análisis de normalidad de esta variable. La naturaleza de la variable, con un límite inferior en 0, hace que la asunción de normalidad sea poco relevante.
+
+### Análisis Univariante Categórico
+
+Tras haber completado el análisis univariante numérico se procede a hacer el análisis categórico.
+
+En la siguiente tabla se presenta un resumen general sobre ellas:
+
+```{r,warning = F, echo=F, fig.cap = "Tabla Summary Variables Categóricas post"}
+data$OCCUPATION_TYPE<- as.factor(data$OCCUPATION_TYPE)
+data$ORGANIZATION_TYPE<- as.factor(data$ORGANIZATION_TYPE)
+data$CODE_GENDER<- as.factor(data$CODE_GENDER)
+data$NAME_INCOME_TYPE<- as.factor(data$NAME_INCOME_TYPE)
+data$NAME_EDUCATION_TYPE <- as.factor(data$NAME_EDUCATION_TYPE)
+data$NAME_FAMILY_STATUS<- as.factor(data$NAME_FAMILY_STATUS)
+                                    
+                                    
+export2md(createTable(compareGroups(select_if(data,is.factor)), show.ratio=TRUE))
+```
+
+Por lo tanto, en la tabla se presentan tanto la frecuencia absoluta como la frecuencia relativa de cada valor posible en cada variable categórica, ya sean dicotómicas o politómicas. Esto facilita la identificación de la moda de manera sencilla.
+
+Una vez se ha realizado un resumen general, se ha procedido a analizar cada variable una a una:
+
+```{r echo = F, fig.show='hide',results = "hide"}
+data_f <- select_if(data,is.factor)
+p <- NULL
+for(i in 1:ncol(data_f)){
+  var <- factor(data_f[,i])
+  PieChart(var, data = data.frame(var), hole = 0,
+         fill = hcl.colors(length(levels(var)),"pastel"),
+         labels_cex = 0.6, main = "",width = 2, height = 2)
+  p[[i]] <- recordPlot()
+}
+```
+
+
+
+
+```{r, include = F}
+library(ggplot2)
+p <- vector("list", length = ncol(data_f))
+for (i in 1:ncol(data_f)) {
+  var <- names(data_f)[i]
+  freq_table <- table(data[[var]])
+  num_classes <- length(freq_table)
+  
+  if (num_classes <= 4) {
+    p[[i]] <- ggplot(data, aes(x = factor(1), fill = .data[[var]])) +
+      geom_bar() +
+      coord_polar(theta = "y") +
+      labs(x = NULL, y = NULL, fill = var, title = var) + 
+      theme_void() +
+      theme(legend.position = "bottom") +
+      scale_fill_brewer(palette = "Paired")
+  } else {
+    p[[i]] <- ggplot(data, aes(x = .data[[var]])) +
+      geom_bar(fill = "skyblue") +
+      labs(x = var, y = "Frecuencia", title = var) +  
+      theme_minimal() +
+      theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  }
+}
+```
+
+```{r, echo = F, fig.cap= "Pie Chart post Variable CODE GENDER",fig.show='hold',out.width="75%",out.height="75%"}
+p[[1]]
+```
+
+Tal y como se aprecia en este gráfico pastel, la estructura de los datos en cuanto a la distribución del sexo no se ve modificada por el preprocessing.
+
+```{r, echo = F, fig.cap= "Bar Chart post Variable NAME INCOME TYPE",fig.show='hold',out.width="75%",out.height="75%"}
+p[[2]]
+```
+
+```{r, echo = F, fig.cap= "Bar Chart post Variable NAME EDUCATION TYPE",fig.show='hold',out.width="75%",out.height="75%"}
+p[[3]]
+```
+
+```{r, echo = F, fig.cap= "Bar Chart post Variable NAME FAMILY STATUS",fig.show='hold',out.width="75%",out.height="75%"}
+p[[4]]
+```
+
+Del mismo modo, las variables `NAME_INCOME_TYPE`, `NAME_EDUCATION_TYPE` y `NAME_EDUCATION_TYPE` y mantienen su estructura y patrones previos al preprocesamiento. Esto sugiere que, o bien había pocos valores atípicos o datos faltantes (NA), o que la imputación de datos se realizó de manera precisa. En consecuencia, la estructura se mantiene constante tanto antes como después del procesamiento.
+
+```{r, echo = F, fig.cap= "Bar Chart post Variable OCCUPATION TYPE",fig.show='hold',out.width="75%",out.height="75%"}
+p[[5]]
+```
+
+En la variable `OCCUPATION_TYPE` se aprecia como se han reducido el número de categorias usando como criterio de agrupación el nivel de habilidades técnicas y nivel de responsabilidad de los distintos trabajos. Así, por ejemplo "High skill tech staff", "Managers" y "Medicine staff" han sido consideradas "High skill laborers" debido a la gran responsabilidad y conocimiento requerido para desarrollar las tareas requeridas del trabajo.
+
+```{r, echo = F, fig.cap= "Bar Chart post Variable ORGANIZATION TYPE",fig.show='hold',out.width="75%",out.height="75%"}
+p[[6]]
+```
+
+En la variable "Organization type," se observan cambios en la distribución de los datos debido a la reorganización y a la imputación de valores atípicos y datos faltantes. Previo a la reagrupación, existian diferentes cateogrías que podían hacer referencia a un mismo sector o grupo, por lo que al agruparlos aparece la categoría "Busiess and Bank" como la mas representativa. Además, ha surgido la categoría "unknown," que incluye a los casos que no se han podido clasificar en ninguna de las otras categorías.
+
+
+### Análisis Bivariante Numérico
+
+Con el propósito de identificar las relaciones más significativas entre las variables numéricas, se ha creado un gráfico de correlación utilizando la técnica de HeatMap. En este gráfico, los colores indican el grado de dependencia entre las variables numéricas. Cuanto más intenso sea el color, mayor será la relación, y se prestará una mayor atención a estas relaciones en nuestro análisis.
+
+```{r, echo = F, fig.cap="Matriz de Correlaciones post para las Variables Numéricas", fig.show='hold'}
+ corr <- round(cor(data[16:24],use="complete.obs"), 1)
+ ggcorrplot(corr, hc.order = T,type = "lower",lab=T)
+```
+
+Después de analizar el gráfico y considerar los cambios realizados en el procesamiento de los datos, se observa que las correlaciones entre las variables antes y después del procesamiento se mantienen constantes. Se destaca especialmente la relación entre la variable `AMT_CREDIT` y `AMT_GOODS_PRICE`, que se mantiene en 1, lo que indica que el valor del crédito otorgado es igual al valor del precio del bien. Además, se observa una correlación entre `AMT_ANNUITY` y `AMT_CREDIT`, así como entre `AMT_ANNUITY` y `AMT_GOODS_PRICE`. También se nota una correlación entre `RATIO_CREDIT_INCOME` y la variable `DTI_RATIO`. La alta correlación entre el ratio DTI y el ratio credit income se debe a que la primera variable representa la cantidad de deuda que se paga en cada período, es decir, la cuota mensual, mientras que el ratio credit income es la relación entre la cuota y el salario del prestatario.
+
+
+
+```{r, echo=F,fig.cap = "Gráfico de dispersión Gasto Total en Pescado vs Gasto Total en Fruta", fig.show='hold',out.width="75%",out.height="75%"}
+plot(log(data$AMT_ANNUITY), log(data$AMT_GOODS_PRICE), pch = 19, col = "black",
+     xlab="log(AMT_ANNUITY)", ylab="(AMT_GOODS_PRICE)")
+abline(lm(data$AMT_ANNUITY ~ data$AMT_GOODS_PRICE), col = "red", lwd = 3)
+text(paste("Correlación:", round(cor(data$AMT_ANNUITY, data$AMT_GOODS_PRICE), 2)),
+     x = 40, y = 20)
+```
+
+De manera similar, la estructura de los datos se ha mantenido constante, es decir, la correlación entre el valor de los bienes y la anualidad también es relativamente alta. Es importante señalar que los clientes que posean una relación entre la anualidad y el valor del bien que compren (teniendo en cuenta que el precio del bien es igual al valor del préstamo) serán aquellos que deban destinar una proporción menor de sus ingresos al reembolso de la deuda. Tal y como se aprecia en el gráfico, todos los datos estan en una franja diagonal.
+
+### Análisis Bivariante Categórico-Descriptivo
+
+Para concluir el análisis descriptivo antes de proceder al procesamiento de los datos, es necesario examinar la relación entre las variables categóricas y las numéricas. Para este propósito, utilizaremos la creación de varios boxplots, lo que nos permitirá presentar nuestras conclusiones de manera precisa y concisa.
+
+```{r, include = F}
+currelas <- c("CODE_GENDER", "NAME_INCOME_TYPE", "NAME_EDUCATION_TYPE", "NAME_FAMILY_STATUS", "OCCUPATION_TYPE", "ORGANIZATION_TYPE", "TARGET", "RATIO_CREDIT_INCOME", "RATIO_ANNUITY_CREDIT", "DTI_RATIO")
+
+for (i in 1:length(currelas)){
+  q[[i]] <- ggplot(data, aes(x = .data[[currelas[i]]], fill = CODE_GENDER)) +
+    geom_bar(position = "fill") +  
+    labs(title = paste("Grouped Bar Chart:", currelas[i], "vs. CODE_GENDER"),
+         x = currelas[i], y = "Proportion") +
+    theme_minimal() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    scale_fill_manual(values = c("M" = "blue", "F" = "pink"))
+}
+
+
+```
+
+
+```{r, echo=F,fig.cap = "Gráfico comparación CODE GENDER vs OCCUPATION TYPE", fig.show='hold',out.width="75%",out.height="75%"}
+q[[5]]
+```
+
+Debido al agrupamiento de las categorías en los distintos niveles de habilidades y responsabilidad, se aprecia como las mujeres tienden a tener puestos de trabajo mas demandantes en cuanto a estos dos atributos respecto a los hombres, completando casi con totalidad los trabajos de "Mid skill laborers y teniendo un peso altamente representativo en "Mid-high skill laborers" y "High skill laborers".
+
+```{r, include = F}
+n <- list()
+
+currelas <- c("NAME_EDUCATION_TYPE", "NAME_FAMILY_STATUS", "OCCUPATION_TYPE", "ORGANIZATION_TYPE", "TARGET")
+library(ggplot2)
+for (i in 1:length(currelas)){
+n[[i]]<- ggplot(data, aes(x = .data[[currelas[i]]], fill = NAME_INCOME_TYPE)) +
+  geom_bar(position = "fill") +
+  labs(title = paste("Grouped Bar Chart:", currelas[i], "vs. NAME_INCOME_TYPE"),
+         x = currelas[i], y = "Proportion") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  scale_fill_brewer(palette = "Set1")
+
+}
+
+```
+
+```{r, echo=F,fig.cap = "Gráfico comparación NAME EDUCATION TYPE vs NAME INCOME TYPE", fig.show='hold',out.width="75%",out.height="75%"}
+n[[1]]
+```
+
+En este gráfico se analiza la relación entre el nivel de educación y el tipo de ingreso. Como se observa, la mayoría de los trabajadores en empleos del sector privado convencional presentan una diversidad de niveles educativos, mientras que aquellos con estudios académicos tienden a trabajar para el sector público. Vale la pena señalar que un porcentaje significativo de los cónyuges sobrevivientes tiene únicamente educación secundaria. Esto podría deberse al hecho de que estos trabajadores son de mayor edad y, en su momento, las oportunidades de acceder a educación superior eran limitadas.
+
+```{r, echo=F,fig.cap = "Gráfico comparación TARGET vs NAME INCOME TYPE", fig.show='hold',out.width="75%",out.height="75%"}
+n[[5]]
+```
+
+En lo que respecta a la variable `TARGET`, se observa una disparidad en la capacidad de pago de los clientes en el sector privado, siendo los pensionistas y los comerciales quienes presentan proporcionalmente menos dificultades.
+
+```{r, include = F}
+m <- list()
+
+currelas <- c("NAME_FAMILY_STATUS", "OCCUPATION_TYPE", "ORGANIZATION_TYPE", "TARGET")
+library(ggplot2)
+for (i in 1:length(currelas)){
+m[[i]]<- ggplot(data, aes(x = .data[[currelas[i]]], fill = NAME_EDUCATION_TYPE)) +
+  geom_bar(position = "fill") +
+  labs(title = paste("Grouped Bar Chart:", currelas[i], "vs. NAME_EDUCATION_TYPE"),
+         x = currelas[i], y = "Proportion") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  scale_fill_brewer(palette = "Set1")
+
+}
+```
+
+```{r, echo=F,fig.cap = "Gráfico comparación post OCCUPATION TYPE vs NAME EDUCATION TYPE", fig.show='hold',out.width="75%",out.height="75%"}
+m[[2]]
+```
+
+En este gráfico se confirma la idea de que los trabajadores con niveles educativos más altos tienden a ocupar puestos de trabajo que requieren un mayor nivel de conocimientos técnicos, mientras que aquellos con niveles educativos más bajos suelen desempeñar empleos que demandan menos destrezas técnicas.
+
+```{r, echo=F,fig.cap = "Gráfico comparación post TARGET vs NAME EDUCATION TYPE", fig.show='hold',out.width="75%",out.height="75%"}
+m[[4]]
+```
+
+En lo que respecta al nivel de educación, es notable que aquellos trabajadores con un nivel educativo más bajo son quienes enfrentan mayores dificultades para cumplir con sus pagos de manera consistente.
+
+```{r, include = F}
+m <- list()
+
+currelas <- c("OCCUPATION_TYPE", "ORGANIZATION_TYPE", "TARGET")
+library(ggplot2)
+for (i in 1:length(currelas)){
+m[[i]]<- ggplot(data, aes(x = .data[[currelas[i]]], fill = NAME_FAMILY_STATUS)) +
+  geom_bar(position = "fill") +
+  labs(title = paste("Grouped Bar Chart:", currelas[i], "vs. NAME_FAMILY_STATUS"),
+         x = currelas[i], y = "Proportion") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  scale_fill_brewer(palette = "Set1")
+
+}
+```
+
+```{r, echo=F,fig.cap = "Gráfico comparación NAME FAMILY STATUS vs NAME OCCUPATION TYPE", fig.show='hold',out.width="75%",out.height="75%"}
+m[[1]]
+```
+
+En este gráfico se analiza la relación entre la ocupación de los individuos y el estado civil de ellos mismos. Como se observa, la mayoría de los trabajadores de cualquier sector están casados, muchos por la iglesia y unos pocos civilmente. Vale la pena señalar que un porcentaje significativo de los cónyuges sobrevivientes trabajan en recursos humanos. Esto podría deberse al hecho de que estos trabajadores son de mayor edad y, en su momento, las oportunidades de acceder este tipo de empleos eran más altas.
+
+
+
+```{r, include = F}
+m <- list()
+
+currelas <- c("NAME_FAMILY_STATUS", "OCCUPATION_TYPE", "ORGANIZATION_TYPE")
+library(ggplot2)
+for (i in 1:length(currelas)){ 
+m[[i]]<- ggplot(data, aes(x = .data[[currelas[i]]], fill = TARGET)) +
+  geom_bar(position = "fill") +
+  labs(title = paste("Grouped Bar Chart:", currelas[i], "vs. TARGET"),
+         x = currelas[i], y = "Proportion") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  scale_fill_brewer(palette = "Set1")
+
+}
+```
+
+```{r, echo=F,fig.cap = "Gráfico comparación NAME FAMILY STATUS vs TARGET", fig.show='hold',out.width="75%",out.height="75%"}
+m[[1]]
+```
+
+En este gráfico se confirma la idea de que dentro de los diferentes grupos de estados civiles no hay mucha diferencia con respecto al target. La única diferencia notable es que aquellas personas que san quedado viudas son quienes enfrentan menores dificultades para cumplir con sus pagos de manera consistente.
+
+```{r, echo=F,fig.cap = "Gráfico comparación OCCUPATION TYPE vs TARGET", fig.show='hold',out.width="75%",out.height="75%"}
+m[[2]]
+```
+
+En el segundo gráfico nos muestra los oficios de las personas con respecto al target. Se aprecia claramente como la gran mayoría de trabajadores poco calificados tienen mas dificultades de pago respecto a los demás, mientras sorprende que los secretarios sean los que menos dificultades tengan en pagar proporcionalmente. Nos podemos basar hasta un cierto punto en este tipo de análisis ya que podria haber pocas personas dentro de un mismo grupo de trabajadores y muchas personas dentro de otro y esto dificultaria sacar conclusiones claras.
