@@ -1,16 +1,39 @@
 ---
-title: "ACP"
-date: "`r Sys.Date()`"
-output: 
-    pdf_document : default
-    html_document: default
+output: pdf_document
+header-includes:
+- \usepackage{fullpage} 
+- \usepackage[spanish]{babel}
+- \setlength{\headsep}{7mm} 
+- \usepackage[linktoc=page]{hyperref}
+- \usepackage{fancyhdr}
+- \usepackage{floatrow}
+- \floatsetup[figure]{capposition=top}
+- \floatsetup[table]{style=plaintop}
+- \usepackage{float}
+- \floatplacement{figure}{H}
+- \newcommand{\beginsupplement}{
+  \setcounter{table}{17}  
+  \renewcommand{\thetable}{\arabic{table}} 
+  \setcounter{figure}{51} 
+  \renewcommand{\thefigure}{\arabic{figure}}}
+- \setlength{\headheight}{13.6pt}
+- \setlength{\topmargin}{-10mm}
+- \rhead{Minería de Datos}
+- \lhead{Entrega D3}
 ---
+\pagenumbering{arabic}
+\pagestyle{fancy}
 
+```{=tex}
+\cfoot{\thepage}
+\setcounter{page}{60}
+```
+\beginsupplement
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
 
 ```
-
+# Análisis de componentes principales (ACP)
 ```{r, warning=FALSE, echo=FALSE}
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 data <- get(load('Dades preprocessades.Rdata'))
@@ -72,7 +95,7 @@ p <- p +
   theme_minimal()
 ```
 
-```{r, echo = F, out.height="75%", out.width="75%"}
+```{r, echo = F, fig.cap="Porcentaje de inercia explicado por dimensión", fig.show='hold', out.height="75%", out.width="75%"}
 p
 ```
 
@@ -98,7 +121,7 @@ for(i in 1:nrow(combn)){
 }
 ```
 
-```{r, echo = F, out.height="75%",out.width="75%"}
+```{r, echo = F, fig.cap="Proyección de variables en los dos primeros planos factoriales", fig.show='hold', out.height="75%", out.width="75%"}
 grafic[[1]]
 ```
 
@@ -122,7 +145,7 @@ grafic[[1]]
 
 Observamos la tabla de rotaciones:
 
-```{r, echo=FALSE,}
+```{r, echo=FALSE}
 kbl(pc1$rotation[,1:5],
     caption = "Correlación de cada variable con cada plano factorial"
     , booktabs=T)%>% 
@@ -158,7 +181,7 @@ p <- p +
   ggtitle("Explained inertia by each dimension") + theme_minimal()
 ```
 
-```{r, echo = F, out.height="75%",out.width="75%"}
+```{r, echo = F, fig.cap="Porcentaje de inercia explicado por dimensión", fig.show='hold', out.height="75%", out.width="75%"}
 p
 ```
 
@@ -183,7 +206,7 @@ for(i in 1:nrow(combn)){
 }
 ```
 
-```{r,echo = F, out.height="75%",out.width="75%"}
+```{r,echo = F, fig.cap="Proyección de variables en los dos primeros planos facoriales", fig.show='hold', out.height="75%", out.width="75%"}
 grafic[[1]]
 ```
 
@@ -226,7 +249,7 @@ p <- p +
   ggtitle("Explained inertia by each dimension") + theme_minimal()
 ```
 
-```{r, echo = F, out.height="75%",out.width="75%"}
+```{r, echo = F, fig.cap="Porcentaje de inercia explicado por dimensión", fig.show='hold', out.height="75%", out.width="75%"}
 p
 ```
 
@@ -251,7 +274,7 @@ for(i in 1:nrow(combn)){
 }
 ```
 
-```{r,echo = F, out.height="75%",out.width="75%"}
+```{r,echo = F, fig.cap="Proyección de variables en los dos primeros planos factoriales", fig.show='hold', out.height="75%", out.width="75%"}
 grafic[[1]]
 ```
 
@@ -293,7 +316,7 @@ p <- p +
   ggtitle("Explained inertia by each dimension") + theme_minimal()
 ```
 
-```{r, echo = F, out.height="75%",out.width="75%"}
+```{r, echo = F, fig.cap="Porcentaje de inercia explicado por dimensión", fig.show='hold', out.height="75%", out.width="75%"}
 p
 ```
 
@@ -318,7 +341,7 @@ for(i in 1:nrow(combn)){
 }
 ```
 
-```{r,echo = F, out.height="75%",out.width="75%"}
+```{r, echo = F, fig.cap="Proyección de variables en los dos primeros planos factoriales", fig.show='hold', out.height="75%", out.width="75%"}
 grafic[[1]]
 ```
 
@@ -341,12 +364,13 @@ Las variables eliminadas han sido:
 
 ## Interpretación de planos factoriales
 
-Para ayudar a dar nombre a las diferentes dimensiones, aparte de utilizar las herramientas gráficas, también podemos fijarnos en las correlaciones entre las variables y los componentes principales. 
+Para ayudar a dar nombre a las diferentes dimensiones, aparte de utilizar las herramientas gráficas, también podemos fijarnos en las correlaciones entre las variables y los componentes principales.
+```{r, echo = F, fig.cap="Proyección de variables en los dos primeros planos factoriales", fig.show='hold', out.height="75%", out.width="75%"}
+grafic[[1]]
+```
 ```{r, echo=F}
 # kable(Phi)
 # Aixo pendent perque en teoria les dues formes son correctes perque mostren les correlacions entre variables originals i PCs, pero donen numeros diferents. S'ha de preguntar pero fem servir la segona forma per ara.
-
-grafic[[1]]
 
 kbl(pc1$rotation[,1:4],
     caption = "Correlación de cada variable con cada plano factorial"
@@ -365,12 +389,12 @@ kbl(pc1$rotation[,1:4],
 
 ## Representación de individuos
 
-A continuación se representan los individuos en los dos primeros planos factoriales.
+A continuación se representan los individuos sobre los dos primeros planos factoriales.
 
-```{r, echo=FALSE}
+```{r, echo=FALSE, fig.cap="Proyección de individuos en los dos primeros planos factoriales", fig.show='hold', out.height="75%", out.width="75%"}
 eje1 <- 1
 eje2 <- 2
-plot(Psi[,eje1],Psi[,eje2],ylab = "PC2",xlab="PC1",main="Proyección de observaciones entre PC1 i PC2")
+plot(Psi[,eje1],Psi[,eje2],ylab = "PC2",xlab="PC1",main="Proyección de observaciones entre PC1 y PC2")
 # autoplot(pc1)
 text(Psi[,eje1],Psi[,eje2],labels=iden, cex=0.5)
 axis(side=1, pos=0, at=seq(-70, 70, by=0.5), labels = F, col="aquamarine4")
@@ -407,7 +431,7 @@ var_categoriques = which(sapply(data, is.factor))
 var_categoriques <- var_categoriques[-8]
 ```
 
-```{r, echo=FALSE}
+```{r, echo=FALSE, fig.cap="Representación conjunta de variables categóricas en los dos primeros planos factoriales", fig.show='hold', out.height="75%", out.width="75%"}
 eje1 <- 1
 eje2 <- 2
 plot(Psi[,eje1],Psi[,eje2],type="n",xlim=c(-1.6,1.6), ylim=c(-1,1), 
@@ -439,7 +463,7 @@ c<-c+1
 
 En este primer gráfico no se puede ver nada con claredad, por eso se ha decidido representar cada una de las variables categóricas en un gráfico distinto:
 
-```{r, echo=FALSE, out.width="95%"}
+```{r, echo=FALSE}
 col <- rainbow(length(var_categoriques))
 c <- 1
 X <- Phi[, eje1]
@@ -474,9 +498,8 @@ Algunos de los gráficos anteriores són interesantes de comentar. En el caso de
 
 Observando el gráfico que incluye **CODE_GENDER**, se puede apreciar como los dos sexos presentan diferencias en la primera dimensión. De acuerdo con la explicación de la dimensión, los hombres són los que, en general, piden préstamos de menor valor monetario, y para los cuales la diferencia entre el crédito del préstamo y los ingresos anuales es menor. Es decir, que los hombres cuentan con menos años para pagar las deudas de los préstamos. Por el lado contrario, las mujeres presentan las características opuestas, préstamos más grandes y diferencias más significativas entre ingresos anuales y valor del crédito.
 
-Para la variable **NAME_FAMILY_STATUS** se puede apreciar que los individuos de la categoria "Widow" són también tienen menores ingresos y créditos concedidos de menor valor. En cambio para la variable **OCUPATION_TYPE** se puede observar que las categorias de "Mid-high skill laborers" y "High skill laborers" representan lo contrario, tienen mayores ingresos y créditos concedidos de mayor valor.
+Para la variable **NAME_FAMILY_STATUS** se puede apreciar que los individuos que forman parte de la categoria "Widow" són también los que tienen menores ingresos y créditos concedidos de menor valor. En cambio, y fijando la atención en la variable **OCUPATION_TYPE**, se puede observar que las categorias de "Mid-high skill laborers" y "High skill laborers" representan lo contrario. Entre todos los tipos de ocupación, són los dos con mayores ingresos y mayores créditos concedidos, que se entiende como un fenómeno muy trivial.
 
-Para la variable **REGION_RATING_CLIENT** vemos que como mejor es la "puntuación" de la región mayores ingresos tienen y más créditos se les han concedido. 
+En relación a la variable **REGION_RATING_CLIENT**, se aprecia la diferencia entre las tres puntuaciones de región; cuanto mejor es la "puntuación" de la región (1 siendo la mejor), mayores ingresos y más crédito concedido tienen los clientes de dicha región. 
 
 Por último, en el gráfico que representa la variable **NAME_INCOME_TYPE**, se pueden analizar las dos dimensiones por separado. Primero, si se comprueba la primera dimensión, es interesante ver que tanto los pensionistas como los funcionarios tienden a pedir préstamos de mayor valor, y ambos presentan diferencias entre ingresos anuales y el valor de dicho préstamo solicitado. Segundo, si se observa en función de la segunda dimensión, se aprecia que los pensionistas són los que presentan unos ingresos totales menores, mientras que las personas con ingresos derivados de puestos de trabajo comerciales són las que tienen ingresos totales mayores.
-
