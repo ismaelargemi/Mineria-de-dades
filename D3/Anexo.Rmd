@@ -177,3 +177,146 @@ ggplot(data = dades, aes(x = cluster, fill = dades$REGION_RATING_CLIENT)) +
 
 
 
+## Profiling CURE
+
+
+```{r, include = F, warning = F, message = F}
+load("datos_profiling_CURE.RData")
+```
+
+```{r, include = F, warning = F, message = F}
+library(ggplot2)
+colores <- scales::brewer_pal(palette = "Set1")(length(unique(cluster)))
+```
+
+**Variables numéricas**
+
+```{r, echo=F, warning = F,fig.cap = "Comparación de medias por cluster OWN CAR AGE", fig.show='hold',out.width="75%",out.height="75%"}
+ggplot(data = dades, aes(x = cluster, y = dades$OWN_CAR_AGE)) + 
+  geom_bar(stat = "summary", fun = "mean", fill= colores) +
+  coord_cartesian(ylim=c(8,12))+
+  geom_hline(yintercept = mean(dades$OWN_CAR_AGE)) +
+  labs(title = "Medias de la Edad en años del coche del cliente por clúster respecto la media global" , y = "Media", x = "Clúster") 
+```
+
+
+```{r, echo=F, warning = F,fig.cap = "Comparación de medias por cluster CNT FAM MEMBERS", fig.show='hold',out.width="75%",out.height="75%"}
+ggplot(data = dades, aes(x = cluster, y = dades$CNT_FAM_MEMBERS)) +
+  geom_bar(stat = "summary", fun = "mean", fill= colores) +
+  geom_hline(yintercept = mean(dades$CNT_FAM_MEMBERS)) +
+  labs(title = "Medias del Número de familiares del cliente por clúster respecto la media global" , y = "Media", x = "Clúster")
+```
+
+
+```{r, echo=F, warning = F, fig.cap = "Comparación de medias por LOG AMT INCOME TOTAL", fig.show='hold',out.width="75%",out.height="75%"}
+ggplot(data = dades, aes(x = cluster, y = dades$log_AMT_INCOME_TOTAL)) +
+  geom_bar(stat = "summary", fun = "mean", fill= colores) +
+  coord_cartesian(ylim=c(11,12.5))+
+  geom_hline(yintercept = mean(dades$log_AMT_INCOME_TOTAL)) +
+  labs(title = "Medias del logaritmo de los Ingresos totales del cliente por clúster respecto la media global" , y = "Media", x = "Clúster") 
+```
+
+
+```{r, echo=F, warning = F,fig.cap = "Comparación de medias por LOG AMT CREDIT", fig.show='hold',out.width="75%",out.height="75%"}
+ggplot(data = dades, aes(x = cluster, y = dades$log_AMT_CREDIT)) +
+  geom_bar(stat = "summary", fun = "mean", fill= colores) +
+  coord_cartesian(ylim=c(12.5,13.5))+
+  geom_hline(yintercept = mean(dades$log_AMT_CREDIT)) +
+  labs(title = "Medias del Importe de crédito del préstamo por clúster respecto la media global" , y = "Media", x = "Clúster")
+
+```
+
+```{r, echo=F, warning = F,fig.cap = "Comparación de medias por cluster AGE YEARS", fig.show='hold',out.width="75%",out.height="75%"}
+ggplot(data = dades, aes(x = cluster, y = dades$AGE_YEARS)) +
+  geom_bar(stat = "summary", fun = "mean", fill= colores) +
+  coord_cartesian(ylim=c(20,60))+
+  geom_hline(yintercept = mean(dades$AGE_YEARS)) +
+  labs(title = "Medias de la Edad por clúster respecto la media global" , y = "Media", x = "Clúster")
+
+```
+
+```{r, echo=F, warning = F,fig.cap = "Comparación de medias por cluster RATIO CREDIT INCOME", fig.show='hold',out.width="75%",out.height="75%"}
+ggplot(data = dades, aes(x = cluster, y = dades$RATIO_CREDIT_INCOME)) +
+  geom_bar(stat = "summary", fun = "mean", fill= colores) +
+  coord_cartesian(ylim=c(2,5))+
+  geom_hline(yintercept = mean(dades$RATIO_CREDIT_INCOME)) +
+  labs(title = "Medias del Ratio del Importe del préstamo por clúster respecto la media global" , y = "Media", x = "Clúster")
+```
+
+```{r, echo=F, warning = F,fig.cap = "Comparación de medias por cluster RATIO ANNUITY CREDIT", fig.show='hold',out.width="75%",out.height="75%"}
+ggplot(data = dades, aes(x = cluster, y = dades$RATIO_ANNUITY_CREDIT)) +
+  geom_bar(stat = "summary", fun = "mean", fill= colores) +
+  coord_cartesian(ylim=c(0.04,0.06))+
+  geom_hline(yintercept = mean(dades$RATIO_ANNUITY_CREDIT)) +
+  labs(title = "Medias del Ratio de la Anualidad del préstamo por clúster respecto la media global" , y = "Media", x = "Clúster")
+
+```
+
+
+```{r, echo=F, warning = F,fig.cap = "Comparación de medias por cluster DTI RATIO", fig.show='hold',out.width="75%",out.height="75%"}
+ggplot(data = dades, aes(x = cluster, y = dades$DTI_RATIO)) +
+  geom_bar(stat = "summary", fun = "mean", fill= colores) +
+  coord_cartesian(ylim=c(0.1,0.25))+
+  geom_hline(yintercept = mean(dades$DTI_RATIO)) +
+  labs(title = "Medias de la Capacidad de cliente para pagar la annuity con sus ingresos por clúster respecto la media global" , y = "Media", x = "Clúster")
+
+```
+
+
+**Variables categóricas**
+
+```{r, echo=F, warning = F,fig.cap = "Comparación de proporción por cluster CODE GENDER", fig.show='hold',out.width="75%",out.height="75%"}
+ggplot(data = dades, aes(x = cluster, fill = dades$CODE_GENDER)) +
+  geom_bar(position = "dodge") +
+  labs(title = "Gráfico de la distribución del Género respecto el Clúster", y = "Freq", x = "Clúster") +
+  theme(legend.position = "top") + guides(fill = guide_legend(title = NULL))
+```
+
+
+```{r, echo=F, warning = F,fig.cap = "Comparación de proporción por cluster NAME INCOME TYPE", fig.show='hold',out.width="75%",out.height="75%"}
+ggplot(data = dades, aes(x = cluster, fill = dades$NAME_INCOME_TYPE)) +
+  geom_bar(position = "dodge") +
+  labs(title = "Gráfico de la distribución del Tipo de ingresos respecto el Clúster", y = "Freq", x = "Clúster") +
+  theme(legend.position = "top") + guides(fill = guide_legend(title = NULL))
+```
+
+
+```{r, echo = F, warning = F, fig.height = 6, fig.width = 10}
+ggplot(data = dades, aes(x = cluster, fill = dades$NAME_EDUCATION_TYPE)) +
+  geom_bar(position = "dodge") +
+  labs(title = "Gráfico de la distribución del Nivel de estudios del cliente respecto el Clúster", y = "Freq", x = "Clúster") +
+  theme(legend.position = "top") + guides(fill = guide_legend(title = NULL))
+```
+
+```{r, echo=F, warning = F,fig.cap = "Comparación de proporción por cluster NAME FAMILY STATUS", fig.show='hold',out.width="75%",out.height="75%"}
+ggplot(data = dades, aes(x = cluster, fill = dades$NAME_FAMILY_STATUS)) +
+  geom_bar(position = "dodge") +
+  labs(title = "Gráfico de la distribución del Estado civil respecto el Clúster", y = "Freq", x = "Clúster") +
+  theme(legend.position = "top") + guides(fill = guide_legend(title = NULL))
+```
+
+```{r, echo=F, warning = F,fig.cap = "Comparación de proporción por cluster OCCUPATION TYPE", fig.show='hold',out.width="75%",out.height="75%"}
+ggplot(data = dades, aes(x = cluster, fill = dades$OCCUPATION_TYPE)) +
+  geom_bar(position = "dodge") +
+  labs(title = "Gráfico de la distribución de la Actividad laboral respecto el Clúster", y = "Freq", x = "Clúster") +
+  theme(legend.position = "top") + guides(fill = guide_legend(title = NULL))
+```
+
+
+```{r, echo=F, warning = F,fig.cap = "Comparación de proporción por cluster ORGANIZATION TYPE", fig.show='hold',out.width="75%",out.height="75%"}
+ggplot(data = dades, aes(x = cluster, fill = dades$ORGANIZATION_TYPE)) +
+  geom_bar(position = "dodge") +
+  labs(title = "Gráfico de la distribución del Tipo de organización donde trabaja el cliente respecto el Clúster", y = "Freq", x = "Clúster") +
+  theme(legend.position = "top") + guides(fill = guide_legend(title = NULL))
+```
+
+
+```{r, echo=F, warning = F,fig.cap = "Comparación de proporción por cluster REGION RATING CLIENT", fig.show='hold',out.width="75%",out.height="75%"}
+ggplot(data = dades, aes(x = cluster, fill = dades$REGION_RATING_CLIENT)) +
+  geom_bar(position = "dodge") +
+  labs(title = "Gráfico de la distribución de la Calificación de la región donde vive el cliente respecto el Clúster", y = "Freq", x = "Clúster") +
+  theme(legend.position = "top") + guides(fill = guide_legend(title = NULL))
+```
+
+
+
