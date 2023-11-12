@@ -1,0 +1,229 @@
+---
+output: pdf_document
+header-includes:
+- \usepackage{fullpage} 
+- \usepackage[spanish]{babel}
+- \setlength{\headsep}{7mm} 
+- \usepackage[linktoc=page]{hyperref}
+- \usepackage{fancyhdr}
+- \usepackage{floatrow}
+- \floatsetup[figure]{capposition=top}
+- \floatsetup[table]{style=plaintop}
+- \usepackage{float}
+- \floatplacement{figure}{H}
+- \newcommand{\beginsupplement}{
+  \setcounter{table}{23}  
+  \renewcommand{\thetable}{\arabic{table}} 
+  \setcounter{figure}{62} 
+  \renewcommand{\thefigure}{\arabic{figure}}}
+- \setlength{\headheight}{13.6pt}
+- \setlength{\topmargin}{-10mm}
+- \rhead{Minería de Datos}
+- \lhead{Entrega D3}
+---
+
+\pagenumbering{arabic}
+\pagestyle{fancy}
+
+```{=tex}
+\cfoot{\thepage}
+\setcounter{page}{78}
+```
+\beginsupplement
+
+
+
+```{r, include=FALSE}
+# Cargamos las librerias necesarias
+library(cluster)
+library(fpc)
+library(pracma)
+library(factoextra)
+library(dbscan)
+library(dplyr) 
+library(kableExtra)
+```
+
+
+```{r, include=FALSE}
+# =============================================================================
+### Generamos una semilla para poder ejecutar los datos
+set.seed(04102022)
+
+# ==============================================================================
+### Creamos la base de datos que vamos a utilizar para detectar los grupos
+
+#Lectura de los datos
+load("Dades preprocessades.Rdata")
+
+#mydata contiene toda la base de datos
+mydata <- df_preprocessed
+mydata[,c("AMT_INCOME_TOTAL","AMT_CREDIT","AMT_ANNUITY","AMT_GOODS_PRICE",
+          "DAYS_BIRTH","TARGET","log_AMT_GOODS_PRICE","log_AMT_ANNUITY",
+          "DIFF_CREDIT_GOODS")] <- NULL
+
+Objectos <- sapply(mydata, class)
+Numeriques <- names(Objectos)[which(Objectos%in%c("numeric"))]
+mydata[,Numeriques] <- scale(mydata[,Numeriques])
+
+
+#dd solo contiene las varibales numericas
+dd <- mydata[,Numeriques]
+
+
+```
+
+
+# OPTICS
+
+OPTICS (Ordering Points To Identify the Clustering Structure), es otro algoritmo de clustering utilizado en mineria de datos y análisis de datos para descubrir patrones y estructuras en conjuntos de datos; siendo su objetivo principal descubrir grupos de puntos que están densamente agrupados en el espacio de características. Fue propuesto como una mejora del algoritmo DBSCAN, dado que este tiene problemas con las fronteras. 
+
+El algoritmo OPTICS comienza identificando los puntos centrales (core points) en el conjunto de datos (llamado `minPts`) dentro de un radio específico (llamado `eps`). Dado que una de sus limitaciones es la elección adecuada de estos parámetros, ya que son cruciales para obtener resultados óptimos, a continuación se optimiza su búsqueda:
+
+## Búsqueda de los parámetros óptimos
+
+### Optimización de la búsqueda de parámetros para épsilon y minPts en Optics:
+
+```{r, include=FALSE}
+#Cargamos las librerias necesarias:
+library(doParallel) #trabaja en paralelo al coger nuestro ordenador y dividirlo en dos (bigdata)
+library(foreach) #para hacer bucles
+```
+
+Primeramente, definimos los valores que se van a probar para `eps` y `minPts`, creando una cuadrícula de parámetros y, seguidamente, se establece el número de núcleos (cores) a utilizar para la optimización en paralelo, que se calcula automáticamente.
+```{r, echo=FALSE, include=FALSE}
+eps_values <- seq(0.1, 1.0, by = 0.1)
+minPts_values <- seq(5, 20, by = 5)
+
+# Cuadrícula de búsqueda de los valores de eps y minPts
+grid <- expand.grid(eps = eps_values, minPts = minPts_values)
+
+### Establecemos el número de núcleos que se van a usar para realizar la optimización en paralelo
+#calcula cuantos cores tenemos en nuestro ordenador, en este caso ocho
+cores <- detectCores()
+registerDoParallel(cores = cores)
+```
+
+
+
+
+### Función para ejecutar OPTICS con una combinación de parámetros y calcular el coeficiente de silueta:
+
+```{r, echo=FALSE, warning=FALSE}
+run_optics <- function(data, eps, minPts) {
+  optics <- dbscan::optics(data, eps = eps, minPts = minPts)
+  res <- dbscan::extractDBSCAN(optics, eps_cl = eps)
+  sil <- cluster::silhouette(res$cluster, dist(data))
+  return(ifelse(is.na(sil), sil, mean(sil[, 3])))
+}
+### Con esta función nos permitirá luego paralelizar el proceso
+
+### Ejecutar la cuadrícula de búsqueda en paralelo para la función dada
+results <- foreach(i = 1:nrow(grid), .combine = rbind) %dopar% {
+  eps <- grid$eps[i]
+  minPts <- grid$minPts[i]
+  score <- run_optics(dd, eps, minPts)
+  c(eps, minPts, score)
+} #objetivo: maximizar o minimizar el siluette.
+
+results <- results[, c(1:3)]
+
+
+### Seleccionamos la combinación de parámetros que produjo el mejor resultado
+best_params <- grid[which.max(results[, 3]), ]
+
+kbl(best_params, col.names = c("eps", "minPts"),
+      caption = "Obtención de los Parámetros Óptimos", booktabs = T) %>%
+  kable_styling(position = "center", 
+                latex_options = c("HOLD_position"))
+
+```
+Como vemos, después del proceso iterativo, la combinación de resultados más óptima ha sido un radio (`eps`) de 1 con un mínimo de 10 puntos (`minPts`). 
+
+Así mismo, a continuación creamos el modelo OPTICS con los parámetros óptimos encontrados y observamos su reachability plot:
+
+```{r, warning=FALSE, echo=F,fig.cap = "Reachability Plot", fig.show='hold',out.width="75%",out.height="75%"}
+### generamos el optics maximizado
+optics <- dbscan::optics(dd, eps = best_params$eps, minPts = best_params$minPts)
+
+plot(optics, reachability=TRUE)
+```
+
+El gráfico de reachability (alcance) que acabamos de generar, es una herramienta para visualizar la estructura de clústeres identificados.
+
+En los gráficos de reachability, cada punto representa un objeto de datos y la altura de la curva indica la distancia a la que se encuentra el objeto más cercano dentro del mismo clúster. Los valles en la curva indican la presencia de clústeres, ya que los puntos dentro de un mismo clúster tienden a estar más cerca entre sí que con puntos de otros clústers. 
+
+Así pues, como se puede observar, a primera vista vemos como apriori podriamos clasificar nuestra base de datos en tres clústeres. Aun así, hay una gran parte de nuestros datos que no está bien representada (la parte derecha del gráfico).
+
+\newpage
+
+### Método de la silueta
+Otra forma de encontrar los valores óptimos de los parámetros necesarios es a través del método de la silueta.
+
+En esta sección, se ejecutará OPTICS con diferentes valores de `eps`y se calculará la medida de silueta para cada valor. Luego, se graficará esta medida en función de épsilon y se identificará su valor óptimo. 
+
+```{r, echo=F,fig.cap = "Gráfico del método de la silueta", fig.show='hold',out.width="75%",out.height="75%"}
+### Metodo de la silueta
+
+#### Ejecutar OPTICS para diferentes valores de eps
+eps_values <- seq(0.1, 1, by = 0.1)
+optics_results <- lapply(eps_values, function(e) optics(dd, eps = e, minPts = 10))
+
+#### Obtener los agrupamientos para cada valor de eps
+clusters <- lapply(optics_results, function(x) extractDBSCAN(x, eps = x$eps))
+
+#### Calcular la medida de silhouette promedio para cada valor de eps
+silhouette_avg <- sapply(clusters, function(x) mean(cluster::silhouette(x$cluster, dist(dd))))
+
+# Graficar la medida de silhouette promedio en función de eps
+plot(eps_values, silhouette_avg, type = "b", pch = 20, main = "Silhouette Plot")
+
+# Agregar una línea vertical en el valor óptimo de eps, el que maximiza la silhoutte:
+opt_eps <- eps_values[which.max(silhouette_avg)]
+
+abline(v = opt_eps, lty = 2, col = "red")
+```
+
+Como se puede apreciar, al agregar una línea vertical en el valor óptimo de épsilon, vemos que se aconseja cortar en 0.8, valor que maximiza la silueta.
+
+Por último, entramos en la etapa posterior al cálculo de la estructura de clústeres utilizando OPTICS. Esta última etapa, consiste en extraer y visualizar los resultados del clustering, donde a partir de la variable `opt_eps`, se determinará como se corta la curva de alcance para identificar los clústeres (diferenciados por colores). 
+
+```{r, echo=F,fig.cap = "Reachability Plot", fig.show='hold',out.width="75%",out.height="75%"}
+#opt_eps #en este caso igual a 0.8
+res <- dbscan::extractDBSCAN(optics, eps_cl = opt_eps)
+
+### el negro es ruido
+plot(res)
+```
+Con `plot(res)` se genera un gráfico que visualiza los clústeres obtenidos. Los puntos de datos se colorean de acuerdo con los clústeres a los que pertenecen, y los puntos que se consideran ruido se muestran en negro.
+
+De igual manera que pasaba en el reachability plot anterior, hay una gran parte de nuestros datos que no sale bien representada. Además, al colorear los diferentes clústeres por colores, vemos que hay una gran parte de nuestros datos que se consideran ruido. Por otro lado, contrariamente a los resultados del primer reachability plot, en este se puede apreciar como nuestros datos podrían estar clasificados entre más grupos. No obstante, la presencia de tanto ruido y la parte no explicada nos podría estar informando de que nuestra base de datos no es adecuada para técnicas de clústring basadas en densidades.
+
+Finalmente, visualizamos el gráfico con los grupos creados en forma de polígonos convexos. Estos polígonos nos ayudan a delimitar visualmente la extensión de cada clúster.
+
+```{r, warning=FALSE, echo=F,fig.cap = "Polígonos de Convexidad para los Clústers Identificados", fig.show='hold',out.width="75%",out.height="75%"}
+dbscan::hullplot(dd, res)
+#res$cluster
+```
+
+Por un lado, el gráfico obtenido no nos permite extraer buenos resultados, dado que es una gran nuve de puntos en donde la mayoría de los polígonos convexos se superponen entre sí. 
+
+```{r, echo=FALSE}
+kbl(table(res$cluster),
+      caption = "Resumen del número de puntos en cada clúster", col.names = c("Clúster", "Frecuencia de puntos"), booktabs = T) %>%
+  kable_styling(position = "center", 
+                latex_options = c("HOLD_position"))
+
+```
+
+Por otro lado, la tabla obtenida nos resume el número de puntos en cada clúster. Así pues, observamos como aunque nos divide los datos en 13 clústers, siendo el grupo 0 el dominante, indicando la presencia de 3153 outliers. En los 12 grupos siguientes, la mayoria de las observaciones se agrupan mayoritariamente en el primero, con 1215, seguidos por el clúster 6 con 227 y el 12 con 276. Los grupos restantes tienen muy pocas observaciones en cada uno de ellos. 
+
+Estos resultados nos indican que para nuestra base de datos, este tipo de clustering no es el más adecuado. 
+
+## Conclusión
+
+En conclusión, aunque las técnicas utilizadas nos hayan ayudado a encontrar unos buenos parámetros para poder agrupar nuestros datos de la manera más óptima, vemos como estos resultados nos ayudan a respaldar aún más el hecho de que nuestra base de datos no es válida para técnicas de clustering basados en densidad, posiblemente por no tener una distribución de densidad variable. 
+
+Las técnicas de clustering basadas en densidad asumen que los clústers se forman en regiones de alta densidad de datos. Por lo tanto, si nuestros datos no tienen una distribución de densidad variable (puntos uniformemente distribuidos o clústeres sin una densidad significativamente mayor que el fondo), las téncicas de clustering basadas en densidad pueden no ser efectivas.
+
+Así pues, ni DBSCAN ni OPTICS nos permiten extraer un buen análisis de nuestra base de datos, hay que recurrir, por ejemplo, a clustering jerárquico. 
