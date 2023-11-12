@@ -12,9 +12,9 @@ header-includes:
 - \usepackage{float}
 - \floatplacement{figure}{H}
 - \newcommand{\beginsupplement}{
-  \setcounter{table}{23}  
+  \setcounter{table}{34}  
   \renewcommand{\thetable}{\arabic{table}} 
-  \setcounter{figure}{62} 
+  \setcounter{figure}{107} 
   \renewcommand{\thefigure}{\arabic{figure}}}
 - \setlength{\headheight}{13.6pt}
 - \setlength{\topmargin}{-10mm}
