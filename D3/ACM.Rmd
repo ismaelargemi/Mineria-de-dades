@@ -1,48 +1,37 @@
 ---
-output: pdf_document
-header-includes:
-  - \usepackage{fullpage} 
-  - \usepackage[spanish]{babel}
-  - \usepackage{fancyhdr}
-  - \setlength{\headsep}{7mm} 
-  - \usepackage[linktoc=page]{hyperref}
+title: "ACM"
+author: "Bertita"
+date: "2023-10-09"
+output: html_document
 ---
-
-```{=tex}
-\setlength{\headheight}{13.6pt}
-\setlength{\topmargin}{-10mm}
-
-\rhead{Minería de Datos}
-\lhead{Entrega D3}
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
 ```
-\pagestyle{fancy}
-```{=tex}
-\cfoot{\thepage}
-\setcounter{page}{5}
-```
+Comentaris:
+- posar més subtítols? 
+- canviar noms variables per a evitar solapaments. HECHO
+- treure les variables numèriques de les suplementàries que s'hagin considerat no rellevants en l'ACP
+- CAL ACABAR TOT EL QUE ESTÀ EN MAJÚSCULES, I SI VOLEU AFEGIR MÉS ANÀLISI I CANVIAR COSES CAP PROBLEMA
+- CONCLUSIONES
+- HE AÑADIDO UNA NUEVA LINEA DONDE SE PUEDE VER LA CONTRIBUCIÓNDE CADA VARIABLE EN CADA EJE Y SUS P-VALORES, DISCUTIR SI ES IMPORTANTE O NO
 
 # ACM
 
 ```{r, include=FALSE}
 library(FactoMineR)
-#install.packages("factoextra")
+install.packages("factoextra")
 library(factoextra)
 library(Matrix)
 library(ggplot2)
 ```
 
 ```{r, include=FALSE}
-load("Dades preprocessades.Rdata")
-
-#mydata contiene toda la base de datos
-mydata <- df_preprocessed
-mydata[,c("AMT_INCOME_TOTAL","AMT_CREDIT","AMT_ANNUITY","AMT_GOODS_PRICE",
-          "DAYS_BIRTH","TARGET","log_AMT_GOODS_PRICE","log_AMT_ANNUITY",
-          "DIFF_CREDIT_GOODS")] <- NULL
-dd <- mydata
-
+# Lectura de la base de datos
+#df <- (load("Dades preprocessades.RData"))
+df <- df_preprocessed
+df2<- df[1:15] 
+df2 <- df2[,-8] #eliminamos la variable TARGET del análisis
 ```
-
 
 El Multiple Correspondance Analysis, ACM en adelante, es un método de análisis factorial para variables categóricas que permite analizar relaciones entre variables, así como reducir la dimensionalidad de la base de datos seleccionando sólo aquellas variables relevantes. Para realizarlo se deben escoger unas variables activas y otras de complementarias. En este caso, como el número de variables es relativamente bajo y se consideran todas relevantes, no se considerará ninguna variable complementaria. Además, se añadirán al análisis las variables numéricas como variables suplementarias, aunque solamente aquellas que se han considerado relevantes en el ACP. 
 
@@ -51,24 +40,23 @@ Consideramos hacer una nueva codificación de las variables, reduciendo su longi
 <!-- CAMBIAR EL NOMBRE DE LAS VARIABLES: -->
 ```{r}
 # Definimos el nombre de las nuevas variables
-
 new_variable_names <- c(
   "GDR", "INC_TYPE", "EDU_TYPE", "FAM_STAT", "OCC_TYPE", 
-  "ORG_TYPE", "RR_CLIENT", "CAR_AGE", "FAM_MEMBERS", "INC_AMT", "CREDIT_AMT", "AGE_YEARS", "CREDIT_INCOME", "ANNUTY_CREDIT", "DTI_RATIO"
+  "ORG_TYPE", "RR_CLIENT", "INC_AMT", "CREDIT_AMT", "ANNUITY_AMT", 
+  "BIRTH_DAYS", "CAR_AGE", "GOODS_PRICE", "FAM_MEMBERS"
 )
 
-
-colnames(dd) <- new_variable_names
+colnames(df2) <- new_variable_names
 ```
 
 
 ## Desarrollo del ACM
 
 ```{r, out.width="95%"}
-res.mca <- MCA(dd, quanti.sup = c(8:15), method = "Burt")
+res.mca <- MCA(df2, quanti.sup = c(8:14), method = "Burt")
 res.mca
-```
-```{r}
+
+#Con este gráfico se ve mejor, OBSERVAMOS COMO LA CATEGORIA SEPARATED APARECE, ANALIZAMOS??????
 plot(res.mca,invisible=c("ind","quali.sup"), cex=0.5)
 ```
 
@@ -90,7 +78,7 @@ data <- data.frame(Dimension = 1:nrow(res.mca$eig),
 
 # Crear el gráfico de barras con ggplot2
 ggplot(data, aes(x = as.factor(Dimension), y = Percentatge)) +
-  geom_bar(stat = "identity", fill = "#ADD8E6") +
+  geom_bar(stat = "identity", fill = "black") +
   ylim(0, 25) +
   labs(x = "Dimensiones",
        y = "Porcentaje de varianza explicada",
@@ -109,9 +97,9 @@ Para poder estudiarlo más a fondo, se realiza la siguiente tabla en la que se p
 ```{r}
 round(res.mca$eig, 2)
 ```
-Tenemos un total de 31 dimensiones. La dimensión 1 destaca muy por encima del resto, explicando un 20.85% de la variabilidad de los datos, seguida de la dimensión 2, explicando un 9.45% de la variabilidad de los datos los datos. A partir de la dimensión 6, se ve que la gráfica se estabiliza bastante ya hasta la última dimensión.
+Tenemos un total de 31 dimensiones. La dimensión 1 destaca muy por encima del resto, explicando un 20.37% de la variabilidad de los datos, seguida de la dimensión 2, explicando un 9.62% de la variabilidad de los datos los datos. A partir de la dimensión 6, se ve que la gráfica se estabiliza bastante ya hasta la última dimensión.
 
-Por tanto, en total las dos primeras dimensiones ya explican un 30.3% de la variabilidad de los datos, y se necesitan 17 dimensiones para llegar a tener una inercia acumulada por encima del 80%. 
+Por tanto, en total las dos primeras dimensiones ya explican un 29.99% de la variabilidad de los datos, y se necesitan 17 dimensiones para llegar a tener una inercia acumulada por encima del 80%. 
 
 Aunque las primeras dos dimensiones expliquen cerca del 30% de la inercia, no todos los puntos se muestran igual de bien en las dos dimensiones. La calidad de la representación se llama coseno cuadrado (cos2), que mide el grado de asociación entre categorías de variables y un eje particular.
 
@@ -133,16 +121,17 @@ fviz_mca_var(res.mca, col.var = "cos2",
 Salen muchas categorías que no están muy bien representadas por las dos primeras dimensiones. Esto implica que la posición de los puntos correspondientes en el diagrama de dispersión debe interpretarse con cierta cautela. Probablemente sea necesaria una solución de mayor dimensión. Aún así, se ha decidido no realizar el MCA de mayores dimensiones debido a la dificultad de representación gráfica. Por tanto, los resultados del MCA se analizarán con cautela, especialmente las variables poco representadas en las dos primeras dimensiones.
 
 
-## Gráfico de individuos y variables
+**Contribuciones de las variables a cada eje y test-values significativos**
 
-Para una primera visualización de la relación entre las variables y las observaciones en un espacio reducido de dimensiones, acudimos al gráfico biplot. Este gráfico nos facilita la interpretación de la estructura de los datos al proporcionar una visualización que muestra la relación entre variables categóricas y observaciones. 
+Con tal de observar en más profundidad cuales són las variables que más contribuyen a cada eje, se plantea la siguiente función que nos muestra la contribución de cada dimensión a las variables continuas y categóricas:
+
 ```{r}
-
- fviz_mca_biplot(res.mca, col.var = "#FC4E07", col.ind = "#00AFBB", ggtheme = theme_minimal())
-
+dimdesc(res.mca)
 ```
 
-Con tal de poder analizar estos resultados de manera más precisa, se decide dividir este gráfico y analizar por una parte únicamente el gráfico de observaciones y por otra parte el gráfico de las variables categóricas.
+Las correlaciones y los p-valores bajos indican la fuerza de estas relaciones. Así mismo, a partir de estos resultados, podemos corroborar las interpretaciones anteriores: no hay apenas variables explicativas que esten explicadas por las primeras tres dimensiones; de la misma manera en la que tampoco hay un gran número de categorías específicas que influyan significativamente en estas dimensiones.
+
+De esta manera, confirmamos que se requiere una solución con más dimensiones para capturar con precisión la estructura de los datos. Por lo tanto, se abordarán los resultados del MCA con prudencia, especialmente en lo que respecta a las variables que tienen una baja representación en las dos primeras dimensiones.
 
 
 ## Gráfico de individuos
@@ -178,7 +167,7 @@ res.mca$var$contrib
 
 ```{r}
 # Totes les variables actives
-newbd<- dd[1:7]
+newbd<- df2[1:7]
 res.mca1<-MCA(newbd, method="Burt", graph=FALSE)
 cats = apply(newbd, 2, function(x) nlevels(as.factor(x)))
 
@@ -197,17 +186,17 @@ ggplot(data = mca1_vars_df, aes(x = Dim.1, y = Dim.2)) +
   ggtitle("Gráfico MCA de variables") +
   scale_colour_discrete(name = "Variable")+ 
   xlim(-2,1.5) + 
-  ylim(-1,1.5) + re
+  ylim(-1,1.5)
 ```
 
 
-A partir de este gráfico, vemos que la dimension 1 no está explicada con claridad ya que predominan los unknowns y errores.
-La dimensión 2 se ve explicada por tipo de ingresos, tipo de organización donde trabaja el cliente y actividad laboral del mismo. 
-Entonces, nos explica la calidad del trabajo en relación a los ingresos obtenidos y nivel de estudios. 
-Podemos ver que los mig-high skill laborers se encontran más arriba que los high skill laborer. Predecimos que esto es debido a un sesgo y que los que tienen high skill laborers necesitan menos créditos que los demás.
+A partir de este gráfico, vemos la relación entre las diferentes variables categóricas y sus clases. 
 
-No podemos analizar nada preciso a partir de este gráfico y por eso pasamos a analizar por cada una de las variables.
+Podemos  ver como hay una relación muy destacada entre Widow y Pensioner en la dimensión 1. Esta correlación puede deberse a  eventos de vida como la pérdida del cónyuge a una elevada edad y factores sociales, finalización laboral y por eso a una pensión por los años trabajados. La asociación de ambos términos con la población anciana y la edad es evidente.
 
+En la dimensión 2 podemos ver una relación entre State Servant y Businessman con Mid/High Skill Laborers y con Education y Medicine. También podríamos ver relación con Higher education. La gente que trabaja en educación y/o mundo sanitario requieren un alto nivel de estudios y son trabajadores altamente cualificados. Al igual que podríamos asociarlo con los trabajadores en Servicios Públicos y Empresarios.
+
+Aún ver relación en este gráfico, hemos decidido realizar un gráfico de dispersión por cada una de las variables para ver si podíamos adquirir más información.
 
 ### Gráficos de dispersión agrupado por cada variable
 
@@ -232,23 +221,18 @@ Como se ha observado que en las dos primeras dimensiones únicamente se muestra 
 
 
 ````{r}
-# for (k in 1:7){ #para cada variable
-#   for(i in 1:5) {   # 1a dimension
-#   for (j in 1:5) {  # 2a dimension
-#     if (i != j) {
-#       grafico <- plotellipses(res.mca,keepvar = "all", axes = c(i, j))[k]
-#       plot(grafico)
-#     }
-#   }
-# }  
-# }
-# 
+for (k in 1:7){ #para cada variable
+  for(i in 1:5) {   # 1a dimension
+  for (j in 1:5) {  # 2a dimension
+    if (i != j) {
+      grafico <- plotellipses(res.mca,keepvar = "all", axes = c(i, j))[k] #GENDER. COMO SE INTERPRETA ESTE GRÁFICO
+      plot(grafico)
+    }
+  }
+}  
+}
+
 
 ````
-Hemos probado de analizar tres dimensions y no hi hay ningun gráfico significativo que nos permita extraer más información de la que ya hemos extraido con dos dimensiones. Por lo tanto, nos quedamos con los análisis sacados a partir de los gráficos de las dos primeras dimensiones. 
-
-
-
-
-
+Hemos probado de hacer las tres dimensiones y no hay ningún gráfico significativo para poder extraer más informaci´n de la que ya hemos visto en las dos dimensiones. Así que nos quedaremos con los gráficos anteriores.
 
