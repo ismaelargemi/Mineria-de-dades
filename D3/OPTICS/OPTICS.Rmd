@@ -14,7 +14,7 @@ header-includes:
 - \newcommand{\beginsupplement}{
   \setcounter{table}{34}  
   \renewcommand{\thetable}{\arabic{table}} 
-  \setcounter{figure}{107} 
+  \setcounter{figure}{106} 
   \renewcommand{\thefigure}{\arabic{figure}}}
 - \setlength{\headheight}{13.6pt}
 - \setlength{\topmargin}{-10mm}
@@ -27,7 +27,7 @@ header-includes:
 
 ```{=tex}
 \cfoot{\thepage}
-\setcounter{page}{78}
+\setcounter{page}{115}
 ```
 \beginsupplement
 
