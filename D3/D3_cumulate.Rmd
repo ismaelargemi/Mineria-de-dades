@@ -305,7 +305,7 @@ Para comenzar, hemos creado una tabla que muestra varios estadísticos de todas 
 
 -   `SE`: El error estándar es la desviación estándar de la distribución muestral de un estadístico muestral. Es decir, es la desviación típica dividida por la raíz cuadrada del tamaño de la muestra (n). Tanto las variables `ATM_CREDIT` como `AMT_GOODS_PRICE` muestran una variabilidad muy alta.
 
-Así pues, tras hacer un análisis general, se procede a realizar un análisi más particular. Para ello, analizaremos cada variable una a una, de formaa gráfica:
+Así pues, tras hacer un análisis general, se procede a realizar un análisi más particular. Para ello, analizaremos cada variable una a una, de forma gráfica:
 
 ```{r, echo = F, message=F,warning=F,fig.show='hide'}
 data_n <- select_if(data, is.numeric)
