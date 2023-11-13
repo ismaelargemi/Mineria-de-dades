@@ -1,13 +1,38 @@
 ---
-title: "BMA"
-output:
-  pdf_document:
-    df_print: paged
+output: pdf_document
+header-includes:
+- \usepackage{fullpage} 
+- \usepackage[spanish]{babel}
+- \setlength{\headsep}{7mm} 
+- \usepackage[linktoc=page]{hyperref}
+- \usepackage{fancyhdr}
+- \usepackage{floatrow}
+- \floatsetup[figure]{capposition=top}
+- \floatsetup[table]{style=plaintop}
+- \usepackage{float}
+- \floatplacement{figure}{H}
+- \newcommand{\beginsupplement}{
+  \setcounter{table}{17}  
+  \renewcommand{\thetable}{\arabic{table}} 
+  \setcounter{figure}{51} 
+  \renewcommand{\thefigure}{\arabic{figure}}}
+- \setlength{\headheight}{13.6pt}
+- \setlength{\topmargin}{-10mm}
+- \rhead{Minería de Datos}
+- \lhead{Entrega D3}
 ---
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
-```
+\pagenumbering{arabic}
+\pagestyle{fancy}
 
+```{=tex}
+\cfoot{\thepage}
+\setcounter{page}{131}
+```
+\beginsupplement
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE, comment = "")
+```
+# Reglas de asociación (Basket Market Analysis)
 
 ```{r}
 library(arules)
@@ -42,24 +67,24 @@ levels(dcat$AGE_YEARS) <- c( "Menys de 26", "[26,30]", "[31,35]", "[36,39]", "[4
 # }
 ```
 
-Cabe resaltar que, ahora la base de datos que utilizaremos es "dcat" con las variables numéricas como categoricas.
+Cabe resaltar que ahora la base de datos que se utilizará es "dcat" con las variables numéricas como categoricas.
 
-Seguidamente, se transformará "dcat" en un data transactions para poder aplicar el Basket Market Analysis. 
+Seguidamente, se transformará "dcat" en un data transactions para poder aplicar el Basket Market Analysis.
 
 ```{r}
 tr <- as(dcat, "transactions") # tendra tantas columnas como categorias
 tr
 ```
 
-Con el siguiente summary, se verá más a fondo que tenemos:
+Con el siguiente summary, se puede ver con más detalle lo que se tiene:
 
 ```{r}
 summary(tr)
 ```
 
-##  Apriori 
+##  Apriori
 
-El primer paso consiste en especificar los parámetros: 
+El primer paso consiste en especificar los parámetros:
 
 ```{r}
 soporte_minimo <- 10/nrow(data) # Support 10/n
@@ -74,14 +99,14 @@ reglas.asociacion <- apriori(tr, parameter = list(supp = soporte_minimo, conf = 
 												  maxlen = tamanyo_conjunto)) # rhs = es la variable output
 ```
 
-Dividimos nuestras reglas de asociación según lo consecuente que es la variable respuesta. La variable respuesta es `TARGET` que toma valores de 1 o 0.
+Dividimos las reglas de asociación obtenidas según lo consecuente que es la variable respuesta. La variable respuesta es `TARGET`, que toma valores de 1 o 0.
 
 ```{r}
 target1 <- subset(reglas.asociacion, subset = rhs%in%"TARGET=1" & lift > 1.2)
 target0 <- subset(reglas.asociacion, subset = rhs%in%"TARGET=0" & lift > 1.2)
 ```
 
-Sacamos las reglas redundantes en ambos casos:
+Se eliminan las reglas redundantes en ambos casos:
 
 ```{r}
 subconjunto.reglas <- which(colSums(is.subset(target0, target0)) > 1)
@@ -112,20 +137,20 @@ summary(testFisher)
 # quality(subconjunto.target1) <- cbind(quality(subconjunto.target1), testFisher)
 ```
 
-```{r, include=TRUE, echo=FALSE}
+```{r, echo=F,fig.cap =  "Scatter plot for 6313 rules", fig.show='hold',out.width="75%",out.height="75%"}
 # Visualización per a target = 0 
 plot(subconjunto.target0, measure = c("support", "lift"), shading = "confidence")
 # plot(subconjunto.target0, method = "two-key plot", main= "Two-key plot")
 #plot(subconjunto.target0, method = "grouped") 
 #plot(subconjunto.target0, method = "paracoord") # no ejecutable
 # plot(subconjunto.target0, method = "graph") 
-``` 
+```
 
-Como podemos ver, el primer gráfico muestra la matriz de puntos de las reglas de asociación filtrada respecto la métrica lift. La reglas de asociación de interés corresponden a los puntos con un color rojo de mayor intensidad (confianza que supere la mínima, 0.8) y como vemos, estas reglas se situan en el gráfico con un soporte mayor al mínimo (0.002)
+Como se puede ver, el primer gráfico muestra la matriz de puntos de las reglas de asociación filtrada respecto la métrica lift. La reglas de asociación de interés corresponden a los puntos con un color rojo de mayor intensidad (confianza que supere la mínima, 0.8) y se aprecia, estas reglas se situan en el gráfico con un soporte mayor al mínimo (0.002).
 
-En el último gráfico se ve algo parecido, aquí las reglas de asociación que interesan corresponden a los puntos con una intensidad roja mayor y los puntos más grandes, que corresponderan a las reglas que tienen un suporte superior al mínimo (0.002).
+En el último gráfico se ve algo parecido, aquí las reglas de asociación que interesan corresponden a los puntos con una intensidad roja mayor y los puntos más grandes, que corresponderan a las reglas que tienen un soporte superior al mínimo (0.002).
 
-```{r, include=TRUE, echo=FALSE}
+```{r, echo=F,fig.cap =  "Scatter plot for 2858 rules", fig.show='hold',out.width="75%",out.height="75%"}
 # Visualización per a target = 1 
 plot(subconjunto.target1, measure = c("support", "lift"), shading = "confidence")
 # plot(subconjunto.target1, method = "two-key plot", main= "Two-key plot")
@@ -134,11 +159,11 @@ plot(subconjunto.target1, measure = c("support", "lift"), shading = "confidence"
 # plot(subconjunto.target0, method = "graph") 
 ``` 
 
-Estos gráficos se interpretan de manera igual a los anteriores vistos. 
+Estos gráficos se interpretan de manera igual a los anteriores vistos.
 
-Con target = 0 obtenemos 6313 reglas y con tagret = 1 2858 reglas. Vemos las 10 primeras reglas en cada caso con mayor lift.  
+Con Target = 0 se obtienen 6313 reglas y con Tagret = 1 2858 reglas. Con la gran cantidad de reglas, la atención se centra en las 10 primeras reglas en cada caso con mayor lift.
 
-Vemos las 10 primeras reglas en cada caso con mayor lift, es decir, van ordenadas de forma decreciente siendo la primera la que tiene una mayor asociación encontrada con la variable respuesta, y se grafican en cada caso. 
+Por tanto, se ven las 10 primeras reglas en cada caso con mayor lift, es decir, van ordenadas de forma decreciente siendo la primera la que tiene una mayor asociación encontrada con la variable respuesta, y se grafican en cada caso.
 
 ```{r}
 subconjunto.target0<-subconjunto.target0[order(quality(subconjunto.target0)[,"lift"], decreasing = TRUE)]
@@ -146,7 +171,7 @@ top <- subconjunto.target0[1:10]
 inspect(top)
 ```
 
-```{r include=TRUE, echo=FALSE}
+```{r, echo=F,fig.cap =  "Scatter plot for 10 rules", fig.show='hold',out.width="75%",out.height="75%"}
 plot(top, measure = c("support", "lift"), shading = "confidence")
 plot(top, method = "paracoord")
 ```
@@ -157,7 +182,7 @@ top2 <- subconjunto.target1[1:10]
 inspect(top2)
 ```
 
-```{r, include=TRUE, echo=TRUE}
+```{r, echo=F,fig.cap =  "Scatter plot for 10 rules", fig.show='hold',out.width="75%",out.height="75%"}
 plot(top2, measure = c("support", "lift"), shading = "confidence")
 plot(top2, method = "paracoord")
 ```
