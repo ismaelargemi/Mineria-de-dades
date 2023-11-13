@@ -7,6 +7,81 @@ output: html_document
 
 ANEXO PROFILING FUZZY
 
+
+```{=tex}
+\setlength{\headheight}{13.6pt}
+\setlength{\topmargin}{-10mm}
+
+\rhead{Minería de Datos}
+\lhead{Entrega D3}
+```
+\pagestyle{fancy}
+```{=tex}
+\cfoot{\thepage}
+\setcounter{page}{5}
+```
+
+
+```{r}
+#Lectura de los datos
+load("Dades preprocessades.Rdata")
+mydata <- df_preprocessed
+mydata[,c("AMT_INCOME_TOTAL","AMT_CREDIT","AMT_ANNUITY","AMT_GOODS_PRICE",
+          "DAYS_BIRTH","TARGET","log_AMT_GOODS_PRICE","log_AMT_ANNUITY",
+          "DIFF_CREDIT_GOODS")] <- NULL
+dades <- mydata
+
+# 
+load("clust_fuzzy.Rdata")
+cluster <- clusters
+library(ggplot2)
+```
+
+```{r}
+indices_categoricas <- sapply(dades, is.factor)
+p_values <- numeric(length(dades))
+
+# Realiza pruebas de chi-cuadrado para las variables categóricas
+for (i in which(indices_categoricas)) {
+  variable_categorica <- dades[, i]
+  cross_table <- table(variable_categorica, cluster)
+  chi_square_result <- chisq.test(cross_table)
+  p_values[i] <- chi_square_result$p.value
+}
+
+
+# Muestra los resultados
+p_values_categoricas <- data.frame(
+  Variable = names(dades)[indices_categoricas],
+  P_Value = p_values[indices_categoricas]
+)
+```
+
+```{r}
+library(car)
+# Identifica las variables categóricas (factores)
+variables_categoricas <- sapply(dades, is.factor)
+
+# Filtra las variables numéricas
+variables_numericas <- dades[!variables_categoricas]
+# Inicializa un objeto para almacenar los p valores de la ANOVA
+p_values_numericas <- list()
+
+# Realiza un ANOVA para cada variable numérica en función de cluster6 y cluster3
+for (i in 1:ncol(variables_numericas)) {
+  variable_name <- names(variables_numericas)[i]
+  
+  formula_cluster <- as.formula(paste(variable_name, " ~ cluster"))
+  anova_result_cluster <- Anova(lm(formula_cluster, data = variables_numericas))
+  
+  # Almacena los p-valores de la ANOVA en p_values_anova
+  p_values_numericas[[variable_name]] <- c(Cluster = anova_result_cluster[["Pr(>F)"]][1])
+}
+```
+
+
+
+
 ```{r}
 ggplot(data = dades, aes(x = cluster, y = dades$OWN_CAR_AGE)) + 
   geom_bar(stat = "summary", fun = "mean", fill= colores) +
@@ -95,6 +170,70 @@ ggplot(data = dades, aes(x = cluster, fill = dades$REGION_RATING_CLIENT)) +
 
 
 ANEXO PROFILING K-MEANS
+
+```{r}
+#Lectura de los datos
+load("Dades preprocessades.Rdata")
+mydata <- df_preprocessed
+mydata[,c("AMT_INCOME_TOTAL","AMT_CREDIT","AMT_ANNUITY","AMT_GOODS_PRICE",
+          "DAYS_BIRTH","TARGET","log_AMT_GOODS_PRICE","log_AMT_ANNUITY",
+          "DIFF_CREDIT_GOODS")] <- NULL
+dades <- mydata
+
+# 
+load("todoslosdatosclustjer.Rdata")
+cluster <- resultado$cluster
+```
+
+```{r}
+indices_categoricas <- sapply(dades, is.factor)
+p_values <- numeric(length(dades))
+
+# Realiza pruebas de chi-cuadrado para las variables categóricas
+for (i in which(indices_categoricas)) {
+  variable_categorica <- dades[, i]
+  cross_table <- table(variable_categorica, cluster)
+  chi_square_result <- chisq.test(cross_table)
+  p_values[i] <- chi_square_result$p.value
+}
+
+
+# Muestra los resultados
+p_values_categoricas <- data.frame(
+  Variable = names(dades)[indices_categoricas],
+  P_Value = p_values[indices_categoricas]
+)
+print(p_values_categoricas)
+```
+
+```{r}
+library(car)
+# Identifica las variables categóricas (factores)
+variables_categoricas <- sapply(dades, is.factor)
+
+# Filtra las variables numéricas
+variables_numericas <- dades[!variables_categoricas]
+# Inicializa un objeto para almacenar los p valores de la ANOVA
+p_values_numericas <- list()
+
+# Realiza un ANOVA para cada variable numérica en función de cluster6 y cluster3
+for (i in 1:ncol(variables_numericas)) {
+  variable_name <- names(variables_numericas)[i]
+  
+  formula_cluster <- as.formula(paste(variable_name, " ~ cluster"))
+  anova_result_cluster <- Anova(lm(formula_cluster, data = variables_numericas))
+  
+  # Almacena los p-valores de la ANOVA en p_values_anova
+  p_values_numericas[[variable_name]] <- c(Cluster = anova_result_cluster[["Pr(>F)"]][1])
+}
+```
+
+```{r}
+library(ggplot2)
+colores <- scales::brewer_pal(palette = "Set1")(length(unique(cluster)))
+```
+
+
 
 ```{r}
 ggplot(data = dades, aes(x = cluster, y = dades$CNT_FAM_MEMBERS)) +
