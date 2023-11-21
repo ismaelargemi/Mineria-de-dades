@@ -30,7 +30,7 @@ knitr::opts_chunk$set(echo = TRUE)
 load("Dades preprocessades.Rdata")
 mydata <- df_preprocessed
 mydata[,c("AMT_INCOME_TOTAL","AMT_CREDIT","AMT_ANNUITY","AMT_GOODS_PRICE",
-          "DAYS_BIRTH","TARGET","log_AMT_GOODS_PRICE","log_AMT_ANNUITY",
+          "DAYS_BIRTH","log_AMT_GOODS_PRICE","log_AMT_ANNUITY",
           "DIFF_CREDIT_GOODS")] <- NULL
 dades <- mydata
 
@@ -173,8 +173,17 @@ ggplot(data = dades, aes(x = cluster, y = dades$DTI_RATIO)) +
   geom_hline(yintercept = mean(dades$DTI_RATIO)) +
   labs(title = "Medias de la Capacidad de cliente para pagar la annuity con sus ingresos por clúster respecto la media global" , y = "Media", x = "Clúster")
 ```
-
 Vemos como el clúster 3 tiene menos capacidad para pagar el préstamo.
+
+```{r}
+ggplot(data = dades, aes(x = cluster, fill = dades$TARGET)) +
+  geom_bar(position = "dodge") +
+  labs(title = "Gráfico de la distribución de la variable respuesta", y = "Freq", x = "Clúster") +
+  theme(legend.position = "top") + guides(fill = guide_legend(title = NULL))
+```
+
+El algoritmo no ha logrado encontrar una estructura o agrupamiento en los datos que permita caracterizar nuestros grupos por la variable objetivo.
+
 
 Conclusiones
 

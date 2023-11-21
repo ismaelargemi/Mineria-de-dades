@@ -30,7 +30,7 @@ knitr::opts_chunk$set(echo = TRUE)
 load("Dades preprocessades.Rdata")
 mydata <- df_preprocessed
 mydata[,c("AMT_INCOME_TOTAL","AMT_CREDIT","AMT_ANNUITY","AMT_GOODS_PRICE",
-          "DAYS_BIRTH","TARGET","log_AMT_GOODS_PRICE","log_AMT_ANNUITY",
+          "DAYS_BIRTH","log_AMT_GOODS_PRICE","log_AMT_ANNUITY",
           "DIFF_CREDIT_GOODS")] <- NULL
 dades <- mydata
 
@@ -214,6 +214,13 @@ ggplot(data = dades, aes(x = cluster, y = dades$DTI_RATIO)) +
 ```
 La ratio mide la capacidad del cliente para pagar la anualidad de su préstamo en relación con sus ingresos. Por ende, los menos capaces son los individuos del clúster 2.
 
+```{r}
+ggplot(data = dades, aes(x = cluster, fill = dades$TARGET)) +
+  geom_bar(position = "dodge") +
+  labs(title = "Gráfico de la distribución de la variable respuesta", y = "Freq", x = "Clúster") +
+  theme(legend.position = "top") + guides(fill = guide_legend(title = NULL))
+```
+El algoritmo no ha logrado encontrar una estructura o agrupamiento en los datos que permita caracterizar nuestros grupos por la variable objetivo. Sin embargo, se observa una particularidad en la proporción de morosidad en el grupo 4, donde hay más clientes morosos que no morosos. Esto contrasta con la distribución de frecuencias en el resto de los grupos.
 
 ```{r}
 ggplot(data = dades, aes(x = cluster, fill = dades$CODE_GENDER)) +
