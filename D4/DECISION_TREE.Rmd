@@ -1,0 +1,125 @@
+---
+output: pdf_document
+header-includes:
+- \usepackage{fullpage} 
+- \usepackage[spanish]{babel}
+- \setlength{\headsep}{7mm} 
+- \usepackage[linktoc=page]{hyperref}
+- \usepackage{fancyhdr}
+- \usepackage{floatrow}
+- \floatsetup[figure]{capposition=top}
+- \floatsetup[table]{style=plaintop}
+- \usepackage{float}
+- \floatplacement{figure}{H}
+- \newcommand{\beginsupplement}{
+  \setcounter{table}{45}  
+  \renewcommand{\thetable}{\arabic{table}} 
+  \setcounter{figure}{121} 
+  \renewcommand{\thefigure}{\arabic{figure}}}
+- \setlength{\headheight}{13.6pt}
+- \setlength{\topmargin}{-10mm}
+- \rhead{Minería de Datos}
+- \lhead{Entrega D4}
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{=tex}
+\cfoot{\thepage}
+\setcounter{page}{141}
+```
+
+\beginsupplement
+
+
+## Árboles de Decisión
+
+Siguiendo con los modelos discriminantes, en este apartado se analizará el algoritmo de los Árboles de Decisión, CART en adelante, con el mismo propósito específico: la clasificación de clientes en categorías de riesgo crediticio. En particular, nos enfocaremos en discendir entre aquellos clientes que puedan tener dificultades de pago y aquellos que son financieramente solventes.
+
+El algoritmo de Árboles de Decisión se revela como una herramienta particularmente poderosa en este contexto, ya que su capacidad para modelar relaciones complejas entre variables puede proporcionar insights para la toma de decisiones financieras. Exploraremos cómo el algoritmo selecciona de manera inteligente las variables más influyentes para segmentar eficientemente el conjunto de datos, permitiendo la identificación de patrones que podrían indicar riesgos financieros. 
+
+
+#### Algoritmo 
+
+En este contexto, la estructura de un Árbol de Decisión se modela de forma análoga a un proceso de decisiones estratégicas:
+
+- Cada nodo interno del árbol representa una evaluación crítica sobre un atributo financiero específico. Estas evaluaciones sirven como puntos clave para discernir las distintas condiciones financieras de los clientes.
+
+- Las ramas que se desprenden de cada nodo interno representan las diferentes trayectorias que un cliente puede seguir según el resultado de la evaluación realizada en ese nodo.
+
+- Las hojas del árbol en el contexto financiero contienen la información crucial: la etiqueta o el valor predicho relacionado con la capacidad del cliente para afrontar compromisos financieros. Esto puede manifestarse como una clasificación de riesgo, como "solvente" o "en riesgo", proporcionando una guía clara para las decisiones crediticias.
+
+
+Así pues, se procede a realizar dicho análisis discriminante:
+
+
+### Desarrollo del CART
+
+```{r, include = F, warning=F, include=F}
+library(rpart)
+library(tree)
+library(MASS)
+library(dplyr)
+library(withr)
+library(kableExtra)
+library(FactoMineR)
+library(factoextra)
+library(gridExtra)
+library(pROC)
+library(doBy)
+library(caret)
+library(ROSE)
+```
+
+```{r, include = F}
+load("Dades noves (balancejada i no balancejada).RData")
+```
+
+
+```{r, warning=FALSE, echo=FALSE}
+#Fit the model on the training set
+set.seed(123)
+model2 <- train(
+  TARGET ~., data=train_balanceado, method = "rpart",
+  trControl = trainControl("cv", number = 10),
+  tuneLength = 10
+)
+
+# Plot the accuracy vs different values of 
+# cp (complexity parameter)
+plot(model2)
+```
+```{r}
+# Ajustar el modelo para varios valores de cp
+set.seed(123)
+cp_values <- seq(0.01, 0.1, by = 0.01)  # Ajusta según tus preferencias
+accuracies <- numeric(length(cp_values))
+
+for (i in seq_along(cp_values)) {
+  model <- train(
+    TARGET ~., data = train_balanceado, method = "rpart",
+    trControl = trainControl("cv", number = 10),
+    tuneLength = 10,  # Usa 1 ya que estamos ajustando solo un hiperparámetro
+    tuneGrid = data.frame(cp = cp_values[i])
+  )
+  
+  predictions <- predict(model, newdata = validation_balanceado)
+  accuracies[i] <- confusionMatrix(predictions, validation_balanceado$TARGET)$overall["Accuracy"]
+}
+
+# Crear un data frame con los resultados
+results_df <- data.frame(cp = cp_values, Accuracy = accuracies)
+
+# Imprimir los resultados
+print(results_df)
+
+# Plot the accuracy vs different values of 
+# cp (complexity parameter)
+plot(results_df$cp, results_df$Accuracy, type = "b", 
+     main = "Accuracy vs cp", xlab = "cp", ylab = "Accuracy")
+
+```
+
