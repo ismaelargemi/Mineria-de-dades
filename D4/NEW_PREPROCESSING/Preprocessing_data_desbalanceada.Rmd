@@ -27,7 +27,10 @@ df_final$REGION_RATING_CLIENT = factor(df_final$REGION_RATING_CLIENT)
 df_final$TARGET = factor(df_final$TARGET)
 ```
 
-Para realizar el preprocesamiento de los datos, será óptimo seguir los pasos propuestos por Karina Gibert con el objetivo de desarrollar correctamente el KDD y, así, obtener conclusiones óptimas a partir de nuestros datos.
+
+Tras haber analizado la base de datos de forma estricta y haber aplicado diferentes métodos de clusterización, el siguiente paso será aplicar todo lo visto a una base de datos real. Como bien se sabe, en una base de datos de un banco es normal encontrar que la gran mayoría de clientes no sean morosos, ya que sino la salud de la que gozaría el banco sería pésima. Así pues, ahora se trabajará con una base de datos donde el número de clientes morosos no sea cercano al 50%, sino más bien cercano al 0. Para ello, se ha seleccionado una base de datos desbalanceada. 
+
+Así pues, será necesario preprocesar la base de datos nuevamente. Para ello, será óptimo seguir los pasos propuestos por Karina Gibert con el objetivo de desarrollar correctamente el KDD y, así, obtener conclusiones óptimas a partir de nuestros datos.
 
 Para ello, seguiremos 4 grandes bloques:
 
@@ -38,7 +41,7 @@ Para ello, seguiremos 4 grandes bloques:
 
 # Limpieza de datos y estandarización de formato
 
-Una vez hemos realizado la descriptiva preprocessing y hemos identificado el número de valores missing en nuestra base de datos, es óptimo analizar todas las variables una a una, así como algunas variables categóricas a las cuales se les puede reducir el número de categorías.
+Una vez se ha realizado la descriptiva preprocessing y se ha identificado el número de valores missing en nuestra base de datos, es óptimo analizar todas las variables una a una, así como algunas variables categóricas a las cuales se les puede reducir el número de categorías.
 
 Para empezar, se puede apreciar que la variable `OCCUPATION_TYPE` tiene un total de 18 categorías:
 
@@ -62,7 +65,6 @@ Una buena idea sería combinar algunas categorías con el objetivo de reducir el
 -   Mid skill laborers: Engloba las categorías de "accountants", "HR staff" y "sales staff".
 
 -   Mid-high skill laborers: Engloba las categorías de "IT staff", "realty agents" y "core staff".
-
 
 -   High skill staff: Engloba las categorías de "high skill tech staff", "managers" y "medicine staff".
 
@@ -770,6 +772,7 @@ pc1 <- prcomp(data_numeric, scale = TRUE)
 Nos quedamos con una variable menos, por tanto tenemos `r ncol(data_numeric)` variables numéricas. 
 
 De vuelta, verificamos el porcentaje de inercia por cada componente principal y la acumulada:
+
 ```{r, echo=F, include = F}
 inerProj<- pc1$sdev^2 
 totalIner<- sum(inerProj)
@@ -978,6 +981,8 @@ Las variables eliminadas han sido:
 
 # Balanceo de los datos
 
+Por último, una vez ya se ha limpiado la base de datos y ésta es óptima para realizar un análisis de datos, es necesario balancearla. Para ello, entre todas las alternativas posibles que se han buscado, la opción que proporciona una base de datos balanceada más parecida a la base de datos original en cuanto a la estructura se refiere es la proporcionada por la función `ovun.sample()`, del paquete `ROSE`, usando la opción `method = "both"`. Esta opción hace una mezcla entre oversampling y undersampling, manteniendo la estructura original y retornando una nueva base de datos con observaciones artificiales ya balanceada. Así pues, se presenta un `summary()` de la nueva base de datos balanceada sobre la que se trabajará:
+
 ```{r}
 library(ROSE)
 
@@ -990,11 +995,6 @@ y = "TARGET"
 
 data_balanceada = ovun.sample(reformulate(x,y), data = data_desbalanceada, method = "both", p = 0.5, seed = 123)$data
 
-summary(data_balanceada)
-```
-
-```{r}
-summary(data_desbalanceada)
 summary(data_balanceada)
 ```
 
