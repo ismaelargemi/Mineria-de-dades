@@ -1,0 +1,204 @@
+---
+link-citations: yes
+linkcolor: blue
+output:
+  pdf_document: 
+  fig_crop: no
+latex_engine: xelatex
+toc: no
+lang: "es"
+toc_depth: 2
+number_sections: yes
+theme: united
+highlight: tango
+html_document:
+  df_print: paged
+header-includes:
+ - \usepackage{floatrow}
+ - \floatsetup[figure]{capposition=top}
+ - \floatsetup[table]{style=plaintop}
+ - \usepackage{float}
+ - \floatplacement{figure}{H}
+editor_options: 
+  markdown: 
+  wrap: sentence
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
+#setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
+options(scipen=999)
+set.seed(1234)
+libraries<- c("kableExtra","naniar","tidyverse",
+              "scales","dplyr","lubridate","psych",
+              "labelled","gridExtra","ggplot2","compareGroups",
+              "lessR","ggcorrplot","class","cluster",
+              "StatMatch","tidyverse","rio","NbClust",
+              "dendextend","factoextra")
+
+installifnot <- function (pckgName){
+  if(!require(pckgName, character.only=TRUE)){
+      install.packages(pckgName, dep=TRUE)
+  }
+}
+
+for(i in libraries){
+  installifnot(i)
+  library(i, character.only = TRUE, quietly = TRUE)
+}
+```
+
+```{r echo=FALSE, results = 'hide'}
+data <- load("~/Downloads/Dades noves (balancejada i no balancejada).RData")
+datadesb<- rbind(train_desbalanceado,validation_desbalanceado)
+databal<- rbind(train_balanceado,validation_balanceado)
+```
+
+# ENTREGA D3
+
+
+### Análisis Univariante Categórico
+
+En la siguiente tabla se presenta un resumen general sobre ellas:
+
+```{r,echo=F, fig.cap = "Tabla Summary Variables Categóricas"}
+datadesb$CODE_GENDER <- as.factor(datadesb$CODE_GENDER)
+datadesb$NAME_INCOME_TYPE <- as.factor(datadesb$NAME_INCOME_TYPE)
+datadesb$NAME_EDUCATION_TYPE <- as.factor(datadesb$NAME_EDUCATION_TYPE)
+datadesb$NAME_FAMILY_STATUS <- as.factor(datadesb$NAME_FAMILY_STATUS)
+datadesb$OCCUPATION_TYPE <- as.factor(datadesb$OCCUPATION_TYPE)
+datadesb$REGION_RATING_CLIENT <- as.factor(datadesb$REGION_RATING_CLIENT)
+datadesb$TARGET <- as.factor(datadesb$TARGET)
+
+
+export2md(createTable(compareGroups(select_if(datadesb,is.factor)), show.ratio=TRUE))
+```
+
+```{r,echo=F, fig.cap = "Tabla Summary Variables Categóricas"}
+databal$CODE_GENDER <- as.factor(databal$CODE_GENDER)
+databal$NAME_INCOME_TYPE <- as.factor(databal$NAME_INCOME_TYPE)
+databal$NAME_EDUCATION_TYPE <- as.factor(databal$NAME_EDUCATION_TYPE)
+databal$NAME_FAMILY_STATUS <- as.factor(databal$NAME_FAMILY_STATUS)
+databal$OCCUPATION_TYPE <- as.factor(databal$OCCUPATION_TYPE)
+databal$REGION_RATING_CLIENT <- as.factor(databal$REGION_RATING_CLIENT)
+databal$TARGET <- as.factor(databal$TARGET)
+
+
+export2md(createTable(compareGroups(select_if(databal,is.factor)), show.ratio=TRUE))
+```
+Por lo tanto, en la tabla se presentan tanto la frecuencia absoluta como la frecuencia relativa de cada valor posible en cada variable categórica, ya sean dicotómicas o politómicas. Esto facilita la identificación de la moda de manera sencilla.
+
+Vemos que para los datos desbalanceados y  balanceados las proporciones de datos no cambia.
+
+Una vez se ha realizado un resumen general, se ha procedido a analizar cada variable una a una:
+
+```{r echo = F, fig.show='hide',results = "hide"}
+
+ggplot(datadesb, aes(x = "", fill = TARGET)) +
+  geom_bar(width = 1, stat = "count") +
+  coord_polar(theta = "y") +
+  theme_void() +  # Elimina los ejes y las etiquetas para que se vea como un pie chart
+  scale_fill_manual(values = hcl.colors(length(unique(datadesb$TARGET)), "pastel")) +
+  labs(title = "TARGET")
+```
+
+```{r echo = F, fig.show='hide',results = "hide"}
+
+ggplot(databal, aes(x = "", fill = TARGET)) +
+  geom_bar(width = 1, stat = "count") +
+  coord_polar(theta = "y") +
+  theme_void() +  # Elimina los ejes y las etiquetas para que se vea como un pie chart
+  scale_fill_manual(values = hcl.colors(length(unique(databal$TARGET)), "pastel")) +
+  labs(title = "TARGET")
+```
+Vemos que en la descriptiva desbalanceada, el 92% son no morosos y el 8% morosos y en la balanceada son 50% morosos y 50% no morosos.
+
+```{r}
+n <- list()
+
+currelas <- c("NAME_EDUCATION_TYPE", "NAME_FAMILY_STATUS", "OCCUPATION_TYPE", "ORGANIZATION_TYPE", "TARGET")
+library(ggplot2)
+for (i in 1:length(currelas)){
+n[[i]]<- ggplot(datadesb, aes(x = datadesb[[currelas[i]]], fill = NAME_INCOME_TYPE)) +
+  geom_bar(position = "fill") +
+  labs(title = paste("Grouped Bar Chart:", currelas[i], "vs. NAME_INCOME_TYPE"),
+         x = currelas[i], y = "Proportion") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  scale_fill_brewer(palette = "Set1")
+
+}
+print(n)
+
+```
+
+
+```{r}
+n[[5]]
+```
+
+En lo que respecta a la variable "TARGET," se observa una disparidad en la capacidad de pago de los clientes en el sector privado, siendo los pensionistas y los comerciales quienes presentan proporcionalmente menos dificultades. 
+Notamos que no hay mucha diferencia entre los datos balanceados y no balanceados.
+
+
+```{r}
+n <- list()
+
+currelas <- c("NAME_EDUCATION_TYPE", "NAME_FAMILY_STATUS", "OCCUPATION_TYPE", "ORGANIZATION_TYPE", "TARGET")
+library(ggplot2)
+for (i in 1:length(currelas)){
+n[[i]]<- ggplot(databal, aes(x = databal[[currelas[i]]], fill = NAME_INCOME_TYPE)) +
+  geom_bar(position = "fill") +
+  labs(title = paste("Grouped Bar Chart:", currelas[i], "vs. NAME_INCOME_TYPE"),
+         x = currelas[i], y = "Proportion") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  scale_fill_brewer(palette = "Set1")
+
+}
+print(n)
+
+```
+
+```{r}
+n[[5]]
+```
+
+
+```{r}
+m <- list()
+
+currelas <- c("OCCUPATION_TYPE", "ORGANIZATION_TYPE", "TARGET")
+library(ggplot2)
+for (i in 1:length(currelas)){
+m[[i]]<- ggplot(datadesb, aes(x = .datadesb[[currelas[i]]], fill = NAME_FAMILY_STATUS)) +
+  geom_bar(position = "fill") +
+  labs(title = paste("Grouped Bar Chart:", currelas[i], "vs. NAME_FAMILY_STATUS"),
+         x = currelas[i], y = "Proportion") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  scale_fill_brewer(palette = "Set1")
+
+}
+print(m)
+```
+
+
+```{r}
+m <- list()
+
+currelas <- c("OCCUPATION_TYPE", "ORGANIZATION_TYPE", "TARGET")
+library(ggplot2)
+for (i in 1:length(currelas)){
+m[[i]]<- ggplot(databal, aes(x = databal[[currelas[i]]], fill = NAME_FAMILY_STATUS)) +
+  geom_bar(position = "fill") +
+  labs(title = paste("Grouped Bar Chart:", currelas[i], "vs. NAME_FAMILY_STATUS"),
+         x = currelas[i], y = "Proportion") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  scale_fill_brewer(palette = "Set1")
+
+}
+print(m)
+```
+Notamos que no hay mucha diferencia entre los datos balanceados y no balanceados.
