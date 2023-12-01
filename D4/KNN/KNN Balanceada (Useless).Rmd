@@ -209,6 +209,7 @@ La "Sensitivity" mide la proporción de individuos de TARGET=0 que han sido clas
 
 Y finalmente la "Specificity" mide la proporción de individuos de TARGET=1 que han sido clasificados correctamente, que ha dado `r conf_matrix$byClass["Specificity"]`
 
+**Conclusiones**
 En general, el modelo muestra un rendimiento bastante sólido. Tiene una buena precisión general y una capacidad sobresaliente para identificar casos positivos (morosos). 
 
 Vemos como la especificidad es un poco más baja en comparación con la sensibilidad, lo que sugiere que hay más falsos positivos (clasificación incorrecta de no morosos como morosos) que falsos negativos (clasificación incorrecta de morosos como no morosos). Lo cual puede ser beneficioso en la clasificación, ya que, si el interés de la empresa es predecir clientes morosos es mejor un falso positivo que un falso negativo, así reducimos el número de clientes morosos.
