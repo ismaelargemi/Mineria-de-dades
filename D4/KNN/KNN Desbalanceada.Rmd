@@ -46,7 +46,8 @@ library(tidyverse)
 library(ggplot2)
 library(kableExtra)
 
-#devtools::install_github('bbc/bbplot')
+# library(devtools)
+# devtools::install_github('bbc/bbplot')
 
 if(!require(pacman))install.packages("pacman")
 
@@ -155,7 +156,7 @@ opt <- data_acc[which.max(data_acc$mean_acc),]
 ggplot(data_acc, aes(x = k, y = mean_acc)) +
   geom_line(colour="#1380A1", size = 1) +  # Líneas que unen los puntos
   geom_point() +# Puntos en el gráfico
-  bbc_style() +
+  # bbc_style() +
   theme(plot.title = element_text(hjust = 0.5)) +
   geom_hline(yintercept = opt$mean_acc, linetype = "dashed", color = "red") +
   geom_vline(xintercept = opt$k, linetype = "dashed", color = "red") + 
@@ -203,11 +204,24 @@ F1 <- 2/((1/conf_matrix$overall["Accuracy"])+(1/conf_matrix$byClass["Recall"]))
 
 La anterior salida nos muestra la matriz de confusión junto con diversos estadísticos que tratan de explicar como de bien o mal ha predicho el algoritmo de kNN.
 
+**Resultados**
 De entre estos cabe destacar la Accuracy, que en este caso a sido de `r conf_matrix$overall["Accuracy"]`, por lo que el agloritmo ha predicho correctamente el `r conf_matrix$overall["Accuracy"]*100`% de los individuos de Test.
 
-La "Sensitivity" mide la proporción de individuos de TARGET=0 que han sido clasificacdos correctamente, que en este caso ha sido de `r conf_matrix$overall["Sensitivity"]`.
+La "Sensitivity" mide la proporción de individuos de TARGET=0 que han sido clasificacdos correctamente, que en este caso ha sido de `r conf_matrix$byClass["Sensitivity"]`.
 
-Y finalmente la "Specificity" mide la proporción de individuos de TARGET=1 que han sido clasificados correctamente, que ha dado `r conf_matrix$overall["Specificity"]`
+Y finalmente la "Specificity" mide la proporción de individuos de TARGET=1 que han sido clasificados correctamente, que ha dado `r conf_matrix$byClass["Specificity"]`
+
+**Conclusiones**
+El "modelo" muestra una alta especificidad para la clase 0, es decir, identifica correctamente la mayoría de clientes no morosos. Sin embargo, tiene un desempeño deficiente en la clase 1, sin predecir correctamente ninguna cliente moroso.
+
+El estadístico Kappa y la sensibilidad para la clase 1 sugieren que el rendimiento del modelo es deficiente y posiblemente peor que el azar.
+
+En una base de datos desbalanceada, la falta de equilibrio entre las clases nos lleva a tener una información limitada sobre los clientes morosos. Esto se ve eclipsado por la abrumadora cantidad de datos disponibles para los clientes no morosos. En consecuencia, el modelo KNN, al ser simplista (o "lazzy"), tiende a etiquetar a la mayoría de los clientes como no morosos. Esto resulta en predicciones poco precisas, ya que el modelo no logra distinguir claramente entre las dos clases.
+
+Finalmente, la falta de valores para el recall de la clase 0 y un F1-Score como "NaN" sugieren que hay problemas en el rendimiento del modelo, especialmente en la identificación de clientes morosos.
+
+Por lo tanto, consideramos que el desempeño de este algoritmo es deficiente para lograr el objetivo establecido de predecir correctamente a clientes morosos y no morosos.
+
 
 <!-- ```{r} -->
 <!-- decisionplot <- function(model, x, cl = NULL, predict_type = "class", -->
