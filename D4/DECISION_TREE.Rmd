@@ -22,6 +22,9 @@ header-includes:
 - \lhead{Entrega D4}
 ---
 
+Notas:
+- Hace falta balancear las variables numéricas de la base de datos??????
+
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -53,13 +56,14 @@ En este contexto, la estructura de un Árbol de Decisión se modela de forma an�
 - Las hojas del árbol en el contexto financiero contienen la información crucial: la etiqueta o el valor predicho relacionado con la capacidad del cliente para afrontar compromisos financieros. Esto puede manifestarse como una clasificación de riesgo, como "solvente" o "en riesgo", proporcionando una guía clara para las decisiones crediticias.
 
 
-Así pues, se procede a realizar dicho análisis discriminante:
+Así pues, a continuación se procede a realizar dicho análisis discriminante.
 
 
 ### Desarrollo del CART
 
 ```{r, include = F, warning=F, include=F}
 library(rpart)
+library(rpart.plot)
 library(tree)
 library(MASS)
 library(dplyr)
@@ -72,37 +76,42 @@ library(pROC)
 library(doBy)
 library(caret)
 library(ROSE)
+library(ggplot2)
 ```
 
 ```{r, include = F}
 load("Dades noves (balancejada i no balancejada).RData")
 ```
 
+```{r, warning=FALSE, echo=FALSE, fig.cap = "Evolución de la precisión (obtenida mediante validación cruzada) dependiendo del parámetro de complejidad", fig.show='hold',out.width="75%",out.height="75%"}
 
-```{r, warning=FALSE, echo=FALSE}
+# TRAINING
 #Fit the model on the training set
 set.seed(123)
+
 model2 <- train(
   TARGET ~., data=train_balanceado, method = "rpart",
   trControl = trainControl("cv", number = 10),
   tuneLength = 10
 )
 
-# Plot the accuracy vs different values of 
-# cp (complexity parameter)
-plot(model2)
-```
-```{r}
+
+results <- as.data.frame(model2$results)
+
+# TEST
 # Ajustar el modelo para varios valores de cp
 set.seed(123)
-cp_values <- seq(0.01, 0.1, by = 0.01)  # Ajusta según tus preferencias
+cp_values <- c(0.007812500, 0.008064516, 0.008568548, 
+               0.009072581, 0.012096774, 0.016633065, 
+               0.017137097, 0.017641129, 0.026713710, 
+               0.072832661)  
 accuracies <- numeric(length(cp_values))
 
 for (i in seq_along(cp_values)) {
   model <- train(
     TARGET ~., data = train_balanceado, method = "rpart",
     trControl = trainControl("cv", number = 10),
-    tuneLength = 10,  # Usa 1 ya que estamos ajustando solo un hiperparámetro
+    tuneLength = 1,  # Usa 1 ya que estamos ajustando solo un hiperparámetro
     tuneGrid = data.frame(cp = cp_values[i])
   )
   
@@ -113,13 +122,70 @@ for (i in seq_along(cp_values)) {
 # Crear un data frame con los resultados
 results_df <- data.frame(cp = cp_values, Accuracy = accuracies)
 
-# Imprimir los resultados
-print(results_df)
+# Plot the accuracy vs different values of cp (complexity parameter)
+ggplot() +
+  geom_line(data = results, aes(x = cp, y = Accuracy, color = "Train")) +
+  geom_point(data = results, aes(x = cp, y = Accuracy, color = "Train")) +
+  geom_line(data = results_df, aes(x = cp, y = Accuracy, color = "Test")) +
+  geom_point(data = results_df, aes(x = cp, y = Accuracy, color = "Test")) +
+  labs(title = "Accuracy vs Complexity Parameter",
+       x = "Complexity Parameter (cp)",
+       y = "Accuracy") +
+  scale_color_manual(name = "Data", values = c("Train" = "blue", "Test" = "red")) +
+  theme_minimal()
+```
 
-# Plot the accuracy vs different values of 
-# cp (complexity parameter)
-plot(results_df$cp, results_df$Accuracy, type = "b", 
-     main = "Accuracy vs cp", xlab = "cp", ylab = "Accuracy")
+
+```{r, warning=FALSE, echo=FALSE, fig.cap = "Árbol de clasificación de la variable TARGET, obtenido con la complejidad "óptima"", fig.show='hold',out.width="75%",out.height="75%"}
+
+# Grafica el árbol de decisión
+rpart.plot(model2$finalModel, box.palette = "auto", shadow.col = "gray", nn = TRUE)
 
 ```
 
+
+
+```{r, echo=F, fig.cap = "Importancia de las variables en CART", fig.show='hold',out.width="75%",out.height="75%"}
+var_imp <- varImp(model2)
+
+# Graficar las variables importantes
+plot(var_imp, top=20)
+```
+
+```{r, include=FALSE}
+pred <- predict(model2, newdata = validation_balanceado)
+
+MC <- confusionMatrix(pred, validation_balanceado$TARGET, positive = "1")
+
+tabla_cart = MC$table
+
+rownames(tabla_cart) = c("No moroso","Potencial moroso")
+colnames(tabla_cart) = c("No moroso","Potencial moroso")
+```
+
+```{r, echo=F, warning = F, fig.cap = "Matriz de confusión sobre el conjunto dde validación CART", fig.show='hold',out.width="75%",out.height="75%"}
+kbl(tabla_cart,
+    caption = "Matriz de confusión del conjunto de validación",
+    booktabs=T)%>% 
+  kable_styling(position = "center", 
+                latex_options = c("HOLD_position")) %>%
+    add_header_above(c("","Realidad" = 2)) %>%
+   pack_rows(index=c("Predicción"=2))
+```
+
+```{r, echo=F, warning = F,fig.cap = "Resumen de Medidas de Validación para CART", fig.show='hold',out.width="75%",out.height="75%"}
+Valores <- c(MC$byClass["Sensitivity"], MC$byClass["Specificity"], MC$byClass["Recall"], MC$byClass["F1"], MC$byClass["Precision"])
+tabla_validacion <- as.data.frame(Valores)
+
+kbl(tabla_validacion, caption = "Medidas de Validación para el modelo CART", booktabs=T)%>% 
+                kable_styling(position = "center", 
+                latex_options = c("HOLD_position"))
+```
+# ```{r}
+# model3 <- train(
+#   TARGET ~., data=train_balanceado, method = "rpart",
+#   trControl = trainControl("cv", number = 10, selectionFunction = "oneSE"),
+#   tuneLength = 10
+# )
+# rpart.plot(model3$finalModel)
+# ```
