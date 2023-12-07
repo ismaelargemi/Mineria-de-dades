@@ -1,0 +1,59 @@
+---
+title: "Untitled"
+author: "Oscar Arroyo"
+date: "2023-12-07"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+select_numeric_columns <- function(data) {
+  numeric_columns <- sapply(data, is.numeric)
+  numeric_data <- data[, numeric_columns]
+  return(numeric_data)
+}
+```
+
+
+```{r}
+library(caret)
+load("Dades noves (balancejada i no balancejada).Rdata")
+
+Train <- train_balanceado
+Test <- validation_balanceado
+
+Traincl <- as.vector(Train$TARGET)
+Testcl <- as.vector(Test$TARGET)
+
+Train <- select_numeric_columns(Train)
+Test <- select_numeric_columns(Test)
+
+Train$Traincl<-Traincl
+
+grid <- expand.grid(
+  nrounds = c(100), # Número de rondas de boosting
+  max_depth = c(3, 6, 9, 12), # Profundidad máxima de los árboles
+  eta = c(0.01, 0.1, 0.3), # Tasa de aprendizaje
+  gamma = c(0), # Parámetro de regularización
+  colsample_bytree = c(1), # Fracción de columnas para cada árbol
+  min_child_weight = c(1), # Suma mínima de pesos de las instancias necesarias en un hijo
+  subsample = c(1) # Fracción de instancias para entrenar cada árbol
+)
+
+control <- trainControl(method = "cv", number = 5, verboseIter = FALSE)
+
+model <- train(
+  Traincl ~ ., data = Train,
+  method = "xgbTree",
+  trControl = control,
+  tuneGrid = grid,
+  verbosity = 0
+)
+print(model$bestTune)
+```
+
+
+
