@@ -25,6 +25,10 @@ header-includes:
 Notas:
 - Hace falta balancear las variables numéricas de la base de datos??????
 
+bertita:
+- comentari a tot
+- LLEGIR GRAFIC IMPORTANCIA VAR
+- TIENE SENTIDO QUE HOJAS DEL ARBOL ACUMULEN UN 0% DE INDIVIDUOS? MÁS PRUNNING? COM0?
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -77,12 +81,15 @@ library(doBy)
 library(caret)
 library(ROSE)
 library(ggplot2)
+library(pROC)
 ```
 
 ```{r, include = F}
 load("Dades noves (balancejada i no balancejada).RData")
 ```
+Para inciar el desarrollo del modelo, el primer paso es encontrar el valor óptimo del complexity parameter, o parámetro de complejidad, que controla la cantidad de ramificaciones y nodos terminales en el árbol. Este parámetro juega un papel importante en la regularización del árbol, evitando que éste se vuelva demasiado complejo y se adapte demasiado a los datos de entrenamiento, lo que podría resultar en un sobreajuste del modelo. 
 
+Para encontrar este valor óptimo del parámetro de complejidad, se entrena el modelo con los datos balanceados de Train y se realiza un proceso de crosvalidación con 10 folds. Entonces calculamos el accuracy para cada 10 valores posibles del complexity parameter tanto para los datos train como test.
 ```{r, warning=FALSE, echo=FALSE, fig.cap = "Evolución de la precisión (obtenida mediante validación cruzada) dependiendo del parámetro de complejidad", fig.show='hold',out.width="75%",out.height="75%"}
 
 # TRAINING
@@ -92,7 +99,8 @@ set.seed(123)
 model2 <- train(
   TARGET ~., data=train_balanceado, method = "rpart",
   trControl = trainControl("cv", number = 10),
-  tuneLength = 10
+  tuneLength = 10,
+  cp=0, plotcp cp que de menor error
 )
 
 
@@ -134,28 +142,26 @@ ggplot() +
   scale_color_manual(name = "Data", values = c("Train" = "blue", "Test" = "red")) +
   theme_minimal()
 ```
+En el gráfico se observa como el primer valor del complexity parameter es el que reporta un mayor accuracy tanto para el conjunto de datos de entrenamiento como el de validación, por lo que 'r model2$bestTune' es el valor óptimo. Como el valor del accuracy es muy parecido para ambos conjuntos de datos, podemos concluir que no se produce un sobreajuste del modelo.
 
 
-```{r, warning=FALSE, echo=FALSE, fig.cap = "Árbol de clasificación de la variable TARGET, obtenido con la complejidad "óptima"", fig.show='hold',out.width="75%",out.height="75%"}
-
-# Grafica el árbol de decisión
-rpart.plot(model2$finalModel, box.palette = "auto", shadow.col = "gray", nn = TRUE)
-
+```{r, echo=F, fig.cap = "Importancia de las variables en CART", fig.show='hold',out.width="75%",out.height="80%"}
+df<- data.frame(variable_names, importance_values)
+df <-df[order(df$importance_values),]
+ggplot(df, aes(x=importance_values, y = reorder(variable_names, +importance_values))) +
+   geom_bar(stat="identity", color='lightblue',fill='lightblue', width = 0.6)+
+  labs(title = "Importancia de variables", x="Importancia", y=NULL)
 ```
+CÓMO SE LEE ESTE GRÁFICO DE IMPORTANCIA? ROLLO ORDEN MAGNITUD. edad en el 70% de los arboles sera la primera
 
-
-
-```{r, echo=F, fig.cap = "Importancia de las variables en CART", fig.show='hold',out.width="75%",out.height="75%"}
-var_imp <- varImp(model2)
-
-# Graficar las variables importantes
-plot(var_imp, top=20)
-```
+### Validación del modelo
 
 ```{r, include=FALSE}
 pred <- predict(model2, newdata = validation_balanceado)
+pred_train<- predict(model2, newdata = train_balanceado)
 
 MC <- confusionMatrix(pred, validation_balanceado$TARGET, positive = "1")
+MC_train<- confusionMatrix(pred_train, train_balanceado$TARGET, positive = "1")
 
 tabla_cart = MC$table
 
@@ -174,18 +180,39 @@ kbl(tabla_cart,
 ```
 
 ```{r, echo=F, warning = F,fig.cap = "Resumen de Medidas de Validación para CART", fig.show='hold',out.width="75%",out.height="75%"}
-Valores <- c(MC$byClass["Sensitivity"], MC$byClass["Specificity"], MC$byClass["Recall"], MC$byClass["F1"], MC$byClass["Precision"])
-tabla_validacion <- as.data.frame(Valores)
+Valores <- c(MC$overall["Accuracy"],MC$byClass["Sensitivity"], MC$byClass["Specificity"], MC$byClass["Recall"], MC$byClass["F1"], MC$byClass["Precision"])
+valores_train<- c(MC_train$overall["Accuracy"],MC_train$byClass["Sensitivity"], MC_train$byClass["Specificity"], MC_train$byClass["Recall"], MC_train$byClass["F1"], MC_train$byClass["Precision"])
 
-kbl(tabla_validacion, caption = "Medidas de Validación para el modelo CART", booktabs=T)%>% 
+tabla_validacion <- data.frame(
+  Train = valores_train,
+  Test = Valores
+)
+ kbl(tabla_validacion, caption = "Medidas de Validación para el modelo CART", booktabs=T)%>% 
                 kable_styling(position = "center", 
                 latex_options = c("HOLD_position"))
+
 ```
-# ```{r}
-# model3 <- train(
-#   TARGET ~., data=train_balanceado, method = "rpart",
-#   trControl = trainControl("cv", number = 10, selectionFunction = "oneSE"),
-#   tuneLength = 10
-# )
-# rpart.plot(model3$finalModel)
-# ```
+
+```{r, echo=F, warning = F, fig.cap = "Curva ROC", fig.show='hold',out.width="75%",out.height="75%"}
+tree.preds <- predict(model2, newdata = validation_balanceado, type="prob")[, 2]
+tree.roc <- roc(validation_balanceado$TARGET, tree.preds,auc=T,ci=T)
+plot.roc(tree.roc,print.auc=T, main = "Curva ROC", col = "blue", lwd = 2)
+
+
+```
+
+### Árbol de decisión
+A continuación se presenta el árbol de decisión final con el parámetro de complejidad óptimo. EXPLICAR ORDEN VARIABLES, Y LECTURA DEL ÁRBOL A NIVEL CONCEPTUAL.
+```{r, warning=FALSE, echo=FALSE, fig.cap = "Árbol de clasificación de la variable TARGET, obtenido con la complejidad "óptima"", fig.show='hold',out.width="75%",out.height="75%"}
+train_balanceado_levels<- train_balanceado
+levels(train_balanceado_levels$TARGET)<- c("NM", "PM")
+model3 <- train(
+  TARGET ~., data=train_balanceado_levels, method = "rpart",
+  trControl = trainControl("cv", number = 10),
+  tuneLength = 10
+)
+# Grafica el árbol de decisión
+rpart.plot(model3$finalModel, box.palette = "auto", shadow.col = "gray", nn = TRUE)
+
+```
+EL % VOL DIR % D'INDIVIDUS QUE ES TROBEN EN AQUELLA FULLA. TÉ ALGUN SENTIT QUE EN ALGUNS HI HAGI 0?
