@@ -1,0 +1,62 @@
+---
+title: "Untitled"
+author: "Oscar Arroyo"
+date: "2023-12-07"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(caret)
+library(pROC)
+```
+
+
+```{r}
+predicciones_knn <- 
+predicciones_lda <- 
+predicciones_svm <- 
+predicciones_dt <- 
+predicciones_rf <- 
+predicciones_xgb <- 
+
+a <- 1/6
+b <- 1/6
+c <- 1/6
+d <- 1/6
+e <- 1/6
+f <- 1/6
+
+predicciones_ensemble <- predicciones_knn*a + predicciones_lda*b + predicciones_svm*c + predicciones_dt*d + predicciones_rf*e + predicciones_xgb*f 
+
+```
+
+```{r}
+AUC_ensemble <- function(weights) {
+  a <- weights[1]
+  b <- weights[2]
+  c <- weights[3]
+  d <- weights[4]
+  e <- weights[5]
+  f <- weights[6]
+  
+  pred_ensemble <- predicciones_knn * a + predicciones_lda * b +
+                   predicciones_svm * c + predicciones_dt * d +
+                   predicciones_rf * e + predicciones_xgb * f
+  
+  auc <- roc(true_values, pred_ensemble)$auc  
+  return(-auc)  
+}
+
+pesos_iniciales <- c(1/6, 1/6, 1/6, 1/6, 1/6, 1/6)
+
+optimized_weights <- optim(par = pesos_iniciales, fn = AUC_ensemble, method = "L-BFGS-B", lower = rep(0, 6), upper = rep(1, 6))$par
+
+print(optimized_weights)
+
+```
+
+
