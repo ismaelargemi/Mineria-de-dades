@@ -347,8 +347,8 @@ colores <- scales::brewer_pal(palette = "Set1")(length(unique(cluster)))
 
 **Variables numéricas**
 
-```{r, echo=F, warning = F,fig.cap = "Comparación de medias por cluster OWN CAR AGE", fig.show='hold',out.width="75%",out.height="75%"}
-ggplot(data = dades, aes(x = cluster, y = dades$OWN_CAR_AGE)) + 
+```{r, echo = F, warning = F, fig.height = 6, fig.width = 10}
+ggplot(data = dades, aes(x = as.factor(unlist(cluster)), y = dades$OWN_CAR_AGE)) + 
   geom_bar(stat = "summary", fun = "mean", fill= colores) +
   coord_cartesian(ylim=c(8,12))+
   geom_hline(yintercept = mean(dades$OWN_CAR_AGE)) +
@@ -356,7 +356,7 @@ ggplot(data = dades, aes(x = cluster, y = dades$OWN_CAR_AGE)) +
 ```
 
 
-```{r, echo=F, warning = F,fig.cap = "Comparación de medias por cluster CNT FAM MEMBERS", fig.show='hold',out.width="75%",out.height="75%"}
+```{r, echo = F, warning = F, fig.height = 6, fig.width = 10}
 ggplot(data = dades, aes(x = cluster, y = dades$CNT_FAM_MEMBERS)) +
   geom_bar(stat = "summary", fun = "mean", fill= colores) +
   geom_hline(yintercept = mean(dades$CNT_FAM_MEMBERS)) +
@@ -364,7 +364,7 @@ ggplot(data = dades, aes(x = cluster, y = dades$CNT_FAM_MEMBERS)) +
 ```
 
 
-```{r, echo=F, warning = F, fig.cap = "Comparación de medias por LOG AMT INCOME TOTAL", fig.show='hold',out.width="75%",out.height="75%"}
+```{r, echo = F, warning = F, fig.height = 6, fig.width = 10}
 ggplot(data = dades, aes(x = cluster, y = dades$log_AMT_INCOME_TOTAL)) +
   geom_bar(stat = "summary", fun = "mean", fill= colores) +
   coord_cartesian(ylim=c(11,12.5))+
@@ -373,7 +373,7 @@ ggplot(data = dades, aes(x = cluster, y = dades$log_AMT_INCOME_TOTAL)) +
 ```
 
 
-```{r, echo=F, warning = F,fig.cap = "Comparación de medias por LOG AMT CREDIT", fig.show='hold',out.width="75%",out.height="75%"}
+```{r, echo = F, warning = F, fig.height = 6, fig.width = 10}
 ggplot(data = dades, aes(x = cluster, y = dades$log_AMT_CREDIT)) +
   geom_bar(stat = "summary", fun = "mean", fill= colores) +
   coord_cartesian(ylim=c(12.5,13.5))+
@@ -382,7 +382,7 @@ ggplot(data = dades, aes(x = cluster, y = dades$log_AMT_CREDIT)) +
 
 ```
 
-```{r, echo=F, warning = F,fig.cap = "Comparación de medias por cluster AGE YEARS", fig.show='hold',out.width="75%",out.height="75%"}
+```{r, echo = F, warning = F, fig.height = 6, fig.width = 10}
 ggplot(data = dades, aes(x = cluster, y = dades$AGE_YEARS)) +
   geom_bar(stat = "summary", fun = "mean", fill= colores) +
   coord_cartesian(ylim=c(20,60))+
@@ -391,7 +391,7 @@ ggplot(data = dades, aes(x = cluster, y = dades$AGE_YEARS)) +
 
 ```
 
-```{r, echo=F, warning = F,fig.cap = "Comparación de medias por cluster RATIO CREDIT INCOME", fig.show='hold',out.width="75%",out.height="75%"}
+```{r, echo = F, warning = F, fig.height = 6, fig.width = 10}
 ggplot(data = dades, aes(x = cluster, y = dades$RATIO_CREDIT_INCOME)) +
   geom_bar(stat = "summary", fun = "mean", fill= colores) +
   coord_cartesian(ylim=c(2,5))+
@@ -399,7 +399,8 @@ ggplot(data = dades, aes(x = cluster, y = dades$RATIO_CREDIT_INCOME)) +
   labs(title = "Medias del Ratio del Importe del préstamo por clúster respecto la media global" , y = "Media", x = "Clúster")
 ```
 
-```{r, echo=F, warning = F,fig.cap = "Comparación de medias por cluster RATIO ANNUITY CREDIT", fig.show='hold',out.width="75%",out.height="75%"}
+
+```{r, echo = F, warning = F}
 ggplot(data = dades, aes(x = cluster, y = dades$RATIO_ANNUITY_CREDIT)) +
   geom_bar(stat = "summary", fun = "mean", fill= colores) +
   coord_cartesian(ylim=c(0.04,0.06))+
@@ -409,7 +410,7 @@ ggplot(data = dades, aes(x = cluster, y = dades$RATIO_ANNUITY_CREDIT)) +
 ```
 
 
-```{r, echo=F, warning = F,fig.cap = "Comparación de medias por cluster DTI RATIO", fig.show='hold',out.width="75%",out.height="75%"}
+```{r, echo = F, warning = F, fig.height = 6, fig.width = 10}
 ggplot(data = dades, aes(x = cluster, y = dades$DTI_RATIO)) +
   geom_bar(stat = "summary", fun = "mean", fill= colores) +
   coord_cartesian(ylim=c(0.1,0.25))+
@@ -421,58 +422,167 @@ ggplot(data = dades, aes(x = cluster, y = dades$DTI_RATIO)) +
 
 **Variables categóricas**
 
-```{r, echo=F, warning = F,fig.cap = "Comparación de proporción por cluster CODE GENDER", fig.show='hold',out.width="75%",out.height="75%"}
+```{r, echo = F, warning = F, message = F, fig.height = 6, fig.width = 10}
+# tableData = table(cluster, dades$CODE_GENDER)
+# length(tableData[1,])
+# 
+# for (i in 1:length(tableData[1,])) {
+#   tableData[,i] = tableData[,i]/sum(tableData[,i])
+# }
+# 
+# library(RColorBrewer)
+# colors <- brewer.pal( length(tableData[1,]) , "Greens")
+# barplot(tableData,
+#         legend.text = TRUE,
+#         args.legend = list(x="topleft"),
+#         beside = TRUE, col = colors, ylim =  c(0,0.6))
 ggplot(data = dades, aes(x = cluster, fill = dades$CODE_GENDER)) +
-  geom_bar(position = "dodge") +
+  geom_bar(position = "fill") +
   labs(title = "Gráfico de la distribución del Género respecto el Clúster", y = "Freq", x = "Clúster") +
   theme(legend.position = "top") + guides(fill = guide_legend(title = NULL))
 ```
 
 
-```{r, echo=F, warning = F,fig.cap = "Comparación de proporción por cluster NAME INCOME TYPE", fig.show='hold',out.width="75%",out.height="75%"}
+```{r, echo = F, warning = F, message = F, fig.height = 6, fig.width = 10}
 ggplot(data = dades, aes(x = cluster, fill = dades$NAME_INCOME_TYPE)) +
   geom_bar(position = "dodge") +
   labs(title = "Gráfico de la distribución del Tipo de ingresos respecto el Clúster", y = "Freq", x = "Clúster") +
   theme(legend.position = "top") + guides(fill = guide_legend(title = NULL))
+
+# tableData = table(cluster, dades$NAME_INCOME_TYPE)
+# 
+# for (i in 1:length(tableData[1,])) {
+#   tableData[,i] = tableData[,i]/sum(tableData[,i])
+# }
+# 
+# colors <- colorRamps::blue2green(length(tableData[,1]))
+# barplot(tableData,
+#         legend.text = TRUE,
+#         args.legend = list(x="topleft"),
+#         beside = TRUE, col = colors, ylim =  c(0,1))
+
 ```
 
 
-```{r, echo = F, warning = F, fig.height = 6, fig.width = 10}
+```{r, echo = F, warning = F, message = F, fig.height = 6, fig.width = 10}
 ggplot(data = dades, aes(x = cluster, fill = dades$NAME_EDUCATION_TYPE)) +
   geom_bar(position = "dodge") +
   labs(title = "Gráfico de la distribución del Nivel de estudios del cliente respecto el Clúster", y = "Freq", x = "Clúster") +
   theme(legend.position = "top") + guides(fill = guide_legend(title = NULL))
+
+# tableData = table(cluster,dades$NAME_EDUCATION_TYPE)
+# for (i in 1:length(tableData[1,])) {
+#   tableData[,i] = tableData[,i]/sum(tableData[,i])
+# }
+# 
+# colors <- colorRamps::blue2green(length(tableData[,1]))
+# barplot(tableData,
+#         legend.text = TRUE,
+#         args.legend = list(x="topleft"),
+#         beside = TRUE, col = colors, ylim =  c(0,1))
+
 ```
 
-```{r, echo=F, warning = F,fig.cap = "Comparación de proporción por cluster NAME FAMILY STATUS", fig.show='hold',out.width="75%",out.height="75%"}
+```{r, echo = F, warning = F, message = F, fig.height = 6, fig.width = 10}
 ggplot(data = dades, aes(x = cluster, fill = dades$NAME_FAMILY_STATUS)) +
   geom_bar(position = "dodge") +
   labs(title = "Gráfico de la distribución del Estado civil respecto el Clúster", y = "Freq", x = "Clúster") +
   theme(legend.position = "top") + guides(fill = guide_legend(title = NULL))
+
+# tableData = table( cluster,dades$NAME_FAMILY_STATUS)
+# for (i in 1:length(tableData[1,])) {
+#   tableData[,i] = tableData[,i]/sum(tableData[,i])
+# }
+# colors <- colorRamps::blue2green(length(tableData[,1]))
+# barplot(tableData,
+#         legend.text = TRUE,
+#         beside = TRUE, col = colors, ylim =  c(0,1))
+
 ```
 
-```{r, echo=F, warning = F,fig.cap = "Comparación de proporción por cluster OCCUPATION TYPE", fig.show='hold',out.width="75%",out.height="75%"}
+```{r, echo = F, warning = F, message = F, fig.height = 6, fig.width = 10}
 ggplot(data = dades, aes(x = cluster, fill = dades$OCCUPATION_TYPE)) +
   geom_bar(position = "dodge") +
   labs(title = "Gráfico de la distribución de la Actividad laboral respecto el Clúster", y = "Freq", x = "Clúster") +
   theme(legend.position = "top") + guides(fill = guide_legend(title = NULL))
+
+# tableData = table( cluster,dades$OCCUPATION_TYPE)
+# for (i in 1:length(tableData[1,])) {
+#   tableData[,i] = tableData[,i]/sum(tableData[,i])
+# }
+# colors <- colorRamps::blue2green(length(tableData[,1]))
+# barplot(tableData,
+#         legend.text = TRUE,
+#         args.legend = list(x="topleft"),
+#         beside = TRUE, col = colors, ylim =  c(0,1))
+# 
+# tableData
+
 ```
 
 
-```{r, echo=F, warning = F,fig.cap = "Comparación de proporción por cluster ORGANIZATION TYPE", fig.show='hold',out.width="75%",out.height="75%"}
+```{r, echo = F, warning = F, message = F, fig.height = 6, fig.width = 10}
 ggplot(data = dades, aes(x = cluster, fill = dades$ORGANIZATION_TYPE)) +
   geom_bar(position = "dodge") +
   labs(title = "Gráfico de la distribución del Tipo de organización donde trabaja el cliente respecto el Clúster", y = "Freq", x = "Clúster") +
   theme(legend.position = "top") + guides(fill = guide_legend(title = NULL))
+
+# tableData = table(cluster,dades$ORGANIZATION_TYPE)
+# for (i in 1:length(tableData[1,])) {
+#   tableData[,i] = tableData[,i]/sum(tableData[,i])
+# }
+# 
+# colors <- colorRamps::blue2green(length(tableData[,1]))
+# barplot(tableData,
+#         legend.text = TRUE,
+#         args.legend = list(x="topleft"),
+#         beside = TRUE, ylim =  c(0,1), col = colors)
+
+
 ```
 
 
-```{r, echo=F, warning = F,fig.cap = "Comparación de proporción por cluster REGION RATING CLIENT", fig.show='hold',out.width="75%",out.height="75%"}
+```{r, echo = F, warning = F, message = F, fig.height = 6, fig.width = 10}
 ggplot(data = dades, aes(x = cluster, fill = dades$REGION_RATING_CLIENT)) +
   geom_bar(position = "dodge") +
   labs(title = "Gráfico de la distribución de la Calificación de la región donde vive el cliente respecto el Clúster", y = "Freq", x = "Clúster") +
   theme(legend.position = "top") + guides(fill = guide_legend(title = NULL))
+
+# tableData = table( cluster,dades$REGION_RATING_CLIENT)
+# for (i in 1:length(tableData[1,])) {
+#   tableData[,i] = tableData[,i]/sum(tableData[,i])
+# }
+# colors <- colorRamps::blue2green(length(tableData[,1]))
+# barplot(tableData,
+#         legend.text = TRUE,
+#         args.legend = list(x="topleft"),
+#         beside = TRUE, col = colors, ylim =  c(0,1))
+
+```
+
+```{r, echo = F, warning = F}
+ggplot(data = dades, aes(x = cluster, fill = dades$NAME_INCOME_TYPE)) +
+  geom_bar(position = "dodge") +
+  labs(title = "Gráfico de la distribución del Tipo de ingresos respecto el Clúster", y = "Freq", x = "Clúster") +
+  theme(legend.position = "top") + guides(fill = guide_legend(title = NULL))
+
+# tableData = table(unlist(clusterIndividuo), df_preprocessed$TARGET)
+# 
+# for (i in 1:length(tableData[1,])) {
+#   tableData[,i] = tableData[,i]/sum(tableData[,i])
+# }
+# 
+# colors <- colorRamps::blue2red(length(tableData[,1]))
+# barplot(tableData,
+#         legend.text = TRUE,
+#         args.legend = list(x="topleft"),
+#         beside = TRUE, col = colors, ylim =  c(0,1))
 ```
 
 
-
+```{r, echo = F, warning = F}
+ggplot(data = dades, aes(x = cluster, fill = dades$TARGET)) +
+  geom_bar(position = "dodge") +
+  labs(title = "Gráfico de la distribución del Tipo de ingresos respecto el Clúster", y = "Freq", x = "Clúster") +
+  theme(legend.position = "top") + guides(fill = guide_legend(title = NULL))
+```
