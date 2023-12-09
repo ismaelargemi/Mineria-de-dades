@@ -1,0 +1,29 @@
+---
+title: "Untitled"
+author: "Oscar Arroyo"
+date: "2023-12-07"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+# install.packages("ensembleR")
+# install.packages("ensembleR", dependencies = c("Imports", "Suggests"))
+library(ensembleR)
+```
+
+```{r}
+Train <- train_balanceado
+Test <- validation_balanceado
+
+predicciones <- ensemble(
+  training = Train, 
+  testing = Test, 
+  outcomeName = 'TARGET', 
+  BaseModels = c('knn', 'svmLinear','xgboost'), 
+  TopModel = 'rf'
+)
+print(predicciones)
+```
+
+

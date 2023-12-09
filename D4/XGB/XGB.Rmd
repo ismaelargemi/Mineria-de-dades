@@ -1,0 +1,187 @@
+---
+title: "Untitled"
+author: "Oscar Arroyo"
+date: "2023-12-07"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+XGBoost es un modelo basado en árboles de decisión y es una mejora de otros métodos de ensamblaje como el Random Forest. El algoritmo utiliza varios métodos de optimización para mejorar la precisión y controlar el sobreajuste.
+
+El proceso de XGBoost comienza con una predicción inicial y luego calcula los residuos, que son las diferencias entre las predicciones y los valores observados. Luego, crea un árbol de decisión con estos residuales y continúa este proceso, construyendo árboles secuenciales que aprenden de los errores del árbol anterior.
+
+Este modelo se puede ajustar según ciertos parámetros. Para encontrar la mejor combinación de parámetros, se llevará a cabo validación cruzada en el conjunto de entrenamiento con el fin de extraer los mejores hiperparámetros. Posteriormente, se aplicará el mejor modelo obtenido en nuestro conjunto de prueba para su validación.
+
+```{r, include=FALSE}
+library(caret)
+library(dplyr)
+library(xgboost)
+library(kableExtra)
+library(parallel)
+library(DiagrammeR)
+```
+
+
+```{r}
+# OH Encoding
+# load("Dades noves (balancejada i no balancejada).Rdata")
+# 
+# Train <- train_balanceado
+# 
+# TARGET <- as.vector(Train$TARGET)
+# Train$TARGET <- NULL #TARGET tiene q ser factor 2 niveles, no numeric
+# 
+# Objectos <- sapply(Train, class)
+# Categoriques <- names(Objectos)[which(Objectos%in%c("factor"))]
+# 
+# Cat <- predict(dummyVars("~ .", data = Train[,Categoriques]), newdata = Train[,Categoriques])
+# 
+# Train[,Categoriques] <- NULL
+# 
+# Train <- cbind(Train, Cat)
+```
+
+
+```{r}
+# Numeric
+load("Dades noves (balancejada i no balancejada).Rdata")
+
+Train <- train_balanceado
+TARGET <- as.vector(Train$TARGET)
+Train <- Train %>% select(-"TARGET") %>%
+  mutate_if(is.factor, as.numeric)
+```
+
+```{r}
+grid <- expand.grid(
+  nrounds = c(100,150), # Número de rondas de boosting
+  max_depth = seq(3,15,by=2), # Profundidad máxima de los árboles
+  eta = c(0.001,0.005,0.01), # Tasa de aprendizaje
+  gamma = c(0), # Parámetro de regularización
+  colsample_bytree = c(1), # Fracción de columnas para cada árbol
+  min_child_weight = c(1), # Suma mínima de pesos de las instancias necesarias en un hijo
+  subsample = c(1) # Fracción de instancias para entrenar cada árbol
+)
+
+control <- trainControl(method = "cv", number = 10, verboseIter = FALSE, allowParallel = TRUE)
+```
+
+
+```{r}
+model <- train(
+  x = Train, 
+  y = TARGET,
+  trControl = control,
+  tuneGrid = grid,
+  method = "xgbTree",
+  verbosity = 0
+)
+```
+
+En la validación cruzada usamos Grid Search. Se busca la mejor combinación de parámetros (como tasa de aprendizaje, número de rondas y profundidad del árbol) probando múltiples valores. 
+
+Esto implica entrenar y evaluar el modelo con cada combinación para encontrar la configuración que maximice el rendimiento. 
+
+Posteriormente, se grafica cómo varía el desempeño del modelo en función de estos valores, lo que ayudará a identificar la configuración óptima para obtener mejores resultados en otros conjuntos de datos.
+
+```{r}
+ggplot(model)
+```
+Los valores óptimos de nuestros parámetros podrían ser:
+
+- Número de rondas de boosting `r model$bestTune$nround`
+- Profundidad de árbol `r model$bestTune$max_depth `
+- Tasa de apredizaje `r model$bestTune$eta `
+
+Entonces, al implementar XGBoost con estos parámetros, obtenemos el siguiente modelo:
+
+```{r}
+grid_opt <- expand.grid(
+  nrounds = model$bestTune$nrounds, 
+  max_depth = model$bestTune$max_depth, 
+  eta = model$bestTune$eta, 
+  gamma = c(0), 
+  colsample_bytree = c(1), 
+  min_child_weight = c(1), 
+  subsample = c(1) 
+)
+xgbTree <- train(x=Train, y=TARGET, method="xgbTree",
+                    metric="Accuracy", trControl=trainControl(method="none"),tuneGrid=grid_opt)
+
+# xgb.plot.tree(model=xgbTree$finalModel, trees = 149, plot_width = 1000, plot_height = 1000)
+xgb.plot.tree(model=xgbTree$finalModel, trees = 149)
+```
+
+```{r}
+grid_opt2 <- expand.grid(
+  nrounds = model$bestTune$nrounds, 
+  max_depth = 4, 
+  eta = model$bestTune$eta, 
+  gamma = c(0), 
+  colsample_bytree = c(1), 
+  min_child_weight = c(1), 
+  subsample = c(1) 
+)
+xgbTree2 <- train(x=Train, y=TARGET, method="xgbTree",
+                    metric="Accuracy", trControl=trainControl(method="none"),tuneGrid=grid_opt2)
+
+xgb.plot.tree(model=xgbTree2$finalModel, trees = 149)
+```
+
+Comentar árbol
+
+
+```{r}
+#OH enc
+# 
+# Test <- validation_balanceado
+# 
+# TARGET_test <- Test$TARGET
+# Test$TARGET <- NULL 
+# 
+# Objectos <- sapply(Test, class)
+# Categoriques <- names(Objectos)[which(Objectos%in%c("factor"))]
+# 
+# Cat <- predict(dummyVars("~ .", data = Test[,Categoriques]), newdata = Test[,Categoriques])
+# 
+# Test[,Categoriques] <- NULL
+# 
+# Test <- cbind(Test, Cat)
+```
+
+
+```{r}
+#Numerico
+Test <- validation_balanceado
+TARGET_test <- Test[["TARGET"]]
+Test <- Test %>%
+         mutate_if(is.factor, as.numeric)
+```
+
+```{r}
+predictxgbTree <- predict(xgbTree,Test)
+conf_matrix <- confusionMatrix(predictxgbTree, TARGET_test, positive="1")
+```
+
+```{r}
+accuracy <- conf_matrix$overall["Accuracy"]
+specificity <- conf_matrix$byClass["Specificity"]
+sensitivity <- conf_matrix$byClass["Sensitivity"]
+f1_score <- conf_matrix$byClass["F1"]
+
+metricas <- data.frame(Accuracy=accuracy,Specificity=specificity,Sensitivity=sensitivity,F1=f1_score)
+metricas <- as.matrix(metricas)
+kbl(metricas, 
+    caption = "Métricas de validación", align = "c")%>% 
+  kable_styling(position = "center", 
+                latex_options = c("HOLD_position"))
+```
+
+Los resultados del modelo XGBoost muestran un rendimiento sólido en la clasificación, con una precisión  en la predicción del `r accuracy` %.
+
+Destaca la alta sensibilidad del modelo, alcanzando un `r sensitivity`, lo que indica su capacidad para identificar correctamente la mayoría de los casos positivos. Además, la especificidad es del `r specificity`, lo que nos muestra su eficacia en la identificación de casos negativos. 
+
+El equilibrio entre precisión y sensibilidad, representado por el F1 score de `r f1_score`, demuestra una buena capacidad general del modelo en la tarea de clasificación. Esta evaluación sugiere que el modelo no presenta overfitting.
