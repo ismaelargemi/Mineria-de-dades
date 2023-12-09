@@ -15,7 +15,7 @@ El proceso de XGBoost comienza con una predicción inicial y luego calcula los r
 
 Este modelo se puede ajustar según ciertos parámetros. Para encontrar la mejor combinación de parámetros, se llevará a cabo validación cruzada en el conjunto de entrenamiento con el fin de extraer los mejores hiperparámetros. Posteriormente, se aplicará el mejor modelo obtenido en nuestro conjunto de prueba para su validación.
 
-```{r}
+```{r, include=FALSE}
 library(caret)
 library(dplyr)
 library(xgboost)
@@ -31,6 +31,15 @@ Train <- train_balanceado
 TARGET <- as.vector(Train$TARGET)
 Train$TARGET <- NULL #TARGET tiene q ser factor 2 niveles, no numeric
 
+# Objectos <- sapply(Train, class)
+# Categoriques <- names(Objectos)[which(Objectos%in%c("factor"))]
+# 
+# Cat <- predict(dummyVars("~ .", data = Train[,Categoriques]), newdata = Train[,Categoriques])
+# 
+# Train[,Categoriques] <- NULL
+# 
+# Train <- cbind(Train, Cat)
+
 Train <- Train %>%
   mutate_if(is.factor, as.numeric)
 
@@ -38,15 +47,15 @@ Train$TARGET <- TARGET
 
 grid <- expand.grid(
   nrounds = c(100), # Número de rondas de boosting
-  max_depth = c(3, 6, 9, 12), # Profundidad máxima de los árboles
-  eta = c(0.01, 0.1, 0.3), # Tasa de aprendizaje
+  max_depth = seq(3,15), # Profundidad máxima de los árboles
+  eta = seq(0.01, 0.01, 0.001), # Tasa de aprendizaje
   gamma = c(0), # Parámetro de regularización
   colsample_bytree = c(1), # Fracción de columnas para cada árbol
   min_child_weight = c(1), # Suma mínima de pesos de las instancias necesarias en un hijo
   subsample = c(1) # Fracción de instancias para entrenar cada árbol
 )
 
-control <- trainControl(method = "cv", number = 5, verboseIter = FALSE)
+control <- trainControl(method = "cv", number = 10, verboseIter = FALSE)
 
 model <- train(
   TARGET ~ ., data = Train,
@@ -84,11 +93,15 @@ params <- list(
   nrounds = 100,  
   early_stopping_rounds = 10, 
   verbose = FALSE,  
-  eta= 0.3,
-  max_depth=12
+  eta= 0.01,
+  max_depth=15
 )
 
 xgb_model <- xgb.train(params = params, data = dtrain, nrounds = 100, watchlist = list(train = dtrain, test = dtest))
+xgboost()
+xgb.plot.tree(xgb_model, trees = 100)
+
+xgb.plot.tree()
 ```
 
 ```{r}
