@@ -34,14 +34,14 @@ knitr::opts_chunk$set(echo = TRUE)
 \beginsupplement
 
 
-## Árboles de Decisión
+# Árboles de Decisión
 
-Siguiendo con los modelos discriminantes, en este apartado se analizará el algoritmo de los Árboles de Decisión, CART en adelante, con el mismo propósito específico: la clasificación de clientes en categorías de riesgo crediticio. En particular, nos enfocaremos en discendir entre aquellos clientes que puedan tener dificultades de pago y aquellos que son financieramente solventes.
+Siguiendo con los modelos predictivos, en este apartado se analizará el algoritmo de los Árboles de Decisión, CART en adelante, con el mismo propósito específico: la clasificación de clientes en categorías de riesgo crediticio. En particular, nos enfocaremos en discendir entre aquellos clientes que puedan tener dificultades de pago y aquellos que son financieramente solventes.
 
 El algoritmo de Árboles de Decisión se revela como una herramienta particularmente poderosa en este contexto, ya que su capacidad para modelar relaciones complejas entre variables puede proporcionar insights para la toma de decisiones financieras. Exploraremos cómo el algoritmo selecciona de manera inteligente las variables más influyentes para segmentar eficientemente el conjunto de datos, permitiendo la identificación de patrones que podrían indicar riesgos financieros. 
 
 
-#### Algoritmo 
+## Algoritmo 
 
 En este contexto, la estructura de un Árbol de Decisión se modela de forma análoga a un proceso de decisiones estratégicas:
 
@@ -57,7 +57,7 @@ Así pues, a continuación se procede a realizar dicho análisis discriminante.
 
 ### Desarrollo del CART
 
-```{r, include = F, warning=F, include=F}
+```{r, include = F, warning=F, echo=F}
 library(rpart)
 library(rpart.plot)
 library(tree)
@@ -78,6 +78,7 @@ library(pROC)
 
 ```{r, include = F}
 load("Dades noves (balancejada i no balancejada).RData")
+load("Pruebas.RData")
 ```
 
 Para inciar el desarrollo del modelo, el primer paso es encontrar el valor óptimo del complexity parameter, o parámetro de complejidad, que controla la cantidad de ramificaciones y nodos terminales en el árbol. Este parámetro juega un papel importante en la regularización del árbol, evitando que éste se vuelva demasiado complejo y se adapte demasiado a los datos de entrenamiento, lo que podría resultar en un sobreajuste del modelo. 
@@ -120,7 +121,7 @@ rpart.plot(tree)
 
 ```
 
-Aunque esta estrategia ayuda a evitar el sobreajuste y a seleccionar un modelo que se encuentra en un punto óptimo entre sesgo y varianza, no nos es óptima ya que aunque el cp sea óptimo, el árbol resultante sigue siendo demasiado grande. Asi pues, consideramos ajustar la estrategia de selección de complejidad a partir de la función train como veremos a continuación.
+Aunque esta estrategia ayuda a evitar el sobreajuste y a seleccionar un modelo que se encuentra en un punto óptimo entre sesgo y varianza, no nos es óptima ya que aunque el cp sea óptimo, el árbol resultante sigue siendo demasiado grande. Así pues, consideramos ajustar la estrategia de selección de complejidad a partir de la función train como veremos a continuación.
 
 
 
@@ -231,11 +232,11 @@ tabla_validacion <- data.frame(
 ```
 
 
-La anterior salida nos muestra la matriz de confusión junto con diversos estadísticos que tratan de explicar como de bien o mal ha predicho el algoritmo de CART. Así pues, como se observa que las medidas de validación son aproximadamente las mismas tanto para Train como para Test, afirmamos que no hay un sobreajuste de los datos. 
+La anterior salida nos muestra la matriz de confusión junto con diversos estadísticos que tratan de explicar como de bien o mal ha predicho el algoritmo de CART. Así pues, como se observa que las medidas de validación son aproximadamente las mismas tanto para Train como para Test, reafirmamos que no hay un sobreajuste en el modelo (como ya se había dicho anteriormente). 
 
 En este caso, la precisión ha sido del `r round(MC$overall["Accuracy"],4)`%, lo que indica que el algoritmo ha predicho correctamente el `r MC$overall["Accuracy"]*100`% de los individuos de Test. 
 
-La "Sensitivity" mide la proporción de individuos de TARGET=0 que han sido clasificacdos correctamente, que en este caso ha sido de `r MC$byClass["Sensitivity"]*100`.
+La "Sensitivity" mide la proporción de individuos de TARGET=0 que han sido clasificados correctamente, que en este caso ha sido de `r MC$byClass["Sensitivity"]*100`.
 
 Por otro lado, la "Specificity" mide la proporción de individuos de TARGET=1 que han sido clasificados correctamente, que ha dado `r MC$byClass["Specificity"]*100`
 
@@ -253,6 +254,7 @@ tree.roc <- roc(validation_balanceado$TARGET, tree.preds, auc = TRUE, ci = TRUE)
 plot.roc(tree.roc, print.auc = TRUE, main = "Curva ROC", col = "blue", lwd = 2, legacy.axes = TRUE)
 
 ```
+
 El AUC (Área Bajo la Curva) de 0.654 en la curva ROC sugiere que el modelo tiene un rendimiento moderado en la clasificación binaria entre morosos y no morosos. En otras palabras, el modelo es mejor que una clasificación aleatoria, pero hay margen para mejorar.
 
 
@@ -260,8 +262,6 @@ El AUC (Área Bajo la Curva) de 0.654 en la curva ROC sugiere que el modelo tien
 ### Árbol de decisión
 
 A continuación, se presenta el árbol de decisión final con el parámetro de complejidad óptimo. 
-
-¿QUEREMOS DECIR ALGO DE LOS PORCENTAJES?
 
 ```{r, warning=FALSE, echo=FALSE, fig.cap = "Árbol de clasificación de la variable TARGET, obtenido con la complejidad 'óptima'", fig.show='hold',out.width="75%",out.height="75%"}
 
@@ -278,26 +278,30 @@ rpart.plot(model3$finalModel, box.palette = "auto", shadow.col = "gray", nn = TR
 ```
 El árbol de decisión generado se inicia evaluando la edad del solicitante. Si la edad es mayor o igual a 61.5 años, la clasificación resultante es "No Moroso" (NM). Este primer nivel de decisión sugiere que, en general, los solicitantes de mayor edad tienden a ser clasificados como no morosos directamente.
 
-Por otro lado, si la edad es menor a 61.5 años, el árbol se ramifica, y la siguiente variable considerada es el importe de crédito del préstamo (log_AMT_CREDIT). Si el monto del crédito es mayor o igual a 13.42907, la clasificación es nuevamente "No Moroso" (NM). Esto indica que para los solicitantes más jóvenes con montos de crédito más altos, el modelo tiende a prever que no serán morosos, con una tasa de acierto del 30%.
+Por otro lado, si la edad es menor a 62 años, el árbol se ramifica, y la siguiente variable considerada es el importe de crédito del préstamo (log_AMT_CREDIT). Si el monto del crédito es mayor o igual a 13, la clasificación es nuevamente "No Moroso" (NM). Esto indica que para los solicitantes más jóvenes con montos de crédito más altos, el modelo tiende a prever que no serán morosos, con una tasa de acierto del 30%.
 
-En caso de que el monto del crédito sea menor a 13.42907, el árbol examina la edad del automóvil propio (OWN_CAR_AGE), dividiéndose en dos caminos. Si la edad del automóvil es menor a 8.5 años, el modelo clasifica como "No Moroso" (NM). Sin embargo, si la edad del automóvil es mayor o igual a 8.5 años, se procede a una serie de condiciones adicionales basadas en otras variables como RATIO_CREDIT_INCOME, RATIO_ANNUITY_CREDIT, DTI_RATIO, y otras.
+En caso de que el monto del crédito sea menor a 13, el árbol examina la edad del automóvil propio (OWN_CAR_AGE), dividiéndose en dos caminos. Si la edad del automóvil es menor a 9 años, el modelo clasifica como "No Moroso" (NM). Sin embargo, si la edad del automóvil es mayor o igual a 9 años, se procede a una serie de condiciones adicionales basadas en otras variables como RATIO_CREDIT_INCOME, RATIO_ANNUITY_CREDIT, DTI_RATIO, y otras.
 
 
 Este orden de variables en el árbol está determinado por la importancia relativa de cada variable en la tarea de clasificación. Las variables que ofrecen una mayor separación entre las clases son utilizadas en los niveles iniciales del árbol.
 
 
 ```{r, echo=F, fig.cap = "Importancia de las variables en CART", fig.show='hold',out.width="75%",out.height="80%"}
-# variable_names <- colnames(train_balanceado)
-# importance_values <- model3$finalModel$variable.importance
-# 
-# df<- data.frame(variable_names, importance_values)
-# df <-df[order(df$importance_values),]
-# ggplot(df, aes(x=importance_values, y = reorder(variable_names, +importance_values))) +
-#    geom_bar(stat="identity", color='lightblue',fill='lightblue', width = 0.6)+
-#   labs(title = "Importancia de variables", x="Importancia", y=NULL)
+importance_values <- model3$finalModel$variable.importance
+variable_names <- names(importance_values)
+
+df<- data.frame(variable_names, importance_values)
+df <-df[order(df$importance_values),]
+ggplot(df, aes(x=importance_values, y = reorder(variable_names, +importance_values))) +
+   geom_bar(stat="identity", color='lightblue',fill='lightblue', width = 0.6)+
+  labs(title = "Importancia de variables", x="Importancia", y=NULL)
+
+
+
 ```
 
-Así pues, como podemos observar, en orden de importancia la variable "Edad" es la más relevante a la hora de clasificar a los clientes en morosos y no morosos, donde en el 60% de las veces que se cree un árbol de decisión, saldrá esta variable como la principal. SEGUIR INTERPRETACIÓN, NO PUEDO VER EL GRÁFICO. 
+
+Así pues, como podemos observar, en orden de importancia, la variable "Edad" es la más relevante a la hora de clasificar a los clientes en morosos y no morosos, sugiriendo que en el 70% de las veces en las que se cree un árbol de decisión, saldrá esta variable como la principal.  
 
 
 

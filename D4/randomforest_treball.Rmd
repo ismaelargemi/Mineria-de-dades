@@ -1,16 +1,45 @@
 ---
-title: "random forest"
-author: "Bertita"
-date: "2023-12-08"
-output: html_document
+output: pdf_document
+header-includes:
+- \usepackage{fullpage} 
+- \usepackage[spanish]{babel}
+- \setlength{\headsep}{7mm} 
+- \usepackage[linktoc=page]{hyperref}
+- \usepackage{fancyhdr}
+- \usepackage{floatrow}
+- \floatsetup[figure]{capposition=top}
+- \floatsetup[table]{style=plaintop}
+- \usepackage{float}
+- \floatplacement{figure}{H}
+- \newcommand{\beginsupplement}{
+  \setcounter{table}{45}  
+  \renewcommand{\thetable}{\arabic{table}} 
+  \setcounter{figure}{121} 
+  \renewcommand{\thefigure}{\arabic{figure}}}
+- \setlength{\headheight}{13.6pt}
+- \setlength{\topmargin}{-10mm}
+- \rhead{Minería de Datos}
+- \lhead{Entrega D4}
 ---
 
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{=tex}
+\cfoot{\thepage}
+\setcounter{page}{141}
+```
+
+\beginsupplement
+
+# Random Forest
 
 ```{r, include = F}
 load("Dades noves (balancejada i no balancejada).RData")
 ```
 
-```{r}
+```{r, include = F, warning=F, echo=F}
 library(caret)
 library(randomForest)
 library(mlbench)
@@ -84,7 +113,7 @@ specificity_train <- verdaderos_negativos_train / (verdaderos_negativos_train + 
 sensitivity_train <- verdaderos_positivos_train / (verdaderos_positivos_train + falsos_negativos_train)
 
 ```
-A partir la matriz de confusión del modelo escogido entrenado con los datos de entrenamiento, en este conjunto de datos train se obtiene un Recall de 'r sensitivity_train' y una Especificidad de 'r specificity_train'.
+A partir de la matriz de confusión del modelo escogido entrenado con los datos de entrenamiento, en este conjunto de datos train se obtiene un Recall de 'r sensitivity_train' y una Especificidad de 'r specificity_train'.
 
 ```{r}
 # Train the Random Forest model
