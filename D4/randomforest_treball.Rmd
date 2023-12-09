@@ -1,0 +1,94 @@
+---
+title: "random forest"
+author: "Bertita"
+date: "2023-12-08"
+output: html_document
+---
+
+
+```{r, include = F}
+load("Dades noves (balancejada i no balancejada).RData")
+```
+
+```{r}
+library(caret)
+library(randomForest)
+library(mlbench)
+library(lattice)
+library(doParallel)
+```
+AQUEST PROPER CHUNK TRIGA BASTANT EN CORRER
+```{r}
+cores <- makeCluster(detectCores()-1)
+registerDoParallel(cores = cores)
+
+# Manual search by creating 10 folds and repeating 3 times
+control <- trainControl(method = 'repeatedcv',
+                        number = 10,
+                        repeats = 3,
+                        search = 'grid')
+
+# Create tunegrid with multiple mtry values
+mtry_values <- c(2:8)  # Add or modify mtry values as needed
+tunegrid <- expand.grid(.mtry = mtry_values)
+
+modellist <- list()
+
+# Train with different ntree and mtry parameters
+for (ntree in c(1000, 1500, 2000, 2750, 3500)) {
+  for (mtry in mtry_values) {
+    set.seed(123)
+    fit <- train(TARGET ~ .,
+                 data = train_balanceado,
+                 method = 'rf',
+                 metric = 'Accuracy',
+                 tuneGrid = data.frame(.mtry = mtry),
+                 trControl = control,
+                 ntree = ntree)
+    key <- paste(toString(ntree), "_mtry_", toString(mtry), sep = "")
+    modellist[[key]] <- fit
+  }
+}
+
+# Compare results
+results <- resamples(modellist)
+```
+
+```{r, fig.width=5, fig.height=6}
+# Graficar los resultados de la validación cruzada repetida
+dotplot(results, metric = "Accuracy", pch = 16, auto.key = list(columns = 2))
+```
+En este gráfico, ordenado de mayor a menor accuracy, se observa que alrededor del Random Forest con ntree=1000 y mtry=6 el accuracy se estabiliza en valores de alrededor del 98%. Hay otros parámetros con los que se obtiene un accuracy ligeramente mayor pero en detrimento del coste computacional, por lo que el modelo mencionado es el escogido. 
+```{r}
+cm_rf_train<- modellist[["1000_mtry_6"]][["finalModel"]][["confusion"]]
+
+# primera clase es la negativa, per això estan girats els coeficients
+verdaderos_negativos_train <- cm_rf_train[1, 1]
+falsos_positivos_train <- cm_rf_train[2, 1]
+verdaderos_positivos_train <- cm_rf_train[2, 2]
+falsos_negativos_train <- cm_rf_train[1, 2]
+
+# Calcular Especificidad
+specificity_train <- verdaderos_negativos_train / (verdaderos_negativos_train + falsos_positivos_train)
+
+# Calcular Sensibilidad (Recall)
+sensitivity_train <- verdaderos_positivos_train / (verdaderos_positivos_train + falsos_negativos_train)
+
+```
+A partir la matriz de confusión del modelo escogido entrenado con los datos de entrenamiento, en este conjunto de datos se obtiene un Recall de 'r sensitivity_train' y una Especificidad de 'r specificity_train'.
+
+
+
+```{r}
+# Train the Random Forest model
+rf_model <- randomForest(x = train_balanceado, y = train_balanceado$TARGET, ntree = 1000, mtry=6, importance = TRUE)
+#pred_train<- predict(rf_model, newdata = train_balanceado) només per comprovar
+# Make predictions on the test set
+predictions <- predict(rf_model, newdata = validation_balanceado)
+
+(MC <- confusionMatrix(predictions, validation_balanceado$TARGET, positive = "1"))
+#(MC_train<- confusionMatrix(pred_train, train_balanceado$TARGET, positive = "1"))
+```
+
+
+
