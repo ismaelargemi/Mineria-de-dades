@@ -19,7 +19,7 @@ El objetivo de SVM es el de encontrar un hiperplano que mejor separe las clases 
 Primero, se carga la base de datos balanceada, y se estandariza para evitar problemas derivados de la diferencia de escalas entre las variables.
 ```{r, include = FALSE}
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
-load("Dades noves (balancejada i no balancejada).RData")
+load("Pruebas.RData")
 ```
 
 También se convierte la variable respuesta a factor, ya que se trata  de un problema de clasificación.
@@ -54,15 +54,17 @@ install_load <- function(packages){
 
 requiredpackages <- c('e1071', 'LiblineaR', 'ggplot2')
 install_load(requiredpackages)
+library(e1071)
 ```
 
 ## Encontrar los valores de los hiperparámetros C (coste) y Gamma
 
-Para poder determinar los valores óptimos de los hiperparámetros, se debe hacer una *validación cross-fold*. Una vez se encuentren estos valores óptimos, se ejecutará el SVM con ellos para el conjunto de datos de validación. Esto nos permite obtener las métricas de rendimiento de este modelo sobre los datos, y poder compararlas con las de otros algoritmos de clasificación.
+Para poder determinar los valores óptimos de los hiperparámetros, se debe hacer una *validación cross-fold*. Una vez se encuentren estos valores óptimos, se ejecutará el SVM con ellos (es decir, el mejor modelo) para el conjunto de datos de validación. Esto nos permite obtener las métricas de rendimiento de este modelo sobre los datos, y poder compararlas con las de otros algoritmos de clasificación.
+
+A continuación se usa la función *tune* para encontrar, dentro de una lista predefinida de valores para cada hiperparámetro, la combinación que resulte con el modelo con mejor rendimiento.
 ```{r}
-library(e1071)
 set.seed(1)
-svm_cv <- tune("svm", TARGET ~ ., data = df_preprocessed, kernel = 'radial',
+svm_cv <- tune("svm", TARGET ~ ., data = df_preprocessed, kernel = 'radial', cross = 10,
               ranges = list(cost = c(0.001, 0.01, 0.1, 1, 5, 10, 20),
               gamma = c(0.5, 1, 2, 3, 4, 5, 10)))
 ```
@@ -76,7 +78,7 @@ ggplot(data = svm_cv$performances, aes(x = cost, y = error, color = as.factor(ga
   theme(legend.position = "bottom")
 ```
 
-Con el gráfico anterior se debería poder tener una idea, a nivel visual, del valor del hiperparámetro gamma que minimiza el error. Sin embargo, en nuestro caso la conclusión no es muy clara, con multiples líneas en el gráfico solapandose. A pesar de esto, sí se pueden obtener los valores óptimos con la siguiente instrucción:
+Con el gráfico anterior se debería poder tener una idea, a nivel visual, del valor del hiperparámetro gamma que minimiza el error.En nuestro caso, la conclusión es muy clara, siendo el valor de 0.5 el que minimiza el error con mucha diferencia respecto a los demás valores. También se pueden obtener los valores óptimos con la siguiente instrucción:
 ```{r}
 svm_cv$best.parameters
 ```
@@ -89,11 +91,27 @@ modelo_svm_rbf <- svm_cv$best.model
 summary(modelo_svm_rbf)
 ```
 
+Se puede apreciar como el número de vecotres de soporte, aquellos puntos más cercanos al límite de decisión y que definen la posición del hiperplano, es elevado, contando con 2042.
 
-Entonces con el mejor modelo procedemos a hacer la predicción con los datos de la base de datos de validación, para obtener las métricas del rendimiento del modelo obtenido.
-```{r}
-predicciones <- predict(object = modelo_svm_rbf, validation_balanceado)
+Este fenómeno puede estar causado por varios motivos. Podría ser que la frontera de decisión entre las clases es inherentemente compleja, por lo que se necesitan muchos datos para representar de forma precisa la separación entre las dos clases. También podría haber ocurrido por *overfitting*, situación en la que el modelo tiene muy buen rendimiento con el conjunto de datos de entrenamiento, pero mal rendimiento con datos nuevos. El *overfitting* ocurre cuando el modelo es demasiado complejo en relación con la cantidad de datos disponibles para entrenarlo.
 
-caret::confusionMatrix(data = predicciones, reference = as.factor(validation_balanceado$TARGET), positive = "1")
+A pesar de esto, con el mejor modelo procedemos a hacer la predicción con la base de datos de validación, para obtener las métricas del rendimiento del modelo obtenido.
+```{r, include=FALSE}
+predicciones1 <- predict(object = modelo_svm_rbf, validation_balanceado)
 ```
 
+A continuación se muestra la matriz de confusión para evaluar dichas métricas y la capacidad predictiva del modelo. Hace falta aclarar que en esta matriz, el 0 representa a los "No morosos" y el 1 a los "Morosos". En los comentarios subsecuentes, "negativo" es 0 y "positivo" es 1.
+```{r}
+caret::confusionMatrix(data = predicciones1, reference = as.factor(validation_balanceado$TARGET), positive = "1")
+```
+
+Se puede observar un accuracy del 57%, por tanto la capacidad discriminante del modelo no destaca. También se ven las métricas de sensitivity (habilidad de clasificar registros positivos de entre todos los registros que son verdaderamente positivos) y specificity (habilidad de clasificar registros negativos de entre todos los registros que son verdaderamente negativos). Sensitivity tiene un valor de 0, es decir, que ningún individuo "Moroso" se clasifica correctamente con este modelo. En cambio, specificity toma el valor de 1, significando que todos los individuos "No morosos" se clasifican correctamente.
+
+Se vuelve a ejecutar la matriz de confusión pero con la base de datos de entrenamiento, para verificar si hay *overfitting*.
+```{r}
+predicciones2 <- predict(object = modelo_svm_rbf, train_balanceado)
+```
+
+```{r}
+caret::confusionMatrix(data = predicciones2, reference = as.factor(train_balanceado$TARGET), positive = "1")
+```
