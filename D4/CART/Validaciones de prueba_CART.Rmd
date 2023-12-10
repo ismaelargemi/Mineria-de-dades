@@ -1,0 +1,186 @@
+---
+title: "validaciones"
+author: "Mireia Bolívar"
+date: "2023-12-10"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, include = F}
+load("Pruebas.RData")
+```
+
+
+# ÁRBOL DE DRECISIÓN CON CP=0 (ARBOL 1):
+
+```{r}
+set.seed(1234)
+model <- rpart(TARGET~., data=train_balanceado, cp=0)
+```
+
+```{r}
+xerror <- model$cptable[,"xerror"]
+imin.xerror <- which.min(xerror)
+# Límite superior "oneSE rule" y complejidad mínima por debajo de ese valor
+upper.xerror <- xerror[imin.xerror] + model$cptable[imin.xerror, "xstd"]
+icp <- min(which(xerror <= upper.xerror))
+cp <- model$cptable[icp, "CP"]
+
+tree <- prune(model, cp = cp)
+```
+
+
+```{r}
+predictions <- predict(tree, newdata = validation_balanceado, type="class")
+predictions_train <- predict(tree, newdata = train_balanceado, type="class")
+
+predicted_values <- as.vector(predictions)
+predicted_values_train <- as.vector(predictions_train)
+
+# Create a confusion matrix
+MC1 <- confusionMatrix(as.factor(predicted_values), validation_balanceado$TARGET, positive="1")
+MC1_train <- confusionMatrix(as.factor(predicted_values_train), train_balanceado$TARGET, positive="1")
+
+tabla_cart = MC1$table
+
+rownames(tabla_cart) = c("No moroso","Potencial moroso")
+colnames(tabla_cart) = c("No moroso","Potencial moroso")
+```
+
+```{r, echo=F, warning = F, fig.cap = "Matriz de confusión sobre el conjunto de validación CART", fig.show='hold',out.width="75%",out.height="75%"}
+kbl(tabla_cart,
+    caption = "Matriz de confusión del conjunto de validación",
+    booktabs=T)%>% 
+  kable_styling(position = "center", 
+                latex_options = c("HOLD_position")) %>%
+    add_header_above(c("","Realidad" = 2)) %>%
+   pack_rows(index=c("Predicción"=2))
+```
+
+
+```{r}
+Valores1 <- c(MC1$overall["Accuracy"],MC1$byClass["Sensitivity"], MC1$byClass["Specificity"], MC1$byClass["Recall"], MC1$byClass["F1"], MC1$byClass["Precision"])
+valores_train1<- c(MC1_train$overall["Accuracy"],MC1_train$byClass["Sensitivity"], MC1_train$byClass["Specificity"], MC1_train$byClass["Recall"], MC1_train$byClass["F1"], MC1_train$byClass["Precision"])
+
+tabla_validacion <- data.frame(
+  Train = valores_train1,
+  Test = Valores1
+)
+ kbl(tabla_validacion, caption = "Medidas de Validación para el modelo CART", booktabs=T)%>% 
+                kable_styling(position = "center", 
+                latex_options = c("HOLD_position"))
+
+```
+
+
+
+#ÁRBOL DE DECISIÓN CON CP ÓPTIMO POR LA FUNCIÓN
+
+```{r}
+set.seed(123)
+
+model2 <- train(
+  TARGET ~., data=train_balanceado, method = "rpart",
+  trControl = trainControl("cv", number = 10),
+  tuneLength = 10
+)
+```
+
+```{r, include=FALSE}
+pred <- predict(model2, newdata = validation_balanceado)
+pred_train<- predict(model2, newdata = train_balanceado)
+
+MC <- confusionMatrix(pred, validation_balanceado$TARGET, positive = "1")
+MC_train<- confusionMatrix(pred_train, train_balanceado$TARGET, positive = "1")
+
+tabla_cart = MC$table
+
+rownames(tabla_cart) = c("No moroso","Potencial moroso")
+colnames(tabla_cart) = c("No moroso","Potencial moroso")
+```
+
+```{r, echo=F, warning = F, fig.cap = "Matriz de confusión sobre el conjunto de validación CART", fig.show='hold',out.width="75%",out.height="75%"}
+kbl(tabla_cart,
+    caption = "Matriz de confusión del conjunto de validación",
+    booktabs=T)%>% 
+  kable_styling(position = "center", 
+                latex_options = c("HOLD_position")) %>%
+    add_header_above(c("","Realidad" = 2)) %>%
+   pack_rows(index=c("Predicción"=2))
+```
+```{r, echo=F, warning = F,fig.cap = "Resumen de Medidas de Validación para CART", fig.show='hold',out.width="75%",out.height="75%"}
+Valores <- c(MC$overall["Accuracy"],MC$byClass["Sensitivity"], MC$byClass["Specificity"], MC$byClass["Recall"], MC$byClass["F1"], MC$byClass["Precision"])
+valores_train<- c(MC_train$overall["Accuracy"],MC_train$byClass["Sensitivity"], MC_train$byClass["Specificity"], MC_train$byClass["Recall"], MC_train$byClass["F1"], MC_train$byClass["Precision"])
+
+tabla_validacion <- data.frame(
+  Train = valores_train,
+  Test = Valores
+)
+ kbl(tabla_validacion, caption = "Medidas de Validación para el modelo CART", booktabs=T)%>% 
+                kable_styling(position = "center", 
+                latex_options = c("HOLD_position"))
+
+```
+
+
+# ÁRBOL DE DECISIÓN CON SEGUNDO CP PARA EVITAR OVERFFITING
+COMO SE HACE AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+
+```{r}
+set.seed(123)
+specific_cp <- 0.004672897
+
+# Create the train control
+ctrl <- trainControl("cv", number = 10)
+
+# Train the model with a specific cp value
+model3 <- train(
+  TARGET ~ ., 
+  data = train_balanceado, 
+  method = "rpart",
+  trControl = ctrl,
+  tuneLength = 10,  # You can adjust this as needed
+  tuneGrid = data.frame(cp = specific_cp)  # Specify the specific cp value
+)
+```
+
+
+```{r, include=FALSE}
+pred <- predict(model3, newdata = validation_balanceado)
+pred_train<- predict(model3, newdata = train_balanceado)
+
+MC <- confusionMatrix(pred, validation_balanceado$TARGET, positive = "1")
+MC_train<- confusionMatrix(pred_train, train_balanceado$TARGET, positive = "1")
+
+tabla_cart = MC$table
+
+rownames(tabla_cart) = c("No moroso","Potencial moroso")
+colnames(tabla_cart) = c("No moroso","Potencial moroso")
+```
+
+```{r, echo=F, warning = F, fig.cap = "Matriz de confusión sobre el conjunto de validación CART", fig.show='hold',out.width="75%",out.height="75%"}
+kbl(tabla_cart,
+    caption = "Matriz de confusión del conjunto de validación",
+    booktabs=T)%>% 
+  kable_styling(position = "center", 
+                latex_options = c("HOLD_position")) %>%
+    add_header_above(c("","Realidad" = 2)) %>%
+   pack_rows(index=c("Predicción"=2))
+```
+
+```{r, echo=F, warning = F,fig.cap = "Resumen de Medidas de Validación para CART", fig.show='hold',out.width="75%",out.height="75%"}
+Valores <- c(MC$overall["Accuracy"],MC$byClass["Sensitivity"], MC$byClass["Specificity"], MC$byClass["Recall"], MC$byClass["F1"], MC$byClass["Precision"])
+valores_train<- c(MC_train$overall["Accuracy"],MC_train$byClass["Sensitivity"], MC_train$byClass["Specificity"], MC_train$byClass["Recall"], MC_train$byClass["F1"], MC_train$byClass["Precision"])
+
+tabla_validacion <- data.frame(
+  Train = valores_train,
+  Test = Valores
+)
+ kbl(tabla_validacion, caption = "Medidas de Validación para el modelo CART", booktabs=T)%>% 
+                kable_styling(position = "center", 
+                latex_options = c("HOLD_position"))
+
+```
