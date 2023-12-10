@@ -31,6 +31,7 @@ indices_numericos <- sapply(df_preprocessed, is.numeric)
 df_preprocessed[, indices_numericos] <- scale(df_preprocessed[, indices_numericos])
 ```
 
+
 ```{r, include = FALSE }
 df_preprocessed$TARGET <- as.factor(df_preprocessed$TARGET)
 # head(df_preprocessed)
@@ -52,9 +53,23 @@ install_load <- function(packages){
   }
 }
 
-requiredpackages <- c('e1071', 'LiblineaR', 'ggplot2')
+requiredpackages <- c('e1071', 'LiblineaR', 'ggplot2', 'dplyr', 'kableExtra')
 install_load(requiredpackages)
-library(e1071)
+```
+
+Para escoger el kernel se grafica las dos primeras dimensiones del PCA. 
+
+```{r}
+data_numeric <- train_balanceado[, indices_numericos]
+pc1 <- prcomp(data_numeric, scale=TRUE)
+Psi <- cbind(pc1$x[,1:2], train_balanceado$TARGET)
+colnames(Psi)[3] <- "Target"
+Psi <- as.data.frame(Psi)
+```
+
+```{r, echo = F, fig.cap="PC1 y PC2 respeto la variable Target", fig.show='hold', out.height="75%", out.width="75%"}
+ggplot()+
+  geom_point(data = Psi, aes(x = PC1, y = PC2, color = as.factor(Target)))
 ```
 
 ## Encontrar los valores de los hiperparámetros C (coste) y Gamma
@@ -79,16 +94,30 @@ ggplot(data = svm_cv$performances, aes(x = cost, y = error, color = as.factor(ga
 ```
 
 Con el gráfico anterior se debería poder tener una idea, a nivel visual, del valor del hiperparámetro gamma que minimiza el error.En nuestro caso, la conclusión es muy clara, siendo el valor de 0.5 el que minimiza el error con mucha diferencia respecto a los demás valores. También se pueden obtener los valores óptimos con la siguiente instrucción:
-```{r}
-svm_cv$best.parameters
+```{r, include = FALSE}
+table_params <- svm_cv$best.parameters
+```
+
+```{r, echo=F, warning = F,fig.cap = "Hiperparámetros óptimos", fig.show='hold',out.width="75%",out.height="75%"}
+kbl(table_params,
+    caption = "Hiperparámetros óptimos",
+    booktabs=T)%>% 
+  kable_styling(position = "center", 
+                latex_options = c("HOLD_position"))
 ```
 
 Por tanto, los valores óptimos para los dos hiperparámetros son los anteriores.
 
 A continuación se puede ver más información sobre el mejor modelo encontrado en el *cross-fold validation*.
+
+```{r, include=F}
+modelo_svm_rbf <- svm(TARGET ~ ., data = df_preprocessed, kernel = 'radial', cost = table_params$cost, scale = FALSE, gamma = table_params$gamma)
+summary(modelo_svm)
+```
+
 ```{r}
-modelo_svm_rbf <- svm_cv$best.model
-summary(modelo_svm_rbf)
+# modelo_svm_rbf <- svm_cv$best.model
+# summary(modelo_svm_rbf)
 ```
 
 Se puede apreciar como el número de vecotres de soporte, aquellos puntos más cercanos al límite de decisión y que definen la posición del hiperplano, es elevado, contando con 2042.
@@ -96,22 +125,50 @@ Se puede apreciar como el número de vecotres de soporte, aquellos puntos más c
 Este fenómeno puede estar causado por varios motivos. Podría ser que la frontera de decisión entre las clases es inherentemente compleja, por lo que se necesitan muchos datos para representar de forma precisa la separación entre las dos clases. También podría haber ocurrido por *overfitting*, situación en la que el modelo tiene muy buen rendimiento con el conjunto de datos de entrenamiento, pero mal rendimiento con datos nuevos. El *overfitting* ocurre cuando el modelo es demasiado complejo en relación con la cantidad de datos disponibles para entrenarlo.
 
 A pesar de esto, con el mejor modelo procedemos a hacer la predicción con la base de datos de validación, para obtener las métricas del rendimiento del modelo obtenido.
+
 ```{r, include=FALSE}
 predicciones1 <- predict(object = modelo_svm_rbf, validation_balanceado)
 ```
 
 A continuación se muestra la matriz de confusión para evaluar dichas métricas y la capacidad predictiva del modelo. Hace falta aclarar que en esta matriz, el 0 representa a los "No morosos" y el 1 a los "Morosos". En los comentarios subsecuentes, "negativo" es 0 y "positivo" es 1.
-```{r}
-caret::confusionMatrix(data = predicciones1, reference = as.factor(validation_balanceado$TARGET), positive = "1")
+```{r, include=FALSE}
+MC <- caret::confusionMatrix(data = predicciones1, reference = as.factor(validation_balanceado$TARGET), positive = "1")
+table_svm <- MC$table
+rownames(table_svm) = c("No moroso","Potencial moroso")
+colnames(table_svm) = c("No moroso","Potencial moroso")
+```
+
+```{r, echo=F, warning = F,fig.cap = "Matriz de confusión sobre el conjunto validación SVM", fig.show='hold',out.width="75%",out.height="75%"}
+kbl(table_svm,
+    caption = "Matriz de confusión del conjunto de validación",
+    booktabs=T)%>% 
+  kable_styling(position = "center", 
+                latex_options = c("HOLD_position")) %>%
+    add_header_above(c("","Realidad" = 2)) %>%
+   pack_rows(index=c("Predicción"=2))
 ```
 
 Se puede observar un accuracy del 57%, por tanto la capacidad discriminante del modelo no destaca. También se ven las métricas de sensitivity (habilidad de clasificar registros positivos de entre todos los registros que son verdaderamente positivos) y specificity (habilidad de clasificar registros negativos de entre todos los registros que son verdaderamente negativos). Sensitivity tiene un valor de 0, es decir, que ningún individuo "Moroso" se clasifica correctamente con este modelo. En cambio, specificity toma el valor de 1, significando que todos los individuos "No morosos" se clasifican correctamente.
 
 Se vuelve a ejecutar la matriz de confusión pero con la base de datos de entrenamiento, para verificar si hay *overfitting*.
-```{r}
+
+```{r, include=FALSE}
 predicciones2 <- predict(object = modelo_svm_rbf, train_balanceado)
 ```
 
-```{r}
-caret::confusionMatrix(data = predicciones2, reference = as.factor(train_balanceado$TARGET), positive = "1")
+```{r, include=FALSE}
+MC <- caret::confusionMatrix(data = predicciones2, reference = as.factor(train_balanceado$TARGET), positive = "1")
+table_svm <- MC$table
+rownames(table_svm) = c("No moroso","Potencial moroso")
+colnames(table_svm) = c("No moroso","Potencial moroso")
+```
+
+```{r, echo=F, warning = F,fig.cap = "Matriz de confusión sobre el conjunto validación SVM", fig.show='hold',out.width="75%",out.height="75%"}
+kbl(table_svm,
+    caption = "Matriz de confusión del conjunto de validación",
+    booktabs=T)%>% 
+  kable_styling(position = "center", 
+                latex_options = c("HOLD_position")) %>%
+    add_header_above(c("","Realidad" = 2)) %>%
+   pack_rows(index=c("Predicción"=2))
 ```
