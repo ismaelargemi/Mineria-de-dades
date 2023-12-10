@@ -131,7 +131,7 @@ xgbTree2 <- train(x=Train, y=TARGET, method="xgbTree",
 
 xgb.plot.tree(model=xgbTree2$finalModel, trees = 149)
 ```
-Los árboles de decisión se interpretan de manera que se parte de una primera variable, que en nuestro caso es "OCCUPATION TYPE", y a partir de allí se indica en que dirección se mueve dependiendo de las características presentadas. Por ejemplo, sí "OCCUPATION TYPE" menor a 5.5 entonces se desplaza hacia arriba hacia "AMT_CREDIT", sí esta no es menor a 14.11 entonces se mueve para "RATIO_CREDIT_INCOME" y de esta manera se va moviendo por los nodos hasta llegar a una hoja.
+Los árboles de decisión se interpretan de manera que se parte de una primera variable, que en nuestro caso es "OCCUPATION TYPE", y a partir de allí se indica en que dirección se mueve dependiendo de las características presentadas. Por ejemplo, sí "OCCUPATION TYPE" mayor a 5.5 entonces se desplaza hacia arriba hacia "AMT_CREDIT", sí esta no es mayor a 14.11 entonces se mueve para "RATIO_CREDIT_INCOME" y de esta manera se va moviendo por los nodos hasta llegar a una hoja.
 
 
 ```{r}
