@@ -7,23 +7,60 @@ output: pdf_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r setup, include=FALSE}
 # install.packages("ensembleR")
 # install.packages("ensembleR", dependencies = c("Imports", "Suggests"))
 library(ensembleR)
 ```
 
-```{r}
+```{r, warning=FALSE}
+load("~/GitHub/Mineria-de-dades/D4/Ensemble/Pruebas.RData")
 Train <- train_balanceado
 Test <- validation_balanceado
 
+TARGET_train <- Train[["TARGET"]]
+TARGET_test <- Test[["TARGET"]]
+
+Train <- Train %>%
+  select(-TARGET) %>%
+  mutate(across(where(is.factor), as.numeric))
+
+Test <- Test %>%
+  select(-TARGET) %>%
+  mutate(across(where(is.factor), as.numeric))
+
+Train$TARGET <- TARGET_train
+Test$TARGET <- TARGET_test
+```
+
+
+```{r, warning=FALSE}
 predicciones <- ensemble(
   training = Train, 
   testing = Test, 
   outcomeName = 'TARGET', 
-  BaseModels = c('knn', 'svmLinear','xgboost'), 
+  BaseModels = c('knn', 'lda','qda','rpart','svmLinear','xgbTree','nb'), 
   TopModel = 'rf'
 )
-print(predicciones)
+```
+
+
+```{r, warning=FALSE}
+conf_matrix <- confusionMatrix(predicciones, TARGET_test, positive="1")
+accuracy <- conf_matrix$overall["Accuracy"]
+specificity <- conf_matrix$byClass["Specificity"]
+sensitivity <- conf_matrix$byClass["Sensitivity"]
+f1_score <- conf_matrix$byClass["F1"]
+
+metricas <- data.frame(Accuracy=accuracy,Specificity=specificity,Sensitivity=sensitivity,F1=f1_score)
+metricas <- as.matrix(metricas)
+kbl(metricas, 
+    caption = "Métricas de validación", align = "c")%>% 
+  kable_styling(position = "center", 
+                latex_options = c("HOLD_position"))
 ```
 
 
