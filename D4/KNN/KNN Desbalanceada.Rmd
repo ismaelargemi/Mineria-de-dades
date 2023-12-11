@@ -59,7 +59,7 @@ pacman::p_load('dplyr', 'tidyr', 'gapminder',
 ```
 
 ```{r, include=FALSE}
-load("Dades noves (balancejada i no balancejada).Rdata")
+load("Pruebas.Rdata")
 
 Train <- train_desbalanceado
 Test <- validation_desbalanceado
@@ -80,12 +80,9 @@ Train[,Numeriques] <- scale(Train[,Numeriques])
 Test[,Numeriques] <- scale(Test[,Numeriques])
 ```
 
-# k-Nearest Neighbors
+# k-Nearest Neighbors (Base original/desbalanceada)
 
-Con objeto de ajustar el modelo a nuestra base de datos para predecir la variable respuesta, se usará el método kNN. Para poder ajustar el modelo de manera óptima se sigue un proceso de preparación de los datos, donde se dividen los en dos conjuntos: un conjunto de entrenamiento y un conjunto de prueba. El primer grupo que se utilizará para entrenar el modelo kNN estará compuesto por el 80% de la base de datos original. Asimismo, el conjunto de prueba se empleará para evaluar el rendimiento y precisión del modelo.
-
-A continuación, en el siguiente código aparece la generación del conjunto de train y test:
-
+Con objeto de ajustar el modelo a nuestra base de datos para predecir la variable respuesta, se usará el método kNN. Para poder ajustar el modelo de manera óptima se sigue un proceso de preparación de los datos, donde se dividen en dos conjuntos: un conjunto de entrenamiento y un conjunto de prueba. El primer grupo que se utilizará para entrenar el modelo kNN estará compuesto por el 80% de la base de datos original. Asimismo, el conjunto de prueba se empleará para evaluar el rendimiento y precisión del modelo.
 
 La selección de un valor de K se considera un paso crucial, ya que K es un hiperparámetro en kNN que representa el número de vecinos más cercanos a considerar. Se recomienda realizar pruebas con diferentes valores de K y utilizar la validación cruzada para determinar el valor óptimo. La validación cruzada se usará dentro del conjunto de datos de entrenamiento para encontrar el valor óptimo de k. 
 
@@ -176,7 +173,7 @@ k_opt <- opt$k
 
 Una vez terminado el proceso de Cross-Validación y habiendo encontrado la k óptima, el siguiente paso implica la implementación del algoritmo (con la k seleccionada) para predecir la categoría de la variable respuesta de los individuos del test mediante la información que proporcionan los individuos del train.
 
-Una vez ejecutado el kNN se muestra en una tabla la matriz de confusión y se calcula la precisión con la que el algoritmo ha predicho la variable Target en la población del test.
+Una vez ejecutado el kNN se muestra en una tabla la matriz de confusión y se calcula la precisión con la que el algoritmo ha predicho la variable TARGET en la población del test.
 
 ```{r, echo=FALSE, fig.align='center'}
 cl <- c(Traincl,Testcl)
@@ -207,9 +204,9 @@ La anterior salida nos muestra la matriz de confusión junto con diversos estad�
 **Resultados**
 De entre estos cabe destacar la Accuracy, que en este caso ha sido de `r conf_matrix$overall["Accuracy"]`, por lo que el algoritmo ha predicho correctamente el `r conf_matrix$overall["Accuracy"]*100`% de los individuos de Test.
 
-La "Sensitivity" mide la proporción de individuos de TARGET=0 que han sido clasificados correctamente, que en este caso ha sido de `r conf_matrix$byClass["Sensitivity"]`.
+La "Sensitivity" mide la proporción de individuos de TARGET=1 que han sido clasificados correctamente, que en este caso ha sido de `r conf_matrix$byClass["Sensitivity"]`.
 
-Y finalmente, la "Specificity" mide la proporción de individuos de TARGET=1 que han sido clasificados correctamente, que ha dado `r conf_matrix$byClass["Specificity"]`
+Y finalmente, la "Specificity" mide la proporción de individuos de TARGET=0 que han sido clasificados correctamente, que ha dado `r conf_matrix$byClass["Specificity"]`
 
 **Conclusiones**
 El "modelo" muestra una alta especificidad para la clase 0, es decir, identifica correctamente la mayoría de clientes no morosos. Sin embargo, tiene un desempeño deficiente en la clase 1, sin predecir correctamente ninguna cliente moroso.
