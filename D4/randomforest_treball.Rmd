@@ -1,52 +1,28 @@
 ---
-output: pdf_document
-header-includes:
-- \usepackage{fullpage} 
-- \usepackage[spanish]{babel}
-- \setlength{\headsep}{7mm} 
-- \usepackage[linktoc=page]{hyperref}
-- \usepackage{fancyhdr}
-- \usepackage{floatrow}
-- \floatsetup[figure]{capposition=top}
-- \floatsetup[table]{style=plaintop}
-- \usepackage{float}
-- \floatplacement{figure}{H}
-- \newcommand{\beginsupplement}{
-  \setcounter{table}{45}  
-  \renewcommand{\thetable}{\arabic{table}} 
-  \setcounter{figure}{121} 
-  \renewcommand{\thefigure}{\arabic{figure}}}
-- \setlength{\headheight}{13.6pt}
-- \setlength{\topmargin}{-10mm}
-- \rhead{Minería de Datos}
-- \lhead{Entrega D4}
+title: "random forest"
+author: "Bertita"
+date: "2023-12-08"
+output: html_document
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
-
-```{=tex}
-\cfoot{\thepage}
-\setcounter{page}{141}
-```
-
-\beginsupplement
-
-# Random Forest
 
 ```{r, include = F}
-load("Dades noves (balancejada i no balancejada).RData")
+load("Pruebas.RData")
 ```
 
-```{r, include = F, warning=F, echo=F}
+```{r}
 library(caret)
 library(randomForest)
 library(mlbench)
 library(lattice)
 library(doParallel)
+library(tidyverse)
+library(kableExtra)
 ```
+# Random Forest
 El Random Forest, es un método que destaca por su capacidad para realizar predicciones precisas y robustas de conjuntos de datos. Utiliza un conjunto de árboles de decisión, cada uno entrenado en subconjuntos aleatorios de datos y utilizando subconjuntos aleatorios de características. Al combinar las predicciones de múltiples árboles, el Random Forest reduce el sobreajuste y mejora la generalización del modelo. Este enfoque de "ensamblado" hace que el algoritmo sea resistente al ruido y capaz de manejar conjuntos de datos grandes y complejos. Además, el Random Forest proporciona información sobre la importancia relativa de las características, lo que facilita la identificación de variables influyentes en el proceso de toma de decisiones.
+
+## Selección de parámetros
 
 Para llevar a cabo el Random Forest, se escogen sus dos parámetros principales:
 
@@ -54,11 +30,10 @@ Para llevar a cabo el Random Forest, se escogen sus dos parámetros principales:
 
 2. **Número de características seleccionadas en cada nodo (`mtry`):** Este parámetro indica cuántas características (variables) se deben considerar al hacer una división en cada nodo de un árbol. Una elección adecuada de `mtry` es crucial para el rendimiento del modelo. Valores bajos pueden llevar a la construcción de árboles más decorados y correlacionados, aumentando el riesgo de sobreajuste. Valores altos pueden hacer que los árboles sean más similares y reducir la diversidad del bosque. 
 
-Para encontrar los valores óptimos de ambos parámetros, se realizará un search grid para evaluar el accuracy del modelo para cada par de valores de los parámetros. Del parámetro ntree se probarán los valores 1000, 1500, 2000, 2750 y 3500. No se probará un número mayor por el alto coste computacional que supone. Del mtry, se prueban los valores del 2 al 8, ya que el valor propuesto por la literatura sería 4.
+Para encontrar los valores óptimos de ambos parámetros, se realizará un search grid para evaluar el accuracy del modelo para cada par de valores de los parámetros. Del parámetro ntree se probarán los valores 1000, 1500, 2000, 2750, 3500 y 5000. No se probará un número mayor por el alto coste computacional que supone. Del mtry, se prueban los valores del 2 al 8, ya que el valor propuesto por la literatura sería 4. Para entrenar el modelo para cada par de variables se realiza un 10-fold cross validation.
 
 
-AQUEST PROPER CHUNK TRIGA BASTANT EN CORRER
-```{r}
+```{r, echo=F, warning = F,fig.cap = "Random Forest para pares de valores de parámetros Ntree y Mtry", fig.show='hold',out.width="75%",out.height="75%"}
 cores <- makeCluster(detectCores()-1)
 registerDoParallel(cores = cores)
 
@@ -71,9 +46,10 @@ mtry_values <- c(2:8)  # Add or modify mtry values as needed
 tunegrid <- expand.grid(.mtry = mtry_values)
 
 modellist <- list()
+#1000, 1500, 2000, 2750, 3500, 5000, 7500
 
 # Train with different ntree and mtry parameters
-for (ntree in c(1000, 1500, 2000, 2750, 3500)) {
+for (ntree in c(500,1000, 1500, 2000, 2750, 3500, 5000)) {
   for (mtry in mtry_values) {
     set.seed(123)
     fit <- train(TARGET ~ .,
@@ -96,9 +72,11 @@ results <- resamples(modellist)
 # Graficar los resultados de la validación cruzada repetida
 dotplot(results, metric = "Accuracy", pch = 16, auto.key = list(columns = 2))
 ```
-Se prueban los pares de variables propuestos y en este gráfico, ordenado de mayor a menor accuracy, se observa que a partir del modelo de Random Forest con ntree=1000 y mtry=6 el accuracy se estabiliza en valores de alrededor del 98%. Hay otros parámetros con los que se obtiene un accuracy ligeramente mayor pero en detrimento del coste computacional, por lo que el modelo mencionado es el escogido. 
+Se prueban los pares de variables propuestos y en este gráfico, ordenado de mayor a menor accuracy, se observa que el mayor accuracy lo presenta modelo de Random Forest con ntree=1500 y mtry=8, con valores alrededor del 80%. 
+
+## Desarrollo del modelo y predicciones
 ```{r}
-cm_rf_train<- modellist[["1000_mtry_6"]][["finalModel"]][["confusion"]]
+cm_rf_train<- modellist[["1500_mtry_8"]][["finalModel"]][["confusion"]]
 
 # primera clase es la negativa, per això estan girats els coeficients
 verdaderos_negativos_train <- cm_rf_train[1, 1]
@@ -112,18 +90,27 @@ specificity_train <- verdaderos_negativos_train / (verdaderos_negativos_train + 
 # Calcular Sensibilidad (Recall)
 sensitivity_train <- verdaderos_positivos_train / (verdaderos_positivos_train + falsos_negativos_train)
 
-```
-A partir de la matriz de confusión del modelo escogido entrenado con los datos de entrenamiento, en este conjunto de datos train se obtiene un Recall de 'r sensitivity_train' y una Especificidad de 'r specificity_train'.
+# Calcular Accuracy
+accuracy_train <- (verdaderos_positivos_train + verdaderos_negativos_train) / sum(cm_rf_train)
 
-```{r}
+# Calcular Puntuación F1
+f1_score_train <- 2 * (sensitivity_train * specificity_train) / (sensitivity_train + specificity_train)
+
+precision_train <- verdaderos_positivos_train / (verdaderos_positivos_train + falsos_positivos_train)
+
+```
+A partir de la 10-folds cross validation del modelo escogido, en los datos de entrenamiento se obtiene un Recall de 'r sensitivity_train' y una Especificidad de 'r specificity_train'. 
+
+A continuación se presenta la matriz de confusión del conjunto de validación en el modelo de Random Forest entrenado.
+
+```{r, echo=F, warning = F,fig.cap = "Matriz de confusión sobre el conjunto validación Random Forest", fig.show='hold',out.width="75%",out.height="75%"}
 # Train the Random Forest model
-rf_model <- randomForest(x = train_balanceado[ ,-8], y = train_balanceado$TARGET, ntree = 1000, mtry=6, importance = TRUE)
-pred_train<- predict(rf_model, newdata = train_balanceado)
+rf_model <- randomForest(x = train_balanceado[ ,-8], y = train_balanceado$TARGET, ntree = 1000, mtry=5, importance = TRUE)
+
 # Make predictions on the test set
 predictions <- predict(rf_model, newdata = validation_balanceado)
 
 MC <- confusionMatrix(predictions, validation_balanceado$TARGET, positive = "1")
-MC_train<- confusionMatrix(pred_train, train_balanceado$TARGET, positive = "1")
 
 tabla_rf = MC$table
 
@@ -137,11 +124,11 @@ kbl(tabla_rf,
     add_header_above(c("","Realidad" = 2)) %>%
    pack_rows(index=c("Predicción"=2))
 ```
-
-```{r, echo=F, warning = F,fig.cap = "Matriz de confusión sobre el conjunto validación QDA", fig.show='hold',out.width="75%",out.height="75%"}
-Valores <- c(MC$overall["Accuracy"],MC$byClass["Sensitivity"], MC$byClass["Specificity"], MC$byClass["Recall"], MC$byClass["F1"], MC$byClass["Precision"])
-valores_train<- c(MC_train$overall["Accuracy"],MC_train$byClass["Sensitivity"], MC_train$byClass["Specificity"], MC_train$byClass["Recall"], MC_train$byClass["F1"], MC_train$byClass["Precision"])
-
+## Validación del modelo
+Y a partir de las matrices de confusión de ambos conjuntos de datos train y test, se calculan las diferentes métricas de validación del modelo:
+```{r, echo=F, warning = F,fig.cap = "Medidas de Validación para el modelo Random Forest", fig.show='hold',out.width="75%",out.height="75%"}
+Valores <- c(MC$overall["Accuracy"],MC$byClass["Sensitivity"], MC$byClass["Specificity"], MC$byClass["F1"], MC$byClass["Precision"])
+valores_train<- c(accuracy_train, sensitivity_train , specificity_train, f1_score_train, precision_train )
 tabla_validacion <- data.frame(
   Train = valores_train,
   Test = Valores
@@ -152,9 +139,11 @@ tabla_validacion <- data.frame(
 
 ```
 
-El modelo Random Forest es extremadamente exacto y preciso en las predicciones de la variable respuesta, con un accuracy del 'r MC$overall["Accuracy"]' y un Specificity del 'r MC$byClass["Specificity"]'. Además, se observa que el modelo no presenta sobrajuste porque las distintas métricas son aproximadamente iguales para ambos conjuntos de datos train y test.
+El modelo Random Forest es más o menos exacto en las predicciones de la variable respuesta del conjunto de datos de validación, con un accuracy del 'r MC$overall["Accuracy"]' indica que el modelo acierta en casi el 79% de las predicciones. Además, se observa que el modelo no presenta excesivo sobrajuste porque el Accuracy es aproximadamente igual para ambos conjuntos de datos train y test. Analizando los valores de la Sensibilidad y Especificidad, con un valor de Sensibilidad del 65% en el conjunto de prueba, el modelo tiene una capacidad moderada para identificar a los clientes morosos, lo que significa que el modelo está perdiendo algunas instancias de morosidad, mientras que con una Especificidad de casi el 90% tiene una capacidad significativamente más alta para identificar los clientes no morosos, este valor minimiza los falsos positivos y ayuda a evitar que clientes no morosos sean clasificados incorrectamente como morosos. Sobre el F1, con un valor del 72.56% en el conjunto de prueba, el F1 Score indica un equilibrio razonable entre precisión y sensibilidad. En problemas de morosidad, donde las consecuencias pueden ser significativas, es importante buscar un equilibrio entre identificar correctamente a los morosos y evitar clasificar incorrectamente a los no morosos. Por último, analizando la Precisión, con un valor del 82.11% en el conjunto de prueba indica que, cuando el modelo predice que un cliente es moroso, tiene una alta probabilidad de que sea correcto. Sin embargo, se debe considerar en conjunto con la sensibilidad para no pasar por alto clientes morosos.
 
-```{r}
+## Variables importantes
+La importancia de las variables en Random Forest se basa en cuánto contribuyen al aumento de la homogeneidad de las clases cuando se utilizan para hacer divisiones en los árboles de decisión del bosque.
+```{r, echo=F, fig.cap = "Importancia de las variables en Random Forest", fig.show='hold',out.width="75%",out.height="80%"}
 importance_values <- importance(rf_model, type = 1)
 
 # Convertir los resultados a un data frame
@@ -171,4 +160,4 @@ ggplot(importance_df, aes(x = Importance, y = reorder(Variable, +Importance))) +
   theme_minimal()
 
 ```
-La importancia de las variables en Random Forest se basa en cuánto contribuyen al aumento de la homogeneidad de las clases cuando se utilizan para hacer divisiones en los árboles de decisión del bosque. Se consideraran las variables más importantes las primeras cuatro que se presentan en el gráfico. 
+Se consideraran las variables más importantes las primeras cuatro que se presentan en el gráfico. Se observa que la Ratio entre la anuidad del préstamo y el crédito total solicitado, el DTI (Debt-to-income) ratio (que mide la capacidad del cliente para pagar la annuity de su préstamo en relación con sus ingresos), la Ratio entre el crédito pedido y el salario anual del prestatario (también se puede contar como el número de años que se tarda en devolver el crédito) y el tipo de organización en la que trabajan, son las cuatro variables más importantes, y que por tanto influyen más en la predicción de morosidad de un cliente, en el modelo de Random Forest.
