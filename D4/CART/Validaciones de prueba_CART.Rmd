@@ -130,6 +130,13 @@ tabla_validacion <- data.frame(
 COMO SE HACE AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
 
 ```{r}
+train_balanceado_levels<- train_balanceado
+levels(train_balanceado_levels$TARGET)<- c("NM", "PM")
+
+validation_balanceado_levels <- validation_balanceado
+levels(validation_balanceado_levels$TARGET)<- c("NM", "PM")
+
+
 set.seed(123)
 specific_cp <- 0.004672897
 
@@ -138,22 +145,39 @@ ctrl <- trainControl("cv", number = 10)
 
 # Train the model with a specific cp value
 model3 <- train(
-  TARGET ~ ., 
-  data = train_balanceado, 
-  method = "rpart",
-  trControl = ctrl,
-  tuneLength = 10,  # You can adjust this as needed
-  tuneGrid = data.frame(cp = specific_cp)  # Specify the specific cp value
+  TARGET ~., data=train_balanceado_levels, method = "rpart",
+  trControl = trainControl("cv", number = 10),
+  tuneLength = 10, parms = list(split='information')
 )
+
+# Suponiendo que tienes un objeto de control como este
+ctrl <- trainControl(method = "cv", number = 10)
+
+# Especifica el valor óptimo de cp y la longitud de ajuste para otros hiperparámetros
+tuneGrid <- expand.grid(
+  .cp = c(specific_cp)
+)
+
+# Entrena el modelo con cp fijo y ajusta otros parámetros
+modelo <- train( TARGET ~., data=train_balanceado_levels, method = "rpart",
+  trControl = ctrl,
+  tuneGrid = tuneGrid
+)
+
+grid <- expand.grid(
+  .cp = c(model3$results$cp[2])
+)
+tree <- train(TARGET ~., data=train_balanceado_levels, method = "rpart",
+                    metric="Accuracy", trControl=trainControl(method="none"),tuneGrid=grid)
 ```
 
 
 ```{r, include=FALSE}
-pred <- predict(model3, newdata = validation_balanceado)
-pred_train<- predict(model3, newdata = train_balanceado)
+pred <- predict(tree, newdata = validation_balanceado_levels)
+pred_train<- predict(tree, newdata = train_balanceado_levels)
 
-MC <- confusionMatrix(pred, validation_balanceado$TARGET, positive = "1")
-MC_train<- confusionMatrix(pred_train, train_balanceado$TARGET, positive = "1")
+MC <- confusionMatrix(pred, validation_balanceado_levels$TARGET, positive = "PM")
+MC_train<- confusionMatrix(pred_train, train_balanceado_levels$TARGET, positive = "PM")
 
 tabla_cart = MC$table
 
