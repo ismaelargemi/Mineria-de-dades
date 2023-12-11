@@ -74,10 +74,11 @@ library(caret)
 library(ROSE)
 library(ggplot2)
 library(pROC)
+library(mlbench)
+library(yardstick)
 ```
 
 ```{r, include = F}
-load("Dades noves (balancejada i no balancejada).RData")
 load("Pruebas.RData")
 ```
 
@@ -99,7 +100,7 @@ model <- rpart(TARGET~., data=train_balanceado, cp=0)
 plotcp(model)
 ```
 
-El gráfico indica que la tasa de error para la 10-fold-cross-validation se estabiliza cuando el número de nodos hoja alcanza aproximadamente 128. Para determinar el tamaño ideal del árbol, la línea punteada representa el mínimo de la curva con un error estándar adicional de 1, que es una práctica común en la poda de árboles de decisión, donde se selecciona el árbol más pequeño dentro de 1 SE del mínimo.
+El gráfico indica que la tasa de error para la 10-fold-cross-validation se estabiliza cuando el número de nodos hoja alcanza aproximadamente 9. Para determinar el tamaño ideal del árbol, la línea punteada representa el mínimo de la curva con un error estándar adicional de 1, que es una práctica común en la poda de árboles de decisión, donde se selecciona el árbol más pequeño dentro de 1 SE del mínimo.
 
 Para obtener una perspectiva más precisa sobre la selección del tamaño del árbol se imprimen los valores de CP.
 
@@ -121,8 +122,49 @@ rpart.plot(tree)
 
 ```
 
-Aunque esta estrategia ayuda a evitar el sobreajuste y a seleccionar un modelo que se encuentra en un punto óptimo entre sesgo y varianza, no nos es óptima ya que aunque el cp sea óptimo, el árbol resultante sigue siendo demasiado grande. Así pues, consideramos ajustar la estrategia de selección de complejidad a partir de la función train como veremos a continuación.
+### Validación del modelo con del ARBOL DE DECISION 1
 
+```{r}
+predictions <- predict(tree, newdata = validation_balanceado, type="class")
+predictions_train <- predict(tree, newdata = train_balanceado, type="class")
+
+predicted_values <- as.vector(predictions)
+predicted_values_train <- as.vector(predictions_train)
+
+# Create a confusion matrix
+MC1 <- confusionMatrix(as.factor(predicted_values), validation_balanceado$TARGET, positive="1")
+MC1_train <- confusionMatrix(as.factor(predicted_values_train), train_balanceado$TARGET, positive="1")
+
+tabla_cart = MC1$table
+
+rownames(tabla_cart) = c("No moroso","Potencial moroso")
+colnames(tabla_cart) = c("No moroso","Potencial moroso")
+```
+
+
+```{r, echo=F, warning = F, fig.cap = "Matriz de confusión sobre el conjunto de validación CART", fig.show='hold',out.width="75%",out.height="75%"}
+kbl(tabla_cart,
+    caption = "Matriz de confusión del conjunto de validación",
+    booktabs=T)%>% 
+  kable_styling(position = "center", 
+                latex_options = c("HOLD_position")) %>%
+    add_header_above(c("","Realidad" = 2)) %>%
+   pack_rows(index=c("Predicción"=2))
+```
+
+```{r}
+Valores1 <- c(MC1$overall["Accuracy"],MC1$byClass["Sensitivity"], MC1$byClass["Specificity"], MC1$byClass["Recall"], MC1$byClass["F1"], MC1$byClass["Precision"])
+valores_train1<- c(MC1_train$overall["Accuracy"],MC1_train$byClass["Sensitivity"], MC1_train$byClass["Specificity"], MC1_train$byClass["Recall"], MC1_train$byClass["F1"], MC1_train$byClass["Precision"])
+
+tabla_validacion <- data.frame(
+  Train = valores_train1,
+  Test = Valores1
+)
+ kbl(tabla_validacion, caption = "Medidas de Validación para el modelo CART", booktabs=T)%>% 
+                kable_styling(position = "center", 
+                latex_options = c("HOLD_position"))
+
+```
 
 
 #### Modelo de clasificación con interfaz de `caret`
@@ -150,10 +192,12 @@ results <- as.data.frame(model2$results)
 # TEST
 # Ajustar el modelo para varios valores de cp
 set.seed(123)
-cp_values <- c(0.007812500, 0.008064516, 0.008568548, 
-               0.009072581, 0.012096774, 0.016633065, 
-               0.017137097, 0.017641129, 0.026713710, 
-               0.072832661)  
+
+cp_values <- c(0.004153686, 0.004672897, 0.005192108, 
+               0.005711319, 0.008307373, 0.008826584, 
+               0.009345794, 0.016614746, 0.043613707, 
+               0.057459328) 
+ 
 accuracies <- numeric(length(cp_values))
 
 for (i in seq_along(cp_values)) {
@@ -182,15 +226,35 @@ ggplot() +
        y = "Accuracy") +
   scale_color_manual(name = "Data", values = c("Train" = "blue", "Test" = "red")) +
   theme_minimal()
+
 ```
 En el gráfico se observa como el primer valor del complexity parameter es el que reporta un mayor accuracy tanto para el conjunto de datos de entrenamiento como el de validación, por lo que 'r model2$bestTune' es el valor óptimo. Como el valor del accuracy es muy parecido para ambos conjuntos de datos, podemos concluir que no se produce un sobreajuste del modelo.
+```{r}
+specific_cp <- 0.004672897
+
+# Create the train control
+ctrl <- trainControl("cv", number = 10)
+
+# Train the model with a specific cp value
+model2 <- train(
+  TARGET ~ ., 
+  data = train_balanceado, 
+  method = "rpart",
+  trControl = ctrl,
+  tuneLength = 10,  # You can adjust this as needed
+  tuneGrid = data.frame(cp = specific_cp)  # Specify the specific cp value
+)
+```
 
 
+```{r}
+model2$results
+```
 
 
 ### Validación del modelo
 
-Una vez ejecutado el modelo CART se muestra en una tabla la matriz de confusión y se calcula la precisión con la que el algoritmo ha predicho la variable Target tanto en la población del Train como en la del Test, para observar si ha habido un sobreajuste o no.
+Una vez ejecutado el modelo CART, con el objetivo de validar el modelo, se muestra en una tabla la matriz de confusión y se calcula la precisión con la que el algoritmo ha predicho la variable Target tanto en la población del Train como en la del Test, para observar si ha habido un sobreajuste o no.
 
 ```{r, include=FALSE}
 pred <- predict(model2, newdata = validation_balanceado)

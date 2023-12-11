@@ -72,9 +72,6 @@ ggplot()+
   geom_point(data = Psi, aes(x = PC1, y = PC2, color = as.factor(Target)))
 ```
 
-
-Como se puede ver, haciendo una representación del PCA de la primera dimensión y la segunda (PC1 y PC2) separando por colores la variable respuesta *TARGET*, siendo rojo (1) los clientes considerados como no morosos y azul (2) los potencialmente morosos, se puede concluir que parece que el grupo de no morosos se encuntra dentro del grupo de morosos formando practicamente dos formas redondeadas en ambos casos. Al ver esta relación, se ha concluido que el kernel más adecuado en este caso era el radial. 
-
 ## Encontrar los valores de los hiperparámetros C (coste) y Gamma
 
 Para poder determinar los valores óptimos de los hiperparámetros, se debe hacer una *validación cross-fold*. Una vez se encuentren estos valores óptimos, se ejecutará el SVM con ellos (es decir, el mejor modelo) para el conjunto de datos de validación. Esto nos permite obtener las métricas de rendimiento de este modelo sobre los datos, y poder compararlas con las de otros algoritmos de clasificación.
@@ -97,7 +94,6 @@ ggplot(data = svm_cv$performances, aes(x = cost, y = error, color = as.factor(ga
 ```
 
 Con el gráfico anterior se debería poder tener una idea, a nivel visual, del valor del hiperparámetro gamma que minimiza el error.En nuestro caso, la conclusión es muy clara, siendo el valor de 0.5 el que minimiza el error con mucha diferencia respecto a los demás valores. También se pueden obtener los valores óptimos con la siguiente instrucción:
-
 ```{r, include = FALSE}
 table_params <- svm_cv$best.parameters
 ```
@@ -116,7 +112,7 @@ A continuación se puede ver más información sobre el mejor modelo encontrado 
 
 ```{r, include=F}
 modelo_svm_rbf <- svm(TARGET ~ ., data = df_preprocessed, kernel = 'radial', cost = table_params$cost, scale = FALSE, gamma = table_params$gamma)
-summary(modelo_svm_rbf)
+summary(modelo_svm)
 ```
 
 ```{r}
@@ -135,7 +131,6 @@ predicciones1 <- predict(object = modelo_svm_rbf, validation_balanceado)
 ```
 
 A continuación se muestra la matriz de confusión para evaluar dichas métricas y la capacidad predictiva del modelo. Hace falta aclarar que en esta matriz, el 0 representa a los "No morosos" y el 1 a los "Morosos". En los comentarios subsecuentes, "negativo" es 0 y "positivo" es 1.
-
 ```{r, include=FALSE}
 MC <- caret::confusionMatrix(data = predicciones1, reference = as.factor(validation_balanceado$TARGET), positive = "1")
 table_svm <- MC$table
@@ -177,30 +172,3 @@ kbl(table_svm,
     add_header_above(c("","Realidad" = 2)) %>%
    pack_rows(index=c("Predicción"=2))
 ```
-
-Las matrices de confusión se utilizan comunmente comúnmente en problemas de clasificación para evaluar el rendimiento de un modelo. En este caso, se trata con un modelo que clasifica clientes en dos categorías: no morosos (clase 0) y potencialmente morosos (clase 1). A continuación se interpretarán los elementos que componen esta matriz:
-
-- **Verdaderos positivos (TP): 140.** Esto significa que 140 clientes fueron correctamente clasificados como morosos.
-
-- **Verdaderos negativos (TN): 268.** Indica que 268 clientes fueron correctamente clasificados como no morosos.
-
-- **Falsos positivos (FP): 52.** Representa a clientes que fueron incorrectamente clasificados como morosos cuando en realidad no lo eran.
-
-- **Falsos negativos (FN): 100.** Muestra la cantidad de clientes que fueron incorrectamente clasificados como no morosos cuando en realidad sí lo eran .
-
-Además, también vemos valores que nos indican la Sensibilidad , que es la proporción de positivos reales que se identificaron correctamente.
-
-\( Sensitivity = \frac{TP}{{TP + FN}} = \frac{140}{{140 + 100}} \approx 0.5833 \)
-
-Tmbién la proporción de negativos reales que se identificaron correctamente como tales o especificidad. 
-
-\( Specificity = \frac{TP}{{TP + FN}} = \frac{268}{{268 + 52}} \approx 0.8375 \)
-
-Por último, destacar el valor de Accuracy o exactitud, que es la proporción de predicciones que el modelo clasificó correctamente.
-
-\( Accuracy = \frac{TP+TN}{{TP + TN+ FP+ FN}} = \frac{140+268}{{140+268+100+52}} \approx 0.7286 \)
-
-
-
-
-
