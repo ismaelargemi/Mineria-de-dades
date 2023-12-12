@@ -1,21 +1,46 @@
 ---
-title: "Untitled"
-author: "Oscar Arroyo"
-date: "2023-12-07"
 output: pdf_document
+header-includes:
+  \usepackage{fullpage} 
+  \usepackage[spanish]{babel}
+  \setlength{\headsep}{7mm} 
+  \usepackage[linktoc=page]{hyperref}
+  \usepackage{fancyhdr}
+  \usepackage{floatrow}
+  \floatsetup[figure]{capposition=top}
+  \floatsetup[table]{style=plaintop}
+  \usepackage{float} 
+  \floatplacement{figure}{H} 
+  \newcommand{\beginsupplement}{\setcounter{table}{1}\renewcommand{\thetable}{\arabic{table}} \setcounter{figure}{1} \renewcommand{\thefigure}{\arabic{figure}}}
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+\pagenumbering{arabic}
+
+```{=tex}
+\setlength{\headheight}{13.6pt}
+\setlength{\topmargin}{-10mm}
+
+\rhead{Minería de Datos}
+\lhead{Entrega D3}
+```
+\pagestyle{fancy}
+```{=tex}
+\cfoot{\thepage}
+\setcounter{page}{1}
+```
+\beginsupplement
+
+```{r, include=FALSE}
+knitr::opts_chunk$set(comment="")
 ```
 
 # XGBoost
 
-XGBoost es un modelo basado en árboles de decisión y es una mejora de otros métodos de ensamblaje como el Random Forest. El algoritmo utiliza varios métodos de optimización para mejorar la precisión y controlar el sobreajuste.
+XGBoost es un modelo basado en árboles de decisión y es una mejora de otros métodos de ensamblaje como el Random Forest. El algoritmo utiliza varios métodos de optimización para mejorar la precisión y controlar el sobre ajuste.
 
 El proceso de XGBoost comienza con una predicción inicial y luego calcula los residuos, que son las diferencias entre las predicciones y los valores observados. Luego, crea un árbol de decisión con estos residuales y continúa este proceso, construyendo árboles secuenciales que aprenden de los errores del árbol anterior.
 
-Este modelo se puede ajustar según ciertos parámetros. Para encontrar la mejor combinación de parámetros, se llevará a cabo validación cruzada en el conjunto de entrenamiento con el fin de extraer los mejores hiperparámetros. Posteriormente, se aplicará el mejor modelo obtenido en nuestro conjunto de prueba para su validación.
+Este modelo se puede ajustar según ciertos parámetros. Para encontrar la mejor combinación de parámetros. Se llevará a cabo validación cruzada en el conjunto de entrenamiento con el fin de extraer los mejores hiperparámetros. Posteriormente, se aplicará el mejor modelo obtenido en nuestro conjunto de prueba para su validación.
 
 ```{r, include=FALSE, warning=FALSE}
 library(caret)
@@ -24,6 +49,8 @@ library(xgboost)
 library(kableExtra)
 library(parallel)
 library(DiagrammeR)
+library(ggplot2)
+library(pROC)
 ```
 
 
@@ -45,8 +72,6 @@ Train[,Categoriques] <- NULL
 
 Train <- cbind(Train, Cat)
 
-
-
 #OH Encoding Test
 Test <- validation_balanceado
 
@@ -58,8 +83,6 @@ Cat <- predict(dummyVars("~ .", data = Test[,Categoriques]), newdata = Test[,Cat
 Test[,Categoriques] <- NULL
 
 Test <- cbind(Test, Cat)
-
-c(0.001,0.01,0.1,0.2,0.3)
 ```
 
 ```{r, include=FALSE}
@@ -97,13 +120,18 @@ Posteriormente, se grafica cómo varía el desempeño del modelo en función de 
 ```{r, echo=FALSE}
 ggplot(model)
 ```
-Los valores óptimos de nuestros parámetros podrían ser:
+Los valores óptimos de nuestros parámetros según la función podrían ser:
 
 - Número de rondas de boosting `r model$bestTune$nround`
-- Profundidad de árbol 7
-- Tasa de apredizaje `r model$bestTune$eta `
+- Profundidad de árbol `r model$bestTune$max_depth `
+- Tasa de aprendizaje `r model$bestTune$eta `
 
-La profundidad de árbol se ha escogido que sea 7 debido a que como se puede ver en el gráfico, la accuracy parece estabilizarse a partir de esa profundidad, por lo que los siguiente niveles del árbol no aportarian información extra que ayudase a mejorar la precisión de este.
+Aunque estamos obteniendo estos resultados, queremos estudiar más profundamente en qué valores fijar estos parámetros para mejorar la eficiencia y sencillez de nuestro árbol. Queremos observar cuándo convergen nuestros valores.
+
+Así se propone:
+
+La profundidad del árbol fijada en 7, ya que, según se puede observar en el gráfico anterior, la precisión parece estabilizarse a partir de esa profundidad. Por tanto, los niveles posteriores del árbol no aportarían información adicional que contribuyera a mejorar la precisión del modelo.
+
 
 ```{r}
 dtrain <- xgb.DMatrix(data = as.matrix(Train), label = TARGET)
@@ -116,52 +144,25 @@ params <- list(
   subsample = 1,
   colsample_bytree = 1
 )
+
 #model1 <- xgb.train(dtrain,label=TARGET, params=params, nrounds = 200)
 #xgb_model <- xgb.train(params = params, data = dtrain, nrounds = 200, watchlist = list(train = dtrain, test = dtest))
+
 xgb_model <- xgboost(params = params, data = dtrain, nrounds = 100)
-
-plot(x=1:20,xgb_model$evaluation_log$train_error, type="l")
-points(x=1:20,xgb_model$evaluation_log$train_error, cex=0.5, col="red",pch=19)
 ```
-
-
-Entonces, al implementar XGBoost con estos parámetros, obtenemos el siguiente modelo:
 
 ```{r}
-grid_opt <- expand.grid(
-  nrounds = 100, 
-  max_depth = c(4), 
-  eta = 0.1, 
-  gamma = c(0), 
-  colsample_bytree = c(1), 
-  min_child_weight = c(1), 
-  subsample = c(1) 
-)
-xgbTree <- train(x=Train, y=TARGET, method="xgbTree",
-                    metric="Accuracy", trControl=trainControl(method="none"),tuneGrid=grid_opt)
-
-# xgb.plot.tree(model=xgbTree$finalModel, trees = 149, plot_width = 1000, plot_height = 1000)
-xgb.plot.tree(model=xgbTree$finalModel, trees = 99)
+ggplot(data = xgb_model$evaluation_log, aes(x = 1:length(train_error), y = train_error)) +
+  geom_line(color = "black") +
+  geom_point(color = "red", size = 2, shape = 19) +
+  geom_vline(xintercept=50, linetype="dashed", color="blue")+
+  labs(x = "Número de árboles", y = "Error")
 ```
-En el gráfico anterior se ha realizado el árbol con 15 variables, como se puede observar son demasiadas y es muy difícil de visualizar. Por lo tanto, se vuelve a realizar otro árbol, pero se para en cuatro variables para facilitar su visualización:
+Por otro lado, en este gráfico se puede observar la evolución del error en función del número de iteraciones. Nos muestra como este valor tiende a estabilizarse alrededor de 50. Así se fija el número de rondas en este valor.
 
-```{r}
-grid_opt2 <- expand.grid(
-  nrounds = model$bestTune$nrounds, 
-  max_depth = 4, 
-  eta = model$bestTune$eta, 
-  gamma = c(0), 
-  colsample_bytree = c(1), 
-  min_child_weight = c(1), 
-  subsample = c(1) 
-)
-xgbTree2 <- train(x=Train, y=TARGET, method="xgbTree",
-                    metric="Accuracy", trControl=trainControl(method="none"),tuneGrid=grid_opt2)
+Se escoge como valor de eta 0.1. Aun siendo un valor elevado que podría generar overfitting, queremos probar si obtenemos un buen modelo.
 
-xgb.plot.tree(model=xgbTree2$finalModel, trees = 149)
-```
-Los árboles de decisión se interpretan de manera que se parte de una primera variable, que en nuestro caso es "OCCUPATION TYPE", y a partir de allí se indica en que dirección se mueve dependiendo de las características presentadas. Por ejemplo, sí "OCCUPATION TYPE" menor a 5.5 entonces se desplaza hacia arriba hacia "AMT_CREDIT", sí esta no es menor a 14.11 entonces se mueve para "RATIO_CREDIT_INCOME" y de esta manera se va moviendo por los nodos hasta llegar a una hoja.
-
+Para verificar que nuestro modelo no tiene overfitting, antes de aplicar la prueba ácida, usaremos un conjunto de Test balanceado con nuestro modelo.
 
 ```{r}
 predictxgbTree <- predict(xgbTree,Test)
@@ -172,9 +173,40 @@ conf_matrix <- confusionMatrix(predictxgbTree, as.factor(TARGET_test), positive=
 accuracy <- conf_matrix$overall["Accuracy"]
 specificity <- conf_matrix$byClass["Specificity"]
 sensitivity <- conf_matrix$byClass["Sensitivity"]
-f1_score <- conf_matrix$byClass["F1"]
 
-metricas <- data.frame(Accuracy=accuracy,Specificity=specificity,Sensitivity=sensitivity,F1=f1_score)
+metricas <- data.frame(Accuracy=accuracy,Specificity=specificity,Sensitivity=sensitivity)
+metricas <- as.matrix(metricas)
+kbl(metricas, 
+    caption = "Métricas de validación", align = "c")%>% 
+  kable_styling(position = "center", 
+                latex_options = c("HOLD_position"))
+```
+
+Comparando Accuracy, en train obtenemos un 0.8179768 y en test 0.7910714, lo que verifica que el modelo con estos parámetros no genera overfitting. Ahora aplicaremos la prueba ácida, con datos test desbalanceados.
+
+
+```{r}
+Test <- validation_desbalanceado
+
+TARGET_test <- as.vector(Test$TARGET)
+Test$TARGET <- NULL 
+
+Cat <- predict(dummyVars("~ .", data = Test[,Categoriques]), newdata = Test[,Categoriques])
+
+Test[,Categoriques] <- NULL
+
+Test <- cbind(Test, Cat)
+
+predictxgbTree <- predict(xgbTree,Test)
+conf_matrix <- confusionMatrix(predictxgbTree, as.factor(TARGET_test), positive="1")
+```
+
+```{r}
+accuracy <- conf_matrix$overall["Accuracy"]
+specificity <- conf_matrix$byClass["Specificity"]
+sensitivity <- conf_matrix$byClass["Sensitivity"]
+
+metricas <- data.frame(Accuracy=accuracy,Specificity=specificity,Sensitivity=sensitivity)
 metricas <- as.matrix(metricas)
 kbl(metricas, 
     caption = "Métricas de validación", align = "c")%>% 
@@ -186,14 +218,42 @@ kbl(metricas,
 
 Los resultados del modelo XGBoost muestran un rendimiento sólido en la clasificación, con una precisión  en la predicción del `r accuracy` %.
 
-Destaca la alta sensibilidad del modelo, alcanzando un `r sensitivity`, lo que indica su capacidad para identificar correctamente la mayoría de los casos positivos. Además, la especificidad es del `r specificity`, lo que nos muestra su eficacia en la identificación de casos negativos. 
+Destaca la alta especificidad del modelo, alcanzando un `r specificity`, lo que indica su capacidad para identificar correctamente los verdaderos negativos. Además, la sensibilidad es del `r sensitivity`, lo que nos muestra su eficacia en la identificación de casos positivos, aunque es mejorable. 
 
-El equilibrio entre precisión y sensibilidad, representado por el F1 score de `r f1_score`, demuestra una buena capacidad general del modelo en la tarea de clasificación. Esta evaluación sugiere que el modelo no presenta overfitting.
+Esta evaluación sugiere que el modelo no presenta overfitting, ya que se presentan valores similares en la precisión y otros.
 
-**Conclusiones**
+Así el árbol conseguido en el modelo es el siguiente:
+```{r}
+grid_opt <- expand.grid(
+  nrounds = 50, 
+  max_depth = c(7), 
+  eta = 0.1, 
+  gamma = c(0), 
+  colsample_bytree = c(1), 
+  min_child_weight = c(1), 
+  subsample = c(1) 
+)
+xgbTree <- train(x=Train, y=TARGET, method="xgbTree",
+                    metric="Accuracy", trControl=trainControl(method="none"),tuneGrid=grid_opt)
 
-Los resultados del modelo XGBoost revelan un rendimiento consistente en la tarea de clasificación, destacando especialmente por su alta sensibilidad. Además, esta evaluación indica que el modelo no exhibe sobreajuste.
+xgb.plot.tree(model=xgbTree$finalModel, trees = 49)
+```
+Los niveles iniciales de nuestro árbol, desde la raíz, revelan las variables más relevantes para la clasificación de los clientes. Observamos cómo estas variables y sus respectivos puntos de corte se despliegan de la siguiente manera:
 
-El análisis del árbol resalta ciertas variables como las más importantes, entre las cuales se encuentran AMT_CREDIT, DTI_RATIO, NAME_EDUCATION_TYPE, RATIO_CREDIT_INCOME, RATIO_ANNUITY_CREDIT y OCCUPATION_TYPE. Aunque este árbol representa solo una instancia de los muchos posibles, su elección de cuatro variables como las más relevantes sugiere que es una buena opción.
+Primer nivel: Se realiza una división utilizando la característica log_AMT_CREDIT con un umbral de < 0.115123019. Si se cumple esta condición, se avanza al segundo nivel; de lo contrario, se llega a una hoja. Esta característica és el logaritmo de
 
+La hoja resultante de esta división tiene una cobertura de 1.09869659, lo que significa que esta regla se aplica a aproximadamente 1.1 unidades de datos.
 
+Segundo nivel: Se divide utilizando la característica OWN_CAR_AGE con un umbral de < 11.8223429. Si se cumple la condición, se avanza al tercer nivel A; de lo contrario, se accede al nivel B.
+
+Tercer nivel A: Se divide utilizando la característica CAR_AGE con un umbral de < 16.5.
+
+Tercer nivel B: Se divide utilizando la característica CNT_FAM_MEMBERS con un umbral de < 4.8.
+
+La característica CNT_FAM_MEMBERS muestra un valor de Ganancia (Gain) de 1.77633166 al dividir los datos. Esto indica que contribuye significativamente a la reducción de la impureza o mejora la separación de los datos en comparación con otras características en este nivel específico del árbol.
+
+Este patrón continúa a través de los niveles subsiguientes hasta alcanzar el séptimo nivel. Es importante destacar que la siguiente variable en orden de importancia es la edad.
+
+**Conclusiones:**
+
+Los resultados del modelo XGBoost revelan un rendimiento consistente en la tarea de clasificación, particularmente notorio por su alta especificidad. Consideramos que este modelo es eficaz para clasificar nuestros datos según nuestros objetivos, aunque nos interesa más una sensibilidad elevada que una alta especificidad. Una mayor sensibilidad implica tener más falsos negativos que falsos positivos, lo cual es crucial al considerar si un cliente será moroso o no.

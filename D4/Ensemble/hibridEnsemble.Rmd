@@ -35,17 +35,36 @@ knitr::opts_chunk$set(comment="")
 ```
 
 ```{r, include=FALSE}
-# install.packages("ensembleR")
-# install.packages("ensembleR", dependencies = c("Imports", "Suggests"))
-library(ensembleR)
 library(dplyr)
 library(kableExtra)
+library(caret)
+library(caretEnsemble)
+library(car)
+```
+
+```{r}
+generar_tabla_metricas <- function(predicciones, nombre_top_model) {
+  conf_matrix <- confusionMatrix(predicciones, TARGET_test, positive = "1")
+  accuracy <- conf_matrix$overall["Accuracy"]
+  specificity <- conf_matrix$byClass["Specificity"]
+  sensitivity <- conf_matrix$byClass["Sensitivity"]
+  f1_score <- conf_matrix$byClass["F1"]
+  
+  metricas <- data.frame(Accuracy = accuracy,
+                         Specificity = specificity,
+                         Sensitivity = sensitivity,
+                         F1 = f1_score)
+  
+  rownames(metricas) <- nombre_top_model  
+  
+  return(metricas)
+}
 ```
 
 ```{r, warning=FALSE}
 load("~/GitHub/Mineria-de-dades/D4/Ensemble/Pruebas.RData")
 Train <- train_balanceado
-Test <- validation_balanceado
+Test <- validation_desbalanceado
 
 TARGET_train <- Train[["TARGET"]]
 TARGET_test <- Test[["TARGET"]]
@@ -64,75 +83,89 @@ Test$TARGET <- TARGET_test
 
 # Ensemble Híbrido
 
-En este último apartado del trabajo se implementa un método de ensamblaje híbrido.
+En este último apartado del trabajo se implementan dos métodos de ensamblaje híbrido.
 
-Este consiste en la combinación de diferentes técnicas de ensamblaje en un solo marco de trabajo para mejorar el rendimiento predictivo del modelo. Este enfoque se basa en la premisa de que la combinación de múltiples modelos puede proporcionar predicciones más precisas y robustas que cualquier modelo individual.
+Un ensamblaje híbrido consiste en la combinación de diferentes técnicas de ensamblaje en un solo marco de trabajo para mejorar el rendimiento predictivo del modelo. Este enfoque se basa en la premisa de que la combinación de múltiples modelos puede proporcionar predicciones más precisas y robustas que cualquier modelo individual.
 
-En este caso se entrenan varios modelos y luego se usa otro modelo, llamado meta-modelo, para combinar las predicciones de los anteriores. Así, para encontrar el mejor meta-modelo comparamos las precisiones y otras métricas de validación para ver cuál es el mejor meta-modelo para nuestros datos.
+
+EXPLICAR MEJOR
+El método de ensamblaje empleado utiliza un modelo lineal para realizar la regresión de las predicciones de nuestros modelos, con el objetivo de obtener más información sobre la contribución de cada modelo y también para observar si hay diferencias entre estos dos métodos de ensamblaje.
 
 ```{r}
-resultados <- list()
+set.seed(123) 
+folds <- createFolds(Train$TARGET, k = 10)
 
-# modelos base
-modelos_base <- c('knn', 'lda', 'qda', 'rpart', 'svmLinear','nb','rf', 'xgbTree')
+control <- trainControl(method = "cv", number = 10, classProbs=TRUE, savePredictions="final", index = folds)
 
-# Bucle para probar cada modelo como TopModel
-for (modelo in modelos_base) {
-  # Excluir el modelo actual top model
-  modelos_para_entrenar <- modelos_base[which(modelos_base != modelo)]
-  
-  # Entrenar el modelo con el modelo actual como TopModel
-  predicciones <- ensemble(
-    training = Train,
-    testing = Test,
-    outcomeName = 'TARGET',
-    BaseModels = modelos_para_entrenar,
-    TopModel = modelo
-  )
-  
-  # Calcular la matriz de confusión
-  conf_matrix <- confusionMatrix(predicciones, TARGET_test, positive = "1")
-  
-  # Obtener métricas de evaluación
-  accuracy <- conf_matrix$overall["Accuracy"]
-  specificity <- conf_matrix$byClass["Specificity"]
-  sensitivity <- conf_matrix$byClass["Sensitivity"]
-  f1_score <- conf_matrix$byClass["F1"]
-  
-  # Guardar las métricas en la lista de resultados
-  resultados[[modelo]] <- list(
-    Metrics = c(Accuracy = accuracy, Specificity = specificity, Sensitivity = sensitivity, F1 = f1_score),
-    Predictions = as.matrix(conf_matrix$byClass)
-  )
-}
-str(resultados)
+lista <- c('knn', 'lda', 'qda', 'svmLinear', 'nb', 'rpart', 'rf','xgbTree')
+
+Train$TARGET <- as.factor(make.names(as.character(Train$TARGET)))
+
+models <- caretList(
+  TARGET~., data=Train, trControl=control, methodList=lista
+)
 ```
 
 
-```{r, warning=FALSE}
-# predicciones <- ensemble(
-#   training = Train, 
-#   testing = Test, 
-#   outcomeName = 'TARGET', 
-#   BaseModels = c('knn', 'lda','qda','rpart','svmLinear','xgbTree','nb'), 
-#   TopModel = 'rf'
-# )
+```{r}
+result <- caretEnsemble(models)
+sr <- summary(result)
 ```
 
+REDACCIÓN DE LOS PESOS
+
+```{r}
+predicciones_wgt <- predict(result, newdata=Test)
+```
+
+Comparamos las metricas de validacion de ambos procesos de ensamblaje con un conjunto de datos Test balanceado para observar overfitting:
 
 ```{r, warning=FALSE}
-# conf_matrix <- confusionMatrix(predicciones, TARGET_test, positive="1")
-# accuracy <- conf_matrix$overall["Accuracy"]
-# specificity <- conf_matrix$byClass["Specificity"]
-# sensitivity <- conf_matrix$byClass["Sensitivity"]
-# f1_score <- conf_matrix$byClass["F1"]
-# 
-# metricas <- data.frame(Accuracy=accuracy,Specificity=specificity,Sensitivity=sensitivity,F1=f1_score)
-# metricas <- as.matrix(metricas)
-kbl(resultados[[modelo]], 
+metricas_rf <- generar_tabla_metricas(predicciones_rf, "Random Forest")
+levels(predicciones_wgt) <- gsub("X", "", levels(predicciones_wgt))
+metricas_wgt <- generar_tabla_metricas(predicciones_wgt, "Weighted")
+
+tabla_metricas_completa <- rbind(metricas_wgt, metricas_rf)
+
+
+kbl(as.matrix(tabla_metricas_completa), 
     caption = "Métricas de validación", align = "c")%>% 
   kable_styling(position = "center", 
                 latex_options = c("HOLD_position"))
 ```
 
 
+Vemos como ambos metodos obtienen resultados en las metricas de validacion muy similares, mostrando un buen desempeño en las predicciones, aun mostrando un poco de descompensacion en la especificidad y la sensibilidad.....
+
+Ahora hacemos la prueba ácida:
+```{r}
+Test <- validation_desbalanceado
+
+TARGET_test <- Test[["TARGET"]]
+
+Test <- Test %>%
+  select(-TARGET) %>%
+  mutate(across(where(is.factor), as.numeric))
+
+Test$TARGET <- TARGET_test
+
+predicciones_wgt <- predict(result, newdata=Test)
+```
+
+Comparamos las metricas de validacion de ambos procesos de ensamblaje con un conjunto de datos Test balanceado para observar overfitting:
+
+```{r, warning=FALSE}
+metricas_rf <- generar_tabla_metricas(predicciones_rf, "Random Forest")
+levels(predicciones_wgt) <- gsub("X", "", levels(predicciones_wgt))
+metricas_wgt <- generar_tabla_metricas(predicciones_wgt, "Weighted")
+
+tabla_metricas_completa <- rbind(metricas_wgt, metricas_rf)
+
+
+kbl(as.matrix(tabla_metricas_completa), 
+    caption = "Métricas de validación", align = "c")%>% 
+  kable_styling(position = "center", 
+                latex_options = c("HOLD_position"))
+```
+
+Conclusiones
