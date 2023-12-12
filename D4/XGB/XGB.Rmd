@@ -9,13 +9,15 @@ output: pdf_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+# XGBoost
+
 XGBoost es un modelo basado en árboles de decisión y es una mejora de otros métodos de ensamblaje como el Random Forest. El algoritmo utiliza varios métodos de optimización para mejorar la precisión y controlar el sobreajuste.
 
 El proceso de XGBoost comienza con una predicción inicial y luego calcula los residuos, que son las diferencias entre las predicciones y los valores observados. Luego, crea un árbol de decisión con estos residuales y continúa este proceso, construyendo árboles secuenciales que aprenden de los errores del árbol anterior.
 
 Este modelo se puede ajustar según ciertos parámetros. Para encontrar la mejor combinación de parámetros, se llevará a cabo validación cruzada en el conjunto de entrenamiento con el fin de extraer los mejores hiperparámetros. Posteriormente, se aplicará el mejor modelo obtenido en nuestro conjunto de prueba para su validación.
 
-```{r, include=FALSE}
+```{r, include=FALSE, warning=FALSE}
 library(caret)
 library(dplyr)
 library(xgboost)
@@ -25,41 +27,46 @@ library(DiagrammeR)
 ```
 
 
-```{r}
-# OH Encoding
-# load("Dades noves (balancejada i no balancejada).Rdata")
-# 
-# Train <- train_balanceado
-# 
-# TARGET <- as.vector(Train$TARGET)
-# Train$TARGET <- NULL #TARGET tiene q ser factor 2 niveles, no numeric
-# 
-# Objectos <- sapply(Train, class)
-# Categoriques <- names(Objectos)[which(Objectos%in%c("factor"))]
-# 
-# Cat <- predict(dummyVars("~ .", data = Train[,Categoriques]), newdata = Train[,Categoriques])
-# 
-# Train[,Categoriques] <- NULL
-# 
-# Train <- cbind(Train, Cat)
-```
-
-
-```{r}
-# Numeric
-load("Dades noves (balancejada i no balancejada).Rdata")
+```{r, include=FALSE,include=FALSE}
+#OH Encoding Train
+load("Pruebas.Rdata")
 
 Train <- train_balanceado
+
 TARGET <- as.vector(Train$TARGET)
-Train <- Train %>% select(-"TARGET") %>%
-  mutate_if(is.factor, as.numeric)
+Train$TARGET <- NULL #TARGET tiene q ser factor 2 niveles, no numeric
+
+Objectos <- sapply(Train, class)
+Categoriques <- names(Objectos)[which(Objectos%in%c("factor"))]
+
+Cat <- predict(dummyVars("~ .", data = Train[,Categoriques]), newdata = Train[,Categoriques])
+
+Train[,Categoriques] <- NULL
+
+Train <- cbind(Train, Cat)
+
+
+
+#OH Encoding Test
+Test <- validation_balanceado
+
+TARGET_test <- as.vector(Test$TARGET)
+Test$TARGET <- NULL #TARGET tiene q ser factor 2 niveles, no numeric
+
+Cat <- predict(dummyVars("~ .", data = Test[,Categoriques]), newdata = Test[,Categoriques])
+
+Test[,Categoriques] <- NULL
+
+Test <- cbind(Test, Cat)
+
+c(0.001,0.01,0.1,0.2,0.3)
 ```
 
-```{r}
+```{r, include=FALSE}
 grid <- expand.grid(
-  nrounds = c(100,150), # Número de rondas de boosting
-  max_depth = seq(3,15,by=2), # Profundidad máxima de los árboles
-  eta = c(0.001,0.005,0.01), # Tasa de aprendizaje
+  nrounds = c(100), # Número de rondas de boosting
+  max_depth = seq(3,15), # Profundidad máxima de los árboles
+  eta = c(0.001,0.01,0.1,0.2,0.3), # Tasa de aprendizaje
   gamma = c(0), # Parámetro de regularización
   colsample_bytree = c(1), # Fracción de columnas para cada árbol
   min_child_weight = c(1), # Suma mínima de pesos de las instancias necesarias en un hijo
@@ -69,8 +76,8 @@ grid <- expand.grid(
 control <- trainControl(method = "cv", number = 10, verboseIter = FALSE, allowParallel = TRUE)
 ```
 
-
-```{r}
+```{r, include=FALSE}
+set.seed(1234)
 model <- train(
   x = Train, 
   y = TARGET,
@@ -87,22 +94,44 @@ Esto implica entrenar y evaluar el modelo con cada combinación para encontrar l
 
 Posteriormente, se grafica cómo varía el desempeño del modelo en función de estos valores, lo que ayudará a identificar la configuración óptima para obtener mejores resultados en otros conjuntos de datos.
 
-```{r}
+```{r, echo=FALSE}
 ggplot(model)
 ```
 Los valores óptimos de nuestros parámetros podrían ser:
 
 - Número de rondas de boosting `r model$bestTune$nround`
-- Profundidad de árbol `r model$bestTune$max_depth `
+- Profundidad de árbol 7
 - Tasa de apredizaje `r model$bestTune$eta `
+
+La profundidad de árbol se ha escogido que sea 7 debido a que como se puede ver en el gráfico, la accuracy parece estabilizarse a partir de esa profundidad, por lo que los siguiente niveles del árbol no aportarian información extra que ayudase a mejorar la precisión de este.
+
+```{r}
+dtrain <- xgb.DMatrix(data = as.matrix(Train), label = TARGET)
+dtest <- xgb.DMatrix(data = as.matrix(Test), label = TARGET_test)
+params <- list(
+  objective = "binary:hinge",
+  eval_metric = "error",
+  eta = 0.1,
+  max_depth = 7,
+  subsample = 1,
+  colsample_bytree = 1
+)
+#model1 <- xgb.train(dtrain,label=TARGET, params=params, nrounds = 200)
+#xgb_model <- xgb.train(params = params, data = dtrain, nrounds = 200, watchlist = list(train = dtrain, test = dtest))
+xgb_model <- xgboost(params = params, data = dtrain, nrounds = 100)
+
+plot(x=1:20,xgb_model$evaluation_log$train_error, type="l")
+points(x=1:20,xgb_model$evaluation_log$train_error, cex=0.5, col="red",pch=19)
+```
+
 
 Entonces, al implementar XGBoost con estos parámetros, obtenemos el siguiente modelo:
 
 ```{r}
 grid_opt <- expand.grid(
-  nrounds = model$bestTune$nrounds, 
-  max_depth = model$bestTune$max_depth, 
-  eta = model$bestTune$eta, 
+  nrounds = 100, 
+  max_depth = c(4), 
+  eta = 0.1, 
   gamma = c(0), 
   colsample_bytree = c(1), 
   min_child_weight = c(1), 
@@ -112,7 +141,7 @@ xgbTree <- train(x=Train, y=TARGET, method="xgbTree",
                     metric="Accuracy", trControl=trainControl(method="none"),tuneGrid=grid_opt)
 
 # xgb.plot.tree(model=xgbTree$finalModel, trees = 149, plot_width = 1000, plot_height = 1000)
-xgb.plot.tree(model=xgbTree$finalModel, trees = 149)
+xgb.plot.tree(model=xgbTree$finalModel, trees = 99)
 ```
 En el gráfico anterior se ha realizado el árbol con 15 variables, como se puede observar son demasiadas y es muy difícil de visualizar. Por lo tanto, se vuelve a realizar otro árbol, pero se para en cuatro variables para facilitar su visualización:
 
@@ -135,35 +164,8 @@ Los árboles de decisión se interpretan de manera que se parte de una primera v
 
 
 ```{r}
-#OH enc
-# 
-# Test <- validation_balanceado
-# 
-# TARGET_test <- Test$TARGET
-# Test$TARGET <- NULL 
-# 
-# Objectos <- sapply(Test, class)
-# Categoriques <- names(Objectos)[which(Objectos%in%c("factor"))]
-# 
-# Cat <- predict(dummyVars("~ .", data = Test[,Categoriques]), newdata = Test[,Categoriques])
-# 
-# Test[,Categoriques] <- NULL
-# 
-# Test <- cbind(Test, Cat)
-```
-
-
-```{r}
-#Numerico
-Test <- validation_balanceado
-TARGET_test <- Test[["TARGET"]]
-Test <- Test %>%
-         mutate_if(is.factor, as.numeric)
-```
-
-```{r}
 predictxgbTree <- predict(xgbTree,Test)
-conf_matrix <- confusionMatrix(predictxgbTree, TARGET_test, positive="1")
+conf_matrix <- confusionMatrix(predictxgbTree, as.factor(TARGET_test), positive="1")
 ```
 
 ```{r}
