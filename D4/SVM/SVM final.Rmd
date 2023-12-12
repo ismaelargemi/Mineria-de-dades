@@ -12,9 +12,9 @@ header-includes:
   \usepackage{float}
   \floatplacement{figure}{H}
   \newcommand{\beginsupplement}{
-  \setcounter{table}{58}  
+  \setcounter{table}{70}  
   \renewcommand{\thetable}{\arabic{table}} 
-  \setcounter{figure}{139} 
+  \setcounter{figure}{146} 
   \renewcommand{\thefigure}{\arabic{figure}}}
   \setlength{\headheight}{13.6pt}
   \setlength{\topmargin}{-10mm}
@@ -37,11 +37,12 @@ header-includes:
 
 ```{=tex}
 \cfoot{\thepage}
-\setcounter{page}{164}
-\setcounter{figure}{139}
-\setcounter{table}{58}
+\setcounter{page}{180}
+\setcounter{figure}{146}
+\setcounter{table}{70}
 ```
-### Support Vector Machine (SVM)
+
+# Support Vector Machine (SVM)
 
 En este apartado se aborda el modelo predictivo llamado Support Vector Machine (SVM). Se trata de un algoritmo de machine learning supervisado, y usado para funciones de clasificación y regresión.
 
