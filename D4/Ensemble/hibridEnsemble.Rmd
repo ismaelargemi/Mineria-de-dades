@@ -1,19 +1,45 @@
 ---
-title: "Untitled"
-author: "Oscar Arroyo"
-date: "2023-12-07"
 output: pdf_document
+header-includes:
+  \usepackage{fullpage} 
+  \usepackage[spanish]{babel}
+  \setlength{\headsep}{7mm} 
+  \usepackage[linktoc=page]{hyperref}
+  \usepackage{fancyhdr}
+  \usepackage{floatrow}
+  \floatsetup[figure]{capposition=top}
+  \floatsetup[table]{style=plaintop}
+  \usepackage{float} 
+  \floatplacement{figure}{H} 
+  \newcommand{\beginsupplement}{\setcounter{table}{49}\renewcommand{\thetable}{\arabic{table}} \setcounter{figure}{123} \renewcommand{\thefigure}{\arabic{figure}}}
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+\pagenumbering{arabic}
+
+```{=tex}
+\setlength{\headheight}{13.6pt}
+\setlength{\topmargin}{-10mm}
+
+\rhead{Minería de Datos}
+\lhead{Entrega D3}
+```
+\pagestyle{fancy}
+```{=tex}
+\cfoot{\thepage}
+\setcounter{page}{146}
+```
+\beginsupplement
+
+```{r, include=FALSE}
+knitr::opts_chunk$set(comment="")
 ```
 
-
-```{r setup, include=FALSE}
+```{r, include=FALSE}
 # install.packages("ensembleR")
 # install.packages("ensembleR", dependencies = c("Imports", "Suggests"))
 library(ensembleR)
+library(dplyr)
+library(kableExtra)
 ```
 
 ```{r, warning=FALSE}
@@ -36,28 +62,74 @@ Train$TARGET <- TARGET_train
 Test$TARGET <- TARGET_test
 ```
 
+# Ensemble Híbrido
 
-```{r, warning=FALSE}
-predicciones <- ensemble(
-  training = Train, 
-  testing = Test, 
-  outcomeName = 'TARGET', 
-  BaseModels = c('knn', 'lda','qda','rpart','svmLinear','xgbTree','nb'), 
-  TopModel = 'rf'
-)
+En este último apartado del trabajo se implementa un método de ensamblaje híbrido.
+
+Este consiste en la combinación de diferentes técnicas de ensamblaje en un solo marco de trabajo para mejorar el rendimiento predictivo del modelo. Este enfoque se basa en la premisa de que la combinación de múltiples modelos puede proporcionar predicciones más precisas y robustas que cualquier modelo individual.
+
+En este caso se entrenan varios modelos y luego se usa otro modelo, llamado meta-modelo, para combinar las predicciones de los anteriores. Así, para encontrar el mejor meta-modelo comparamos las precisiones y otras métricas de validación para ver cuál es el mejor meta-modelo para nuestros datos.
+
+```{r}
+resultados <- list()
+
+# modelos base
+modelos_base <- c('knn', 'lda', 'qda', 'rpart', 'svmLinear','nb','rf', 'xgbTree')
+
+# Bucle para probar cada modelo como TopModel
+for (modelo in modelos_base) {
+  # Excluir el modelo actual top model
+  modelos_para_entrenar <- modelos_base[which(modelos_base != modelo)]
+  
+  # Entrenar el modelo con el modelo actual como TopModel
+  predicciones <- ensemble(
+    training = Train,
+    testing = Test,
+    outcomeName = 'TARGET',
+    BaseModels = modelos_para_entrenar,
+    TopModel = modelo
+  )
+  
+  # Calcular la matriz de confusión
+  conf_matrix <- confusionMatrix(predicciones, TARGET_test, positive = "1")
+  
+  # Obtener métricas de evaluación
+  accuracy <- conf_matrix$overall["Accuracy"]
+  specificity <- conf_matrix$byClass["Specificity"]
+  sensitivity <- conf_matrix$byClass["Sensitivity"]
+  f1_score <- conf_matrix$byClass["F1"]
+  
+  # Guardar las métricas en la lista de resultados
+  resultados[[modelo]] <- list(
+    Metrics = c(Accuracy = accuracy, Specificity = specificity, Sensitivity = sensitivity, F1 = f1_score),
+    Predictions = as.matrix(conf_matrix$byClass)
+  )
+}
+str(resultados)
 ```
 
 
 ```{r, warning=FALSE}
-conf_matrix <- confusionMatrix(predicciones, TARGET_test, positive="1")
-accuracy <- conf_matrix$overall["Accuracy"]
-specificity <- conf_matrix$byClass["Specificity"]
-sensitivity <- conf_matrix$byClass["Sensitivity"]
-f1_score <- conf_matrix$byClass["F1"]
+# predicciones <- ensemble(
+#   training = Train, 
+#   testing = Test, 
+#   outcomeName = 'TARGET', 
+#   BaseModels = c('knn', 'lda','qda','rpart','svmLinear','xgbTree','nb'), 
+#   TopModel = 'rf'
+# )
+```
 
-metricas <- data.frame(Accuracy=accuracy,Specificity=specificity,Sensitivity=sensitivity,F1=f1_score)
-metricas <- as.matrix(metricas)
-kbl(metricas, 
+
+```{r, warning=FALSE}
+# conf_matrix <- confusionMatrix(predicciones, TARGET_test, positive="1")
+# accuracy <- conf_matrix$overall["Accuracy"]
+# specificity <- conf_matrix$byClass["Specificity"]
+# sensitivity <- conf_matrix$byClass["Sensitivity"]
+# f1_score <- conf_matrix$byClass["F1"]
+# 
+# metricas <- data.frame(Accuracy=accuracy,Specificity=specificity,Sensitivity=sensitivity,F1=f1_score)
+# metricas <- as.matrix(metricas)
+kbl(resultados[[modelo]], 
     caption = "Métricas de validación", align = "c")%>% 
   kable_styling(position = "center", 
                 latex_options = c("HOLD_position"))
