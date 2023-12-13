@@ -12,9 +12,9 @@ header-includes:
 - \usepackage{float}
 - \floatplacement{figure}{H}
 - \newcommand{\beginsupplement}{
-  \setcounter{table}{45}  
+  \setcounter{table}{72}  
   \renewcommand{\thetable}{\arabic{table}} 
-  \setcounter{figure}{121} 
+  \setcounter{figure}{148} 
   \renewcommand{\thefigure}{\arabic{figure}}}
 - \setlength{\headheight}{13.6pt}
 - \setlength{\topmargin}{-10mm}
@@ -22,13 +22,26 @@ header-includes:
 - \lhead{Entrega D4}
 ---
 
+
+```{=tex}
+\setlength{\headheight}{13.6pt}
+\setlength{\topmargin}{-10mm}
+```
+
+\pagestyle{fancy}
+
+```{=tex}
+\rhead{Mineria de Datos}
+\lhead{Entrega D4}
+```
+
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ```{=tex}
 \cfoot{\thepage}
-\setcounter{page}{141}
+\setcounter{page}{184}
 ```
 
 \beginsupplement
@@ -52,7 +65,7 @@ En este contexto, la estructura de un Árbol de Decisión se modela de forma an�
 - Las hojas del árbol en el contexto financiero contienen la información crucial: la etiqueta o el valor predicho relacionado con la capacidad del cliente para afrontar compromisos financieros. Esto puede manifestarse como una clasificación de riesgo, como "solvente" o "en riesgo", proporcionando una guía clara para las decisiones crediticias.
 
 
-Así pues, a continuación se procede a realizar dicho análisis discriminante.
+Así pues, a continuación se procede a realizar dicho análisis predictivo.
 
 
 ### Desarrollo del CART
@@ -83,95 +96,6 @@ load("Pruebas.RData")
 ```
 
 Para inciar el desarrollo del modelo, el primer paso es encontrar el valor óptimo del complexity parameter, o parámetro de complejidad, que controla la cantidad de ramificaciones y nodos terminales en el árbol. Este parámetro juega un papel importante en la regularización del árbol, evitando que éste se vuelva demasiado complejo y se adapte demasiado a los datos de entrenamiento, lo que podría resultar en un sobreajuste del modelo. 
-
-
-Para encontrar este valor óptimo de complejidad, se ejecutarán dos funciones diferentes. Por un lado, se utilizará la función `rpart` con cp=0 que construye el árbol utilizando la validación cruzada para podarlo. Por otro lado, se hará uso de la función `train` de la libreria CARET, que emplea bootstrap de las observaciones para seleccionar el valor óptimo del hiperparámetro cp, a través de emplear una valdiación cruzada. 
-
-
-#### Modelo de clasificación con `rpart`
-
-Obtenemos el árbol de clasifiación con todas las opciones por defecto (split="gini", etc), pero con un cp=0 para encontrar el valor óptimo del (hiper)parámetro de complejidad. Se construye un árbol de decisión completo y se emplea validación cruzada para podarlo.
-
-
-```{r, warning=FALSE, echo=FALSE, fig.cap = "Evaluación del error (reescalado) de validación cruzada en función del parámetro de complejidad.", fig.show='hold',out.width="75%",out.height="75%"}
-set.seed(1234)
-#hace 10-fold CV by default
-model <- rpart(TARGET~., data=train_balanceado, cp=0)
-plotcp(model)
-```
-
-El gráfico indica que la tasa de error para la 10-fold-cross-validation se estabiliza cuando el número de nodos hoja alcanza aproximadamente 9. Para determinar el tamaño ideal del árbol, la línea punteada representa el mínimo de la curva con un error estándar adicional de 1, que es una práctica común en la poda de árboles de decisión, donde se selecciona el árbol más pequeño dentro de 1 SE del mínimo.
-
-Para obtener una perspectiva más precisa sobre la selección del tamaño del árbol se imprimen los valores de CP.
-
-```{r, echo=TRUE}
-printcp(model)
-```
-Para obtener el modelo final, seleccionamos el valor óptimo de complejidad siguiendo el criterio de un error estándar de Breiman et al. (1984) y podamos el árbol.
-
-```{r, warning=FALSE, echo=FALSE, fig.cap = "Árbol de clasificación de `train_balanceado$TARGET` obtenido después de la poda", fig.show='hold',out.width="75%",out.height="75%"}
-xerror <- model$cptable[,"xerror"]
-imin.xerror <- which.min(xerror)
-# Límite superior "oneSE rule" y complejidad mínima por debajo de ese valor
-upper.xerror <- xerror[imin.xerror] + model$cptable[imin.xerror, "xstd"]
-icp <- min(which(xerror <= upper.xerror))
-cp <- model$cptable[icp, "CP"]
-
-tree <- prune(model, cp = cp)
-rpart.plot(tree) 
-
-```
-
-### Validación del modelo con del ÁRBOL DE DECISION 1
-
-```{r}
-predictions <- predict(tree, newdata = validation_balanceado, type="class")
-predictions_train <- predict(tree, newdata = train_balanceado, type="class")
-
-predicted_values <- as.vector(predictions)
-predicted_values_train <- as.vector(predictions_train)
-
-# Create a confusion matrix
-MC1 <- confusionMatrix(as.factor(predicted_values), validation_balanceado$TARGET, positive="1")
-MC1_train <- confusionMatrix(as.factor(predicted_values_train), train_balanceado$TARGET, positive="1")
-
-tabla_cart = MC1$table
-
-rownames(tabla_cart) = c("No moroso","Potencial moroso")
-colnames(tabla_cart) = c("No moroso","Potencial moroso")
-```
-
-
-```{r, echo=F, warning = F, fig.cap = "Matriz de confusión sobre el conjunto de validación CART", fig.show='hold',out.width="75%",out.height="75%"}
-kbl(tabla_cart,
-    caption = "Matriz de confusión del conjunto de validación",
-    booktabs=T)%>% 
-  kable_styling(position = "center", 
-                latex_options = c("HOLD_position")) %>%
-    add_header_above(c("","Realidad" = 2)) %>%
-   pack_rows(index=c("Predicción"=2))
-```
-
-```{r}
-Valores1 <- c(MC1$overall["Accuracy"],MC1$byClass["Sensitivity"], MC1$byClass["Specificity"], MC1$byClass["Recall"], MC1$byClass["F1"], MC1$byClass["Precision"])
-valores_train1<- c(MC1_train$overall["Accuracy"],MC1_train$byClass["Sensitivity"], MC1_train$byClass["Specificity"], MC1_train$byClass["Recall"], MC1_train$byClass["F1"], MC1_train$byClass["Precision"])
-
-tabla_validacion <- data.frame(
-  Train = valores_train1,
-  Test = Valores1
-)
- kbl(tabla_validacion, caption = "Medidas de Validación para el modelo CART", booktabs=T)%>% 
-                kable_styling(position = "center", 
-                latex_options = c("HOLD_position"))
-
-```
-
-
-
-
-#### Modelo de clasificación con interfaz de `caret`
-
-A través de la libreria `CARET` podemos ajustar un árbol CART seleccionando method = "rpart". Por defecto emplea bootstrap de las observaciones para seleccionar el valor óptimo del hiperparámetro cp (considerando únicamente tres posibles valores). Si queremos emplear validación cruzada, empleamos la función auxiliar trainControl() y para considerar un mayor rango de posibles valores, el argumento tuneLength.
 
 Entonces, para encontrar este valor óptimo del parámetro de complejidad, se entrena el modelo con los datos balanceados de Train y se realiza un proceso de crosvalidación con 10 folds. Entonces calculamos el accuracy para cada 10 valores posibles del complexity parameter tanto para los datos train como test.
 
@@ -231,12 +155,14 @@ ggplot() +
   theme_minimal()
 
 ```
-En el gráfico se observa como el primer valor del complexity parameter es el que reporta un mayor accuracy tanto para el conjunto de datos de entrenamiento. No obstante, no únicamente buscamos el hiperparámetro que nos aporta un mayor accuracy, sino que también nos interesa encontrar un cp con el que además de maximizar el accuracy, evitemos overffiting (sobreajuste del modelo). Así pues, observamos como el segundo valor del complexity parameter nos da un valor que no se aleja mucho del accuracy mayor, y además nos evita en una gran manera overfitting. Por lo tanto, el cop óptimo para nuestro árbol de decisión final es `r model2$results$cp[2]`
-
+En el gráfico se observa como el primer valor del complexity parameter es el que reporta un mayor accuracy para el conjunto de datos de entrenamiento. No obstante, no únicamente buscamos el hiperparámetro que nos aporte un mayor accuracy, sino que también nos interesa encontrar un cp con el que además de maximizar el accuracy, evitemos overffiting (sobreajuste del modelo). Así pues, observamos como el segundo valor del complexity parameter nos da un valor que no se aleja mucho del accuracy óptimo y, además, nos evita en una gran manera un overfitting. Por lo tanto, concluimos que el cp óptimo para nuestro árbol de decisión final es `r model2$results$cp[2]`.
 
 
 ```{r, include=FALSE}
 # **model tree final**
+
+train_balanceado_levels<- train_balanceado
+levels(train_balanceado_levels$TARGET)<- c("NM", "PM")
 
 grid <- expand.grid(
   .cp = c(model2$results$cp[2])
@@ -303,17 +229,74 @@ tabla_validacion <- data.frame(
 
 La anterior salida nos muestra la matriz de confusión junto con diversos estadísticos que tratan de explicar como de bien o mal ha predicho el algoritmo de CART. Así pues, como se observa, las medidas de validación son aproximadamente las mismas tanto para Train como para Test, por lo tanto, reafirmamos que no hay un sobreajuste en el modelo (como ya se había dicho anteriormente). 
 
-En este caso, la precisión ha sido del `r round(MC$overall["Accuracy"],4)`%, lo que indica que el algoritmo ha predicho correctamente el `r round(MC$overall["Accuracy"]*100, 4)`% de los individuos de Test. 
+En este caso, la precisión ha sido del `r round(MC$overall["Accuracy"],4)`%, lo que indica que el algoritmo ha predicho correctamente el `r round(MC$overall["Accuracy"]*100, 4)`% de los individuos de Test.  Esto indica que el modelo es capaz de clasificar correctamente a la mayoría de los clientes en categorías de riesgo crediticio.
 
-La "Sensitivity" mide la proporción de individuos de TARGET=0 que han sido clasificados correctamente, que en este caso ha sido de `r round(MC$byClass["Sensitivity"]*100,4)`.
+La sensibilidad del modelo, que mide la capacidad de identificar clientes potencialmente morosos, es del `r round(MC$byClass["Sensitivity"]*100,4)`% en el conjunto de prueba. Esto sugiere que hay margen para mejorar en la identificación de clientes con dificultades de pago.
 
-Por otro lado, la "Specificity" mide la proporción de individuos de TARGET=1 que han sido clasificados correctamente, que ha dado un valor muy elevado, de`r round(MC$byClass["Specificity"]*100,4)`.
+Por otro lado, el modelo muestra una alta especificidad, del `r round(MC$byClass["Specificity"]*100,4)`%, indicando su habilidad para identificar clientes no morosos con precisión. 
 
-Si observamos otras métricas disponibles, apreciaremos una tasa de valores positivos predichos de `r round(MC$byClass["Pos Pred Value"]*100,4)`% y una tasa de valores negativos predichos de `r round(MC$byClass["Neg Pred Value"]*100,4)`%. Este hecho implica que al predecir una clase, la probabilidad de que ésta sea clasificada correctamente es de entorno al 77%. Por último, podemos apreciar que el valor del F-score es de `r 2/((1/MC$overall["Accuracy"]) + (1/MC$byClass["Specificity"]))`, métrica perjudicada por el bajo valor de la sensibilidad. \newline
+Si observamos otras métricas disponibles, apreciaremos como la precisión, que mide la exactitud de las predicciones positivas, es del `r round(MC$byClass["Precision"]*100,4)`% en el conjunto de prueba. Esto significa que cuando el modelo predice que un cliente es potencialmente moroso, es correcto en aproximadamente el 82.76% de las veces. Por último, podemos apreciar como la puntuación F1, que equilibra precisión y recuperación, es del 62.3% en el conjunto de prueba, indicandonos que el modelo logra un buen equilibrio entre la precisión de las predicciones positivas y la capacidad para recuperar casos positivos. 
+
+En resumen, el modelo muestra un buen rendimiento general, especialmente en términos de especificidad, pero hay margen para mejorar en la identificación de clientes potencialmente morosos, como lo sugiere la sensibilidad y la puntuación F1 en ambos conjuntos. 
+
+
+### Prueba ácida
+
+```{r, include=FALSE}
+train_balanceado_levels<- train_balanceado
+levels(train_balanceado_levels$TARGET)<- c("NM", "PM")
+
+validation_desbalanceado_levels <- validation_desbalanceado
+levels(validation_desbalanceado_levels$TARGET)<- c("NM", "PM")
+
+
+pred <- predict(tree, newdata = validation_desbalanceado_levels)
+pred_train<- predict(tree, newdata = train_balanceado_levels)
+
+MC <- confusionMatrix(pred, validation_desbalanceado_levels$TARGET, positive = "PM")
+MC_train<- confusionMatrix(pred_train, train_balanceado_levels$TARGET, positive = "PM")
+
+tabla_cart = MC$table
+
+rownames(tabla_cart) = c("No moroso","Potencial moroso")
+colnames(tabla_cart) = c("No moroso","Potencial moroso")
+```
+
+```{r, echo=F, warning = F, fig.cap = "Matriz de confusión sobre el conjunto de validación CART sobre test desbalanceado", fig.show='hold',out.width="75%",out.height="75%"}
+kbl(tabla_cart,
+    caption = "Matriz de confusión del conjunto de validación desbalanceado",
+    booktabs=T)%>% 
+  kable_styling(position = "center", 
+                latex_options = c("HOLD_position")) %>%
+    add_header_above(c("","Realidad" = 2)) %>%
+   pack_rows(index=c("Predicción"=2))
+```
 
 
 
-#### Curva ROC
+```{r, echo=F, warning = F,fig.cap = "Resumen de Medidas de Validación para CART sobre test desbalanceado", fig.show='hold',out.width="75%",out.height="75%"}
+Valores <- c(MC$overall["Accuracy"],MC$byClass["Sensitivity"], MC$byClass["Specificity"], MC$byClass["Recall"], MC$byClass["F1"], MC$byClass["Precision"])
+valores_train<- c(MC_train$overall["Accuracy"],MC_train$byClass["Sensitivity"], MC_train$byClass["Specificity"], MC_train$byClass["Recall"], MC_train$byClass["F1"], MC_train$byClass["Precision"])
+
+tabla_validacion <- data.frame(
+  Train = valores_train,
+  Test_desbalanceado = Valores
+)
+ kbl(tabla_validacion, caption = "Medidas de Validación con el conjunto test desbalanceado para el modelo CART", booktabs=T)%>% 
+                kable_styling(position = "center", 
+                latex_options = c("HOLD_position"))
+
+```
+
+El accuracy del modelo en el conjunto de prueba desbalanceado ha sido del `r round(MC$overall["Accuracy"],4)`%, lo que indica que el `r round(MC$overall["Accuracy"],4)`% de las predicciones fueron buenas. Sin embargo, la exactitud puede ser engañosa en conjuntos de datos desbalanceados, donde la mayoría de las observaciones pertenecen a una clase particular. Por otra parte, la sensibilidad en el conjunto de prueba desbalanceado es bastante baja, solo del 15%. Esto significa que el modelo tiene dificultades para identificar correctamente a los clientes morosos. La sensibilidad es especialmente crucial en situaciones financieras, ya que representa la capacidad del modelo para capturar la totalidad de los casos positivos (morosos) reales. En este caso, el bajo valor de sensibilidad indica que el modelo está dejando pasar un número significativo de clientes morosos sin detectarlos.
+
+Así pues, la especificidad que mide la capacidad del modelo para identificar correctamente los casos negativos (clientes no morosos), es del 93.14%. Esto sugiere que el modelo tiene un buen rendimiento al identificar a los clientes que no son morosos. Sin embargo, es importante destacar que la alta especificidad podría deberse al desbalance en los datos, ya que hay más clientes no morosos en el conjunto de prueba.
+
+
+Finalmente,  el valor de F1 es del 15.48%, lo que refleja un equilibrio entre precisión y sensibilidad. Este valor relativamente bajo sugiere que hay margen de mejora en la capacidad del modelo para identificar clientes morosos sin comprometer demasiado la precisión. De la misma manera, en cuanto a la precisión (Precision), es del 16%, lo que significa que de las instancias que el modelo predice como morosas, solo el 16% son realmente morosas. Este valor puede ser bajo, indicando que el modelo podría estar generando demasiados falsos positivos.
+
+
+### Curva ROC
 
 Para un análisis más profundo sobre la calidad de predicción del modelo, se representa la curva ROC y se interpreta su área bajo la curva (AUC).
 
@@ -328,15 +311,15 @@ plot.roc(tree.roc, print.auc = TRUE, main = "Curva ROC", col = "blue", lwd = 2, 
 
 ```
 
-El AUC (Área Bajo la Curva) de 0.760 en la curva ROC sugiere que el modelo tiene una capacidad moderadamente buena para distinguir en la clasificación binaria entre morosos y no morosos. En otras palabras, el modelo es mejor que una clasificación aleatoria, es prometedor y sugiere que el modelo tiene un rendimiento decente en términos de discriminación. Sin embargo, hay margen para mejorar.
+El AUC (Área Bajo la Curva) de 0.760 en la curva ROC sugiere que el modelo tiene una capacidad moderadamente buena para distinguir en la clasificación binaria entre morosos y no morosos. En otras palabras, el modelo es mejor que una clasificación aleatoria, es prometedor y sugiere que el modelo tiene un rendimiento decente en términos de discriminación. Sin embargo, hay un pequeño margen para mejorar.
 
 
 
-### Árbol de decisión
+## Árbol de decisión
 
-A continuación, se presenta el árbol de decisión final con el parámetro de complejidad óptimo. 
+A continuación, se presenta el árbol de decisión final con el parámetro de complejidad óptimo elegido. 
 
-```{r, warning=FALSE, echo=FALSE, fig.cap = "Árbol de clasificación de la variable TARGET, obtenido con la complejidad 'óptima'", fig.show='hold',out.width="75%",out.height="75%"}
+```{r, warning=FALSE, echo=FALSE, fig.cap = "Árbol de clasificación de la variable TARGET, obtenido con la complejidad 'óptima'"}
 
 train_balanceado_levels<- train_balanceado
 levels(train_balanceado_levels$TARGET)<- c("NM", "PM")
@@ -350,18 +333,18 @@ tree <- train(TARGET ~., data=train_balanceado_levels, method = "rpart",
                     metric="Accuracy", trControl=trainControl(method="none"),tuneGrid=grid)
 
 
-
 # Grafica el árbol de decisión
-rpart.plot(tree$finalModel, box.palette = "auto", shadow.col = "gray", nn = TRUE)
-
+rpart.plot(tree$finalModel, box.palette = "auto", shadow.col = "gray", nn = TRUE, extra=101)
 ```
-El árbol de decisión generado se inicia evaluando la edad del solicitante. Si la edad es mayor o igual a 57 años, el modelo tiende a clasificar al individuo como "No Moroso" con una probabilidad del 81.8%. Este primer nivel de decisión sugiere que la edad es un factor determinante en la predicción de la no morosidad.
 
-Por otro lado, dentro de la categoria de clientes más jovenes, el árbol se ramifica según el ratio anualidad/crédito (RATIO_ANNITY_CREDIT). Aquellos con un ratio inferior a 0.0295 presentan una alta probabilidad de no ser morosos (86.21%), sugiriendo que clientes con cargas de anualidad más bajas en comparación con su crédito son menos propensos a tener dificultades de pago. 
+
+El árbol de decisión generado se inicia evaluando la edad del solicitante. Si la edad es mayor o igual a 57 años, el modelo tiende a clasificar al individuo como "No Moroso" con un accuracy del 85%. Este primer nivel de decisión sugiere que la edad es un factor determinante en la predicción de la no morosidad.
+
+Por otro lado, dentro de la categoria de clientes más jovenes, el árbol se ramifica según el ratio anualidad/crédito (RATIO_ANNITY_CREDIT). Aquellos con un ratio inferior a 0.0295, se los clasifica como no morosos con un accuracy del 91%, sugiriendo que clientes con cargas de anualidad más bajas en comparación con su crédito son menos propensos a tener dificultades de pago. 
 
 En contraste, para clientes con un ratio mayor o igual a 0.0295, factores adicionales como el estado civil, número de miembros familiares y educación influyen en la clasificación.
 
-Clientes casados y con más de 2 miembros familiares tienden a tener una probabilidad del 61.25% de no ser morosos. En casos específicos, como aquellos con menos de 2 miembros familiares y educación incompleta, la probabilidad de no morosidad alcanza el 72.25%.
+Clientes casados y con más de 2 miembros familiares tienden a tener una probabilidad de ser clasificados correctamente de no ser morosos (accuracy) de un 80%. En casos específicos, como aquellos con menos de 2 miembros familiares y educación incompleta, la probabilidad ser clasificados en clientes no morosos alcanza el 88%.
 
 La segmentación se profundiza aún más considerando variables como la región del cliente, la ocupación y la relación anualidad/crédito. En situaciones particulares, como ocupaciones desconocidas y ratios anualidad/crédito superiores a 0.03193, la probabilidad de morosidad se incrementa significativamente (71.81%).
 
@@ -374,21 +357,24 @@ variable_names <- names(importance_values)
 
 df<- data.frame(variable_names, importance_values)
 df <-df[order(df$importance_values),]
-ggplot(df, aes(x=importance_values, y = reorder(variable_names, +importance_values))) +
+top_10 <- head(df, 10)
+
+ggplot(top_10, aes(x=importance_values, y = reorder(variable_names, +importance_values))) +
    geom_bar(stat="identity", color='lightblue',fill='lightblue', width = 0.6)+
   labs(title = "Importancia de variables", x="Importancia", y=NULL)
 
 ```
+La variable "CNT_FAM_MEMBERS" (Número de miembros de la familia) es la característica más influyente en la clasificación del riesgo crediticio, con una importancia relativa del 218.19%. Esto sugiere que la composición familiar tiene un impacto significativo en la capacidad de pago.
 
+Por otro lado, el estado civil "Married" (Casado) y la relación entre la anualidad y el crédito ("RATIO_ANNUITY_CREDIT") son también factores cruciales, con importancias del 74.26% y 64.80%, respectivamente. Estos indican que el estado civil y la relación entre la anualidad y el crédito desempeñan un papel fundamental en la toma de decisiones crediticias.
 
-Así pues, como podemos observar, en orden de importancia, la variable "Edad" es la más relevante a la hora de clasificar a los clientes en morosos y no morosos, sugiriendo que en el 70% de las veces en las que se cree un árbol de decisión, saldrá esta variable como la principal.  
+Además, la "Edad" ("AGE_YEARS") del solicitante es otra variable clave, con una importancia del 57.85%. Esto refuerza la conclusión de que la edad es un factor importante en la predicción de la no morosidad.
 
+En resumen, las variables más influyentes, como el número de miembros de la familia, estado civil, relación anualidad/crédito y edad, resaltan la importancia de aspectos fundamentales en la evaluación del riesgo. Además, factores sociodemográficos como la ubicación geográfica y la educación juegan un papel crucial en la toma de decisiones crediticias.\newline
 
 
 **Conclusiones**  \newline
 
-En resumen, el árbol de decisión proporciona un marco claro para entender cómo el modelo clasifica a los solicitantes en función de sus características, permitiendo una interpretación detallada de las reglas de decisión utilizadas en la evaluación de la morosidad, siendo la variable EDAD la más importante en la tarea de clasificación de clientes morosos.
-
 Como la sensibilidad obtenida ha sido mucho más baja que la especificidad, concluimos que el modelo tiene más dificultades para identificar los casos positivos reales (morosos) en comparación con su habilidad para identificar correctamente los casos negativos reales (no morosos). Este resultado no nos es beneficioso en la clasificación, ya que en este contexto quizás sea mejor detectar adecuadamente casos posotivos (morosos), para así reducir el número de clientes morosos.
 
-En resumen, observando los resultados obtenidos, se puede afirmar que los resultados obtenidos son un tanto pobres, siendo necesario utilizar algún otro tipo de modelo de predicción que aporte valores más óptimos.
+Así pues concluimos que el modelo CART proporciona una herramienta valiosa para la clasificación de riesgo crediticio, destacando la importancia de variables clave como los miembros de la familia, la edad y la relación entre la anualidad y el crédito. Para mejorar aún más, es recomendable explorar ajustes en la sensibilidad y considerar otras técnicas de modelado que puedan aportar mejoras específicas para el objetivo del problema.
