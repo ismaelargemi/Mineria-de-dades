@@ -34,7 +34,7 @@ header-includes:
 knitr::opts_chunk$set(comment="")
 ```
 
-```{r, include=FALSE}
+```{r, include=FALSE, warning=FALSE}
 library(dplyr)
 library(kableExtra)
 library(caret)
@@ -97,7 +97,7 @@ models <- caretList(
 ```
 
 
-```{r}
+```{r,include=FALSE, warning=FALSE}
 result <- caretEnsemble(models)
 sr <- summary(result)
 ```
@@ -124,14 +124,14 @@ Support Vector Machine con kernel radial en 0.3761: Este peso positivo indica qu
 
 Extreme Gradient Boosting Tree con -3.1035: Este peso negativo, similar al de Random Forest, sugiere que el modelo XGBoost está contribuyendo a disminuir la predicción final del ensamblaje. Dado que este peso es más grande en magnitud que el de Random Forest, el modelo XGBoost tiene un mayor impacto en la corrección de la sobreestimación.
 
-```{r}
+```{r,include=FALSE, warning=FALSE}
 predicciones_wgt <- predict(result, newdata=Test)
 ```
 
 **Validación**
 
 Ahora evaluaremos el modelo con un conjunto de prueba balanceado para evaluar si hay overfitting:
-```{r, warning=FALSE}
+```{r, warning=FALSE, echo=FALSE, fig.cap = "Métricas de validación, prueba balanceada", fig.show='hold',out.width="75%",out.height="75%"}
 levels(predicciones_wgt) <- gsub("X", "", levels(predicciones_wgt))
 
 conf_matrix <- confusionMatrix(predicciones_wgt, TARGET_test, positive = "1")
@@ -156,7 +156,7 @@ Observamos que los valores de precisión (accuracy) en los conjuntos de datos de
 Asimismo, se observa una disparidad entre la sensibilidad y la especificidad del modelo, donde la última es considerablemente más alta que la sensibilidad. Esto puede indicar un desequilibrio en el rendimiento del modelo, con una mayor capacidad para predecir correctamente los casos negativos en comparación con los casos positivos.
 
 Ahora hacemos la prueba ácida, con datos de prueba desbalanceados:
-```{r}
+```{r warning=FALSE, echo=FALSE, fig.cap = "Métricas de validación, prueba desbalanceada", fig.show='hold',out.width="75%",out.height="75%"}
 Test <- validation_desbalanceado
 
 TARGET_test <- Test[["TARGET"]]
