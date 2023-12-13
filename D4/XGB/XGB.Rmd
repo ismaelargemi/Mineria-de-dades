@@ -11,7 +11,7 @@ header-includes:
   \floatsetup[table]{style=plaintop}
   \usepackage{float} 
   \floatplacement{figure}{H} 
-  \newcommand{\beginsupplement}{\setcounter{table}{1}\renewcommand{\thetable}{\arabic{table}} \setcounter{figure}{1} \renewcommand{\thefigure}{\arabic{figure}}}
+  \newcommand{\beginsupplement}{\setcounter{table}{80}\renewcommand{\thetable}{\arabic{table}} \setcounter{figure}{154} \renewcommand{\thefigure}{\arabic{figure}}}
 ---
 
 \pagenumbering{arabic}
@@ -26,7 +26,7 @@ header-includes:
 \pagestyle{fancy}
 ```{=tex}
 \cfoot{\thepage}
-\setcounter{page}{1}
+\setcounter{page}{195}
 ```
 \beginsupplement
 
@@ -248,8 +248,11 @@ subsample = c(1)
 xgbTree <- train(x=Train, y=TARGET, method="xgbTree",
                  metric="Accuracy", trControl=trainControl(method="none"),tuneGrid=grid_opt)
 
-xgb.plot.tree(model=xgbTree$finalModel, trees = 49)
+# xgb.plot.tree(model=xgbTree$finalModel, trees = 49)
 ```
+
+![]("C:\Users\oscar\Documents\GitHub\Mineria-de-dades\D4\XGB\xgbARBOL.png")
+
 Los niveles iniciales de nuestro árbol, desde la raíz, revelan las variables más relevantes para la clasificación de los clientes. Observamos cómo estas variables y sus respectivos puntos de corte se despliegan de la siguiente manera:
 
 Primer nivel: Se realiza una división utilizando la característica RATIO_ANNUITY_CREDIT (Ratio entre la anuidad del préstamo y el crédito total solicitado), con un umbral de < 0.115123019. Si se cumple esta condición, se avanza al segundo nivel; de lo contrario, se llega a una hoja.
