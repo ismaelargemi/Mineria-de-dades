@@ -1,16 +1,43 @@
 ---
-title: "random forest"
-author: "Bertita"
-date: "2023-12-08"
-output: html_document
+output: pdf_document
+header-includes:
+- \usepackage{fullpage} 
+- \usepackage[spanish]{babel}
+- \setlength{\headsep}{7mm} 
+- \usepackage[linktoc=page]{hyperref}
+- \usepackage{fancyhdr}
+- \usepackage{floatrow}
+- \floatsetup[figure]{capposition=top}
+- \floatsetup[table]{style=plaintop}
+- \usepackage{float}
+- \floatplacement{figure}{H}
+- \newcommand{\beginsupplement}{
+  \setcounter{table}{45}  
+  \renewcommand{\thetable}{\arabic{table}} 
+  \setcounter{figure}{121} 
+  \renewcommand{\thefigure}{\arabic{figure}}}
+- \setlength{\headheight}{13.6pt}
+- \setlength{\topmargin}{-10mm}
+- \rhead{Minería de Datos}
+- \lhead{Entrega D4}
 ---
 
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{=tex}
+\cfoot{\thepage}
+\setcounter{page}{141}
+```
+
+\beginsupplement
 
 ```{r, include = F}
 load("Pruebas.RData")
 ```
 
-```{r}
+```{r, echo=F, include=F}
 library(caret)
 library(randomForest)
 library(mlbench)
@@ -33,7 +60,7 @@ Para llevar a cabo el Random Forest, se escogen sus dos parámetros principales:
 Para encontrar los valores óptimos de ambos parámetros, se realizará un search grid para evaluar el accuracy del modelo para cada par de valores de los parámetros. Del parámetro ntree se probarán los valores 1000, 1500, 2000, 2750, 3500 y 5000. No se probará un número mayor por el alto coste computacional que supone. Del mtry, se prueban los valores del 2 al 8, ya que el valor propuesto por la literatura sería 4. Para entrenar el modelo para cada par de variables se realiza un 10-fold cross validation.
 
 
-```{r, echo=F, warning = F,fig.cap = "Random Forest para pares de valores de parámetros Ntree y Mtry", fig.show='hold',out.width="75%",out.height="75%"}
+```{r}
 cores <- makeCluster(detectCores()-1)
 registerDoParallel(cores = cores)
 
@@ -67,8 +94,8 @@ for (ntree in c(500,1000, 1500, 2000, 2750, 3500, 5000)) {
 # Compare results
 results <- resamples(modellist)
 ```
-
-```{r, fig.width=5, fig.height=6}
+ 
+```{r, echo=F, warning = F,fig.cap = "Random Forest para pares de valores de parámetros Ntree y Mtry", fig.show='hold',out.width="75%",out.height="100%", fig.width=5, fig.height=6}
 # Graficar los resultados de la validación cruzada repetida
 dotplot(results, metric = "Accuracy", pch = 16, auto.key = list(columns = 2))
 ```
@@ -76,6 +103,7 @@ Se prueban los pares de variables propuestos y en este gráfico, ordenado de may
 
 ## Desarrollo del modelo y predicciones
 ```{r}
+
 cm_rf_train<- modellist[["1500_mtry_8"]][["finalModel"]][["confusion"]]
 
 # primera clase es la negativa, per això estan girats els coeficients
@@ -126,20 +154,26 @@ kbl(tabla_rf,
 ```
 ## Validación del modelo
 Y a partir de las matrices de confusión de ambos conjuntos de datos train y test, se calculan las diferentes métricas de validación del modelo:
-```{r, echo=F, warning = F,fig.cap = "Medidas de Validación para el modelo Random Forest", fig.show='hold',out.width="75%",out.height="75%"}
+```{r, echo=F, warning = F,fig.cap = "Medidas de Validación para el modelo Random Forest con conjunto test balanceado", fig.show='hold',out.width="75%",out.height="75%"}
 Valores <- c(MC$overall["Accuracy"],MC$byClass["Sensitivity"], MC$byClass["Specificity"], MC$byClass["F1"], MC$byClass["Precision"])
 valores_train<- c(accuracy_train, sensitivity_train , specificity_train, f1_score_train, precision_train )
 tabla_validacion <- data.frame(
   Train = valores_train,
   Test = Valores
 )
- kbl(tabla_validacion, caption = "Medidas de Validación para el modelo Random Forest", booktabs=T)%>% 
+ kbl(tabla_validacion, caption = "Medidas de Validación para el modelo Random Forest con conjunto test balanceado", booktabs=T)%>% 
                 kable_styling(position = "center", 
                 latex_options = c("HOLD_position"))
 
 ```
 
-El modelo Random Forest es más o menos exacto en las predicciones de la variable respuesta del conjunto de datos de validación, con un accuracy del 'r MC$overall["Accuracy"]' indica que el modelo acierta en casi el 79% de las predicciones. Además, se observa que el modelo no presenta excesivo sobrajuste porque el Accuracy es aproximadamente igual para ambos conjuntos de datos train y test. Analizando los valores de la Sensibilidad y Especificidad, con un valor de Sensibilidad del 65% en el conjunto de prueba, el modelo tiene una capacidad moderada para identificar a los clientes morosos, lo que significa que el modelo está perdiendo algunas instancias de morosidad, mientras que con una Especificidad de casi el 90% tiene una capacidad significativamente más alta para identificar los clientes no morosos, este valor minimiza los falsos positivos y ayuda a evitar que clientes no morosos sean clasificados incorrectamente como morosos. Sobre el F1, con un valor del 72.56% en el conjunto de prueba, el F1 Score indica un equilibrio razonable entre precisión y sensibilidad. En problemas de morosidad, donde las consecuencias pueden ser significativas, es importante buscar un equilibrio entre identificar correctamente a los morosos y evitar clasificar incorrectamente a los no morosos. Por último, analizando la Precisión, con un valor del 82.11% en el conjunto de prueba indica que, cuando el modelo predice que un cliente es moroso, tiene una alta probabilidad de que sea correcto. Sin embargo, se debe considerar en conjunto con la sensibilidad para no pasar por alto clientes morosos.
+El modelo Random Forest es más o menos exacto en las predicciones de la variable respuesta del conjunto de datos de validación, con un accuracy del 'r MC$overall["Accuracy"]' indica que el modelo acierta en casi el 79% de las predicciones. Además, se observa que el modelo no presenta excesivo sobrajuste porque el Accuracy es aproximadamente igual para ambos conjuntos de datos train y test. 
+
+Analizando los valores de la Sensibilidad y Especificidad, con un valor de Sensibilidad del 65% en el conjunto de prueba, el modelo tiene una capacidad moderada para identificar a los clientes morosos, lo que significa que el modelo está perdiendo algunas instancias de morosidad, mientras que con una Especificidad de casi el 90% tiene una capacidad significativamente más alta para identificar los clientes no morosos, este valor minimiza los falsos positivos y ayuda a evitar que clientes no morosos sean clasificados incorrectamente como morosos.
+
+Sobre el F1, con un valor del 72.56% en el conjunto de prueba, el F1 Score indica un equilibrio razonable entre precisión y sensibilidad. En problemas de morosidad, donde las consecuencias pueden ser significativas, es importante buscar un equilibrio entre identificar correctamente a los morosos y evitar clasificar incorrectamente a los no morosos. 
+
+Por último, analizando la Precisión, con un valor del 82.11% en el conjunto de prueba indica que, cuando el modelo predice que un cliente es moroso, tiene una alta probabilidad de que sea correcto. Sin embargo, se debe considerar en conjunto con la sensibilidad para no pasar por alto clientes morosos.
 
 ## Variables importantes
 La importancia de las variables en Random Forest se basa en cuánto contribuyen al aumento de la homogeneidad de las clases cuando se utilizan para hacer divisiones en los árboles de decisión del bosque.
@@ -160,4 +194,41 @@ ggplot(importance_df, aes(x = Importance, y = reorder(Variable, +Importance))) +
   theme_minimal()
 
 ```
-Se consideraran las variables más importantes las primeras cuatro que se presentan en el gráfico. Se observa que la Ratio entre la anuidad del préstamo y el crédito total solicitado, el DTI (Debt-to-income) ratio (que mide la capacidad del cliente para pagar la annuity de su préstamo en relación con sus ingresos), la Ratio entre el crédito pedido y el salario anual del prestatario (también se puede contar como el número de años que se tarda en devolver el crédito) y el tipo de organización en la que trabajan, son las cuatro variables más importantes, y que por tanto influyen más en la predicción de morosidad de un cliente, en el modelo de Random Forest.
+Se consideraran las variables más importantes las primeras cuatro que se presentan en el gráfico. Se observa que la Ratio entre la anuidad del préstamo y el crédito total solicitado, el DTI (Debt-to-income) ratio (que mide la capacidad del cliente para pagar la annuity de su préstamo en relación con sus ingresos), la Ratio entre el crédito pedido y el salario anual del prestatario (también se puede contar como el número de años que se tarda en devolver el crédito) y el tipo de organización en la que trabajan, son las cuatro variables más importantes, y que por tanto influyen más en la predicción de morosidad de un cliente en el modelo de Random Forest.
+
+## Prueba ácida
+
+```{r, echo=F, warning = F,fig.cap = "Medidas de Validación con el conjunto test desbalanceado para el modelo Random Forest", fig.show='hold',out.width="75%",out.height="75%"}
+# Make predictions on the test set
+predictions <- predict(rf_model, newdata = validation_desbalanceado)
+
+MC_acid <- confusionMatrix(predictions, validation_desbalanceado$TARGET, positive = "1")
+
+tabla_rf = MC_acid$table
+
+rownames(tabla_rf) = c("No moroso","Potencial moroso")
+colnames(tabla_rf) = c("No moroso","Potencial moroso")
+kbl(tabla_rf,
+    caption = "Matriz de confusión del conjunto de validación desbalanceado",
+    booktabs=T)%>% 
+  kable_styling(position = "center", 
+                latex_options = c("HOLD_position")) %>%
+    add_header_above(c("","Realidad" = 2)) %>%
+   pack_rows(index=c("Predicción"=2))
+
+Valores_acid <- c(MC_acid$overall["Accuracy"],MC_acid$byClass["Sensitivity"], MC_acid$byClass["Specificity"], MC_acid$byClass["F1"], MC_acid$byClass["Precision"])
+
+tabla_validacion <- data.frame(
+  Train = valores_train,
+  Test = Valores_acid
+)
+ kbl(tabla_validacion, caption = "Medidas de Validación con el conjunto test desbalanceado para el modelo Random Forest", booktabs=T)%>% 
+                kable_styling(position = "center", 
+                latex_options = c("HOLD_position"))
+
+```
+En el conjunto de entrenamiento, el modelo acierta alrededor del 80.67% de las predicciones, mientras que en el conjunto de prueba, alcanza un 88.69%. El accuracy es una métrica general que puede ser engañosa en conjuntos de datos desbalanceados, como en el caso de este conjunto de datos de validación, ya que puede estar dominada por la clase mayoritaria. La sensibilidad mide la proporción de casos positivos que el modelo identifica correctamente. En el conjunto de entrenamiento, el modelo identifica correctamente alrededor del 84.04% de los casos positivos, mientras que en el conjunto de prueba, la sensibilidad es del 83.75%, lo que indica que el modelo está capturando bien los casos positivos. El modelo también presenta una alta Especificidad para el conjunto de validación desbalanceado, con una tasa del 89,11%, indicando una buena capacidad para predecir casos negativos.
+
+En el conjunto de prueba, el F1 Score es del 54.25%. Aunque esta puntuación es más baja que en el conjunto de entrenamiento, sigue siendo una métrica relevante para evaluar el rendimiento del modelo en un conjunto de datos desbalanceado. Un F1 Score más bajo en el conjunto de prueba sugiere que el modelo tiene dificultades para equilibrar precisión y recall en un entorno desbalanceado, y puede requerir ajustes para mejorar su rendimiento en la clasificación de la clase minoritaria. La precisión en el conjunto de prueba es del 40.12%, lo que significa que el modelo tiene una proporción más baja de verdaderos positivos entre todas las instancias clasificadas como positivas, situación esperada en conjuntos desbalanceados.
+
+En conclusión, el modelo Random Forest exhibe una sensibilidad excepcionalmente alta, indicando su habilidad sobresaliente para identificar correctamente los casos positivos. Esta capacidad para minimizar los falsos negativos, es decir, la tendencia del modelo a perder muy pocos casos positivos reales, es extremadamente valiosa, especialmente en el contexto financiero, donde la identificación precisa de la clase positiva es esencial. La baja incidencia de falsos negativos indica que nuestro modelo tiende a errar en el lado de la precaución, asegurándose de no perder casos positivos importantes. Sin embargo, es importante tener en cuenta que la alta sensibilidad va acompañada de un aumento en los falsos positivos, es decir, este modelo tiende a clasificar más instancias como positivas de lo necesario.
