@@ -357,7 +357,7 @@ variable_names <- names(importance_values)
 
 df<- data.frame(variable_names, importance_values)
 df <-df[order(df$importance_values),]
-top_10 <- head(df, 10)
+top_10 <- tail(df, 10)
 
 ggplot(top_10, aes(x=importance_values, y = reorder(variable_names, +importance_values))) +
    geom_bar(stat="identity", color='lightblue',fill='lightblue', width = 0.6)+
