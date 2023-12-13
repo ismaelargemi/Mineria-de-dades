@@ -54,7 +54,7 @@ library(pROC)
 ```
 
 
-```{r, include=FALSE,include=FALSE}
+```{r,include=FALSE}
 #OH Encoding Train
 load("Pruebas.Rdata")
 
@@ -133,7 +133,7 @@ Así se propone:
 La profundidad del árbol fijada en 7, ya que, según se puede observar en el gráfico anterior, la precisión parece estabilizarse a partir de esa profundidad. Por tanto, los niveles posteriores del árbol no aportarían información adicional que contribuyera a mejorar la precisión del modelo.
 
 
-```{r}
+```{r,include=FALSE}
 dtrain <- xgb.DMatrix(data = as.matrix(Train), label = TARGET)
 dtest <- xgb.DMatrix(data = as.matrix(Test), label = TARGET_test)
 params <- list(
@@ -151,7 +151,7 @@ params <- list(
 xgb_model <- xgboost(params = params, data = dtrain, nrounds = 100)
 ```
 
-```{r}
+```{r,echo=FALSE, warning=FALSE}
 ggplot(data = xgb_model$evaluation_log, aes(x = 1:length(train_error), y = train_error)) +
   geom_line(color = "black") +
   geom_point(color = "red", size = 2, shape = 19) +
@@ -164,12 +164,12 @@ Se escoge como valor de eta 0.1. Aun siendo un valor elevado que podría generar
 
 Para verificar que nuestro modelo no tiene overfitting, antes de aplicar la prueba ácida, usaremos un conjunto de Test balanceado con nuestro modelo.
 
-```{r}
+```{r,include=FALSE}
 predictxgbTree <- predict(xgbTree,Test)
 conf_matrix <- confusionMatrix(predictxgbTree, as.factor(TARGET_test), positive="1")
 ```
 
-```{r}
+```{r, warning=FALSE, echo=FALSE, fig.cap = "Métricas de validación, prueba balanceada", fig.show='hold',out.width="75%",out.height="75%"}
 accuracy <- conf_matrix$overall["Accuracy"]
 specificity <- conf_matrix$byClass["Specificity"]
 sensitivity <- conf_matrix$byClass["Sensitivity"]
@@ -185,7 +185,7 @@ kbl(metricas,
 Comparando Accuracy, en train obtenemos un 0.8179768 y en test 0.7910714, lo que verifica que el modelo con estos parámetros no genera overfitting. Ahora aplicaremos la prueba ácida, con datos test desbalanceados.
 
 
-```{r}
+```{r,include=FALSE}
 Test <- validation_desbalanceado
 
 TARGET_test <- as.vector(Test$TARGET)
@@ -201,7 +201,7 @@ predictxgbTree <- predict(xgbTree,Test)
 conf_matrix <- confusionMatrix(predictxgbTree, as.factor(TARGET_test), positive="1")
 ```
 
-```{r}
+```{r, warning=FALSE, echo=FALSE, fig.cap = "Métricas de validación, prueba desbalanceada", fig.show='hold',out.width="75%",out.height="75%"}
 accuracy <- conf_matrix$overall["Accuracy"]
 specificity <- conf_matrix$byClass["Specificity"]
 sensitivity <- conf_matrix$byClass["Sensitivity"]
@@ -222,8 +222,8 @@ Destaca la alta especificidad del modelo, alcanzando un `r specificity`, lo que 
 
 Esta evaluación sugiere que el modelo no presenta overfitting, ya que se presentan valores similares en la precisión y otros.
 
-Así el árbol conseguido en el modelo es el siguiente:
-```{r}
+Así, el árbol conseguido en el modelo es el siguiente:
+```{r, echo=FALSE, warning=FALSE}
 grid_opt <- expand.grid(
   nrounds = 50, 
   max_depth = c(7), 
@@ -240,15 +240,15 @@ xgb.plot.tree(model=xgbTree$finalModel, trees = 49)
 ```
 Los niveles iniciales de nuestro árbol, desde la raíz, revelan las variables más relevantes para la clasificación de los clientes. Observamos cómo estas variables y sus respectivos puntos de corte se despliegan de la siguiente manera:
 
-Primer nivel: Se realiza una división utilizando la característica log_AMT_CREDIT con un umbral de < 0.115123019. Si se cumple esta condición, se avanza al segundo nivel; de lo contrario, se llega a una hoja. Esta característica és el logaritmo de
+Primer nivel: Se realiza una división utilizando la característica RATIO_ANNUITY_CREDIT (Ratio entre la anuidad del préstamo y el crédito total solicitado), con un umbral de < 0.115123019. Si se cumple esta condición, se avanza al segundo nivel; de lo contrario, se llega a una hoja.
 
 La hoja resultante de esta división tiene una cobertura de 1.09869659, lo que significa que esta regla se aplica a aproximadamente 1.1 unidades de datos.
 
-Segundo nivel: Se divide utilizando la característica OWN_CAR_AGE con un umbral de < 11.8223429. Si se cumple la condición, se avanza al tercer nivel A; de lo contrario, se accede al nivel B.
+Segundo nivel: Se divide utilizando la característica log_AMT_CREDIT (logaritmo del importe de crédito del préstamo), con un umbral de < 11.8223429. Si se cumple la condición, se avanza al tercer nivel A; de lo contrario, se accede al nivel B.
 
-Tercer nivel A: Se divide utilizando la característica CAR_AGE con un umbral de < 16.5.
+Tercer nivel A: Se divide utilizando la característica OWN_CAR_AGE (edad del coche), con un umbral de < 16.5.
 
-Tercer nivel B: Se divide utilizando la característica CNT_FAM_MEMBERS con un umbral de < 4.8.
+Tercer nivel B: Se divide utilizando la característica CNT_FAM_MEMBERS (número de miembros en la familia), con un umbral de < 4.8.
 
 La característica CNT_FAM_MEMBERS muestra un valor de Ganancia (Gain) de 1.77633166 al dividir los datos. Esto indica que contribuye significativamente a la reducción de la impureza o mejora la separación de los datos en comparación con otras características en este nivel específico del árbol.
 
