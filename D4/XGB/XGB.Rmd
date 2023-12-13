@@ -11,7 +11,7 @@ header-includes:
   \floatsetup[table]{style=plaintop}
   \usepackage{float} 
   \floatplacement{figure}{H} 
-  \newcommand{\beginsupplement}{\setcounter{table}{80}\renewcommand{\thetable}{\arabic{table}} \setcounter{figure}{154} \renewcommand{\thefigure}{\arabic{figure}}}
+  \newcommand{\beginsupplement}{\setcounter{table}{81}\renewcommand{\thetable}{\arabic{table}} \setcounter{figure}{155} \renewcommand{\thefigure}{\arabic{figure}}}
 ---
 
 \pagenumbering{arabic}
@@ -26,7 +26,7 @@ header-includes:
 \pagestyle{fancy}
 ```{=tex}
 \cfoot{\thepage}
-\setcounter{page}{195}
+\setcounter{page}{196}
 ```
 \beginsupplement
 

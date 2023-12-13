@@ -11,7 +11,7 @@ header-includes:
   \floatsetup[table]{style=plaintop}
   \usepackage{float} 
   \floatplacement{figure}{H} 
-  \newcommand{\beginsupplement}{\setcounter{table}{1}\renewcommand{\thetable}{\arabic{table}} \setcounter{figure}{1} \renewcommand{\thefigure}{\arabic{figure}}}
+  \newcommand{\beginsupplement}{\setcounter{table}{83}\renewcommand{\thetable}{\arabic{table}} \setcounter{figure}{155} \renewcommand{\thefigure}{\arabic{figure}}}
 ---
 
 \pagenumbering{arabic}
@@ -26,7 +26,7 @@ header-includes:
 \pagestyle{fancy}
 ```{=tex}
 \cfoot{\thepage}
-\setcounter{page}{1}
+\setcounter{page}{200}
 ```
 \beginsupplement
 
@@ -127,6 +127,8 @@ Extreme Gradient Boosting Tree con -3.1035: Este peso negativo, similar al de Ra
 ```{r,include=FALSE, warning=FALSE}
 predicciones_wgt <- predict(result, newdata=Test)
 ```
+
+\newpage
 
 **Validación**
 
