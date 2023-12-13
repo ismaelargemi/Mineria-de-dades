@@ -72,7 +72,7 @@ Train[,Categoriques] <- NULL
 
 Train <- cbind(Train, Cat)
 
-#OH Encoding Test
+#OH Encoding Test balanceado
 Test <- validation_balanceado
 
 TARGET_test <- as.vector(Test$TARGET)
@@ -158,13 +158,25 @@ ggplot(data = xgb_model$evaluation_log, aes(x = 1:length(train_error), y = train
   geom_vline(xintercept=50, linetype="dashed", color="blue")+
   labs(x = "Número de árboles", y = "Error")
 ```
-Por otro lado, en este gráfico se puede observar la evolución del error en función del número de iteraciones. Nos muestra como este valor tiende a estabilizarse alrededor de 50. Así se fija el número de rondas en este valor.
+Por otro lado, en este gráfico se puede observar la evolución del error en función del número de iteraciones. Nos muestra como este valor tiende a estabilizarse a partir de la iteración 50. Así se fija el número de rondas en este valor.
 
 Se escoge como valor de eta 0.1. Aun siendo un valor elevado que podría generar overfitting, queremos probar si obtenemos un buen modelo.
 
 Para verificar que nuestro modelo no tiene overfitting, antes de aplicar la prueba ácida, usaremos un conjunto de Test balanceado con nuestro modelo.
 
 ```{r,include=FALSE}
+grid_opt <- expand.grid(
+  nrounds = 50, 
+  max_depth = c(7), 
+  eta = 0.1, 
+  gamma = c(0), 
+  colsample_bytree = c(1), 
+  min_child_weight = c(1), 
+  subsample = c(1) 
+)
+xgbTree <- train(x=Train, y=TARGET, method="xgbTree",
+                    metric="Accuracy", trControl=trainControl(method="none"),tuneGrid=grid_opt)
+
 predictxgbTree <- predict(xgbTree,Test)
 conf_matrix <- confusionMatrix(predictxgbTree, as.factor(TARGET_test), positive="1")
 ```
@@ -225,16 +237,16 @@ Esta evaluación sugiere que el modelo no presenta overfitting, ya que se presen
 Así, el árbol conseguido en el modelo es el siguiente:
 ```{r, echo=FALSE, warning=FALSE}
 grid_opt <- expand.grid(
-  nrounds = 50, 
-  max_depth = c(7), 
-  eta = 0.1, 
-  gamma = c(0), 
-  colsample_bytree = c(1), 
-  min_child_weight = c(1), 
-  subsample = c(1) 
+nrounds = 50,
+max_depth = c(7),
+eta = 0.1,
+gamma = c(0),
+colsample_bytree = c(1),
+min_child_weight = c(1),
+subsample = c(1)
 )
 xgbTree <- train(x=Train, y=TARGET, method="xgbTree",
-                    metric="Accuracy", trControl=trainControl(method="none"),tuneGrid=grid_opt)
+                 metric="Accuracy", trControl=trainControl(method="none"),tuneGrid=grid_opt)
 
 xgb.plot.tree(model=xgbTree$finalModel, trees = 49)
 ```
