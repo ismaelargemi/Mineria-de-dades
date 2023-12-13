@@ -101,7 +101,7 @@ dotplot(results, metric = "Accuracy", pch = 16, auto.key = list(columns = 2))
 ```
 Se prueban los pares de variables propuestos y en este gráfico, ordenado de mayor a menor accuracy, se observa que el mayor accuracy lo presenta modelo de Random Forest con ntree=1500 y mtry=8, con valores alrededor del 80%. 
 
-## Desarrollo del modelo y predicciones
+## Desarrollo y validación del modelo 
 ```{r}
 
 cm_rf_train<- modellist[["1500_mtry_8"]][["finalModel"]][["confusion"]]
@@ -152,7 +152,6 @@ kbl(tabla_rf,
     add_header_above(c("","Realidad" = 2)) %>%
    pack_rows(index=c("Predicción"=2))
 ```
-## Validación del modelo
 Y a partir de las matrices de confusión de ambos conjuntos de datos train y test, se calculan las diferentes métricas de validación del modelo:
 ```{r, echo=F, warning = F,fig.cap = "Medidas de Validación para el modelo Random Forest con conjunto test balanceado", fig.show='hold',out.width="75%",out.height="75%"}
 Valores <- c(MC$overall["Accuracy"],MC$byClass["Sensitivity"], MC$byClass["Specificity"], MC$byClass["F1"], MC$byClass["Precision"])
